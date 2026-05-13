@@ -16,13 +16,14 @@ import {
 export default function LMS() {
   const { profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [videoActive, setVideoActive] = useState(false);
 
   const materials = [
-    { title: 'Introduction to ' + profile?.internshipDomain, type: 'Video', duration: '45 mins', size: '250MB', icon: PlayCircle, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { title: 'Advanced Concepts & Best Practices', type: 'PPT', duration: '12 Slides', size: '15MB', icon: FileVideo, color: 'text-orange-600', bg: 'bg-orange-50' },
-    { title: 'Industry Project Case Studies', type: 'PDF', duration: '20 Pages', size: '4MB', icon: FileText, color: 'text-green-600', bg: 'bg-green-50' },
-    { title: 'Development Tools & Setup Guide', type: 'Video', duration: '30 mins', size: '120MB', icon: PlayCircle, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { title: 'Assessment Preparation Guide', type: 'PDF', duration: '5 Pages', size: '2MB', icon: FileText, color: 'text-red-600', bg: 'bg-red-50' },
+    { title: 'Introduction to ' + profile?.internshipDomain, type: 'Video', duration: '45 mins', size: '250MB', icon: PlayCircle, color: 'text-blue-600', bg: 'bg-blue-50', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+    { title: 'Advanced Concepts & Best Practices', type: 'PPT', duration: '12 Slides', size: '15MB', icon: FileVideo, color: 'text-orange-600', bg: 'bg-orange-50', url: 'https://drive.google.com/drive/folders/internmitra-ppt' },
+    { title: 'Industry Project Case Studies', type: 'PDF', duration: '20 Pages', size: '4MB', icon: FileText, color: 'text-green-600', bg: 'bg-green-50', url: 'https://drive.google.com/drive/folders/internmitra-pdf' },
+    { title: 'Development Tools & Setup Guide', type: 'Video', duration: '30 mins', size: '120MB', icon: PlayCircle, color: 'text-purple-600', bg: 'bg-purple-50', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+    { title: 'Assessment Preparation Guide', type: 'PDF', duration: '5 Pages', size: '2MB', icon: FileText, color: 'text-red-600', bg: 'bg-red-50', url: 'https://drive.google.com/drive/folders/internmitra-pdf' },
   ];
 
   return (
@@ -86,13 +87,24 @@ export default function LMS() {
           </div>
           
           <div className="aspect-video w-full bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl relative group-hover:scale-[1.02] transition-transform duration-700">
-            <iframe 
-              className="w-full h-full"
-              src="https://www.youtube.com/embed/dQw4w9WgXcQ" // Example placeholder, user can swap
-              title="InternMitra Live Training"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            ></iframe>
+            {videoActive ? (
+              <iframe
+                className="w-full h-full"
+                src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
+                title="InternMitra Live Training"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <button
+                onClick={() => setVideoActive(true)}
+                className="w-full h-full flex items-center justify-center bg-slate-900 group/play"
+              >
+                <div className="w-20 h-20 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all group-hover/play:scale-110">
+                  <PlayCircle size={48} className="text-white" />
+                </div>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -115,10 +127,16 @@ export default function LMS() {
               <p className="text-slate-500 italic font-bold mb-10 text-sm">Session Duration: {item.duration}</p>
             </div>
             <div className="pt-8 border-t border-slate-50 flex items-center justify-between relative z-10">
-               <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition underline underline-offset-8">
+               <button
+                 onClick={() => window.open(item.url, '_blank')}
+                 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition underline underline-offset-8"
+               >
                  <Download size={14} /> Download Asset
                </button>
-               <button className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all duration-300 shadow-inner group/btn">
+               <button
+                 onClick={() => window.open(item.url, '_blank')}
+                 className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all duration-300 shadow-inner group/btn"
+               >
                  <ChevronRight size={24} className="group-hover/btn:translate-x-0.5 transition-transform" />
                </button>
             </div>

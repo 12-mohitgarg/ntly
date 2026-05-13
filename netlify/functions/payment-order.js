@@ -1,8 +1,8 @@
 const Razorpay = require('razorpay');
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_live_SoVxB05ogtK0Fl',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || '23a2eaU3UwRf4LnZaBWVvpvr',
+  key_id: "rzp_live_SoVxB05ogtK0Fl",
+  key_secret: '23a2eaU3UwRf4LnZaBWVvpvr',
 });
 
 exports.handler = async (event) => {

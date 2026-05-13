@@ -48,7 +48,7 @@ export default function Payment() {
 
       // 2. Open Razorpay Checkout
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_SnzhdLV74kWqEv',
+        key: "rzp_live_SoVxB05ogtK0Fl",
         amount: order.amount,
         currency: order.currency,
         name: 'INTERNMITRA',
