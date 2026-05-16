@@ -99,7 +99,7 @@ export default function Home() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12">
 
               <div className="bg-white/10 rounded-2xl p-5 text-center">
-                <h2 className="text-2xl font-bold">500+</h2>
+                <h2 className="text-2xl font-bold">10000+</h2>
                 <p className="text-sm text-slate-300">Students</p>
               </div>
 
@@ -413,7 +413,14 @@ export default function Home() {
               </h3>
 
               <ul className="space-y-4 text-slate-300">
-                <li>Features</li>
+                <li>
+                  <Link
+                    to="/features"
+                    className="hover:text-white transition-colors duration-300"
+                  >
+                    Features
+                  </Link>
+                </li>
                 <li>Pricing</li>
                 <li>For Students</li>
                 <li>For Colleges</li>
@@ -427,8 +434,22 @@ export default function Home() {
 
               <ul className="space-y-4 text-slate-300">
                 <li>FAQs</li>
-                <li>Help Center</li>
-                <li>Contact Us</li>
+                <li>
+                  <Link
+                    to="/about"
+                    className="hover:text-white transition-colors duration-300"
+                  >
+                    About
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/contact"
+                    className="hover:text-white transition-colors duration-300"
+                  >
+                    Contact us
+                  </Link>
+                </li>
                 <li>Certificates</li>
               </ul>
             </div>

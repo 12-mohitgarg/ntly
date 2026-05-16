@@ -77,10 +77,66 @@ export default function Navbar() {
 
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
-            <button onClick={() => setIsOpen(!isOpen)} className="p-2 text-gray-600">
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+          {/* Mobile Buttons */}
+          <div className="md:hidden flex items-center gap-3">
+
+            {/* LOGIN */}
+            <Link to="/login">
+              <button
+                className="
+        h-11
+        px-6
+        rounded-[18px]
+        bg-gradient-to-r
+        from-blue-600
+        via-indigo-600
+        to-purple-600
+        text-white
+        font-bold
+        text-sm
+        flex
+        items-center
+        gap-2
+        shadow-lg
+        shadow-blue-500/30
+        border
+        border-blue-400/20
+        active:scale-95
+        transition-all
+      "
+              >
+
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                  <LogIn className="w-3.5 h-3.5 text-white" />
+                </div>
+
+                LOGIN
+
+              </button>
+            </Link>
+
+            {/* REGISTER */}
+            <Link to="/register">
+              <button
+                className="
+        h-11
+        px-6
+        rounded-[18px]
+        border-2
+        border-blue-500
+        bg-white
+        text-blue-600
+        font-bold
+        text-sm
+        shadow-sm
+        active:scale-95
+        transition-all
+      "
+              >
+                REGISTER
+              </button>
+            </Link>
+
           </div>
         </div>
       </div>
