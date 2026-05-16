@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -51,6 +52,100 @@ export default function Home() {
       icon: "🏆",
     },
   ];
+
+  const allTestimonials = [
+    {
+      name: "Rahul Kumar",
+      role: "B.Tech Student",
+      type: "Student",
+      review:
+        "Internmitra helped me gain real internship experience with live projects.",
+    },
+    {
+      name: "Priya Sharma",
+      role: "MBA Student",
+      type: "Student",
+      review:
+        "The training sessions and internship tasks were very practical.",
+    },
+    {
+      name: "Aman Raj",
+      role: "BCA Student",
+      type: "Student",
+      review:
+        "Amazing platform for students and certification support.",
+    },
+    {
+      name: "Neha Singh",
+      role: "BBA Student",
+      type: "Student",
+      review:
+        "Very professional internship management system.",
+    },
+    {
+      name: "Ritesh Kumar",
+      role: "MCA Student",
+      type: "Student",
+      review:
+        "Mentorship support was excellent throughout the internship.",
+    },
+    {
+      name: "Pooja Verma",
+      role: "B.Sc Student",
+      type: "Student",
+      review:
+        "Internmitra improved my communication and technical skills.",
+    },
+    {
+      name: "Dr. Rajesh Kumar",
+      role: "College Professor",
+      type: "Teacher",
+      review:
+        "Very useful internship platform for colleges and students.",
+    },
+    {
+      name: "Anjali Sinha",
+      role: "Training Mentor",
+      type: "Teacher",
+      review:
+        "Easy dashboard and proper internship workflow system.",
+    },
+    {
+      name: "Deepak Sir",
+      role: "Faculty",
+      type: "Teacher",
+      review:
+        "Professional certification and tracking process.",
+    },
+    {
+      name: "Ravi Sir",
+      role: "Placement Trainer",
+      type: "Teacher",
+      review:
+        "Students are getting real industry exposure.",
+    },
+    {
+      name: "Meena Ma'am",
+      role: "Mentor",
+      type: "Teacher",
+      review:
+        "Excellent support and learning management.",
+    },
+    {
+      name: "Abhishek Sir",
+      role: "Technical Trainer",
+      type: "Teacher",
+      review:
+        "One of the best internship platforms for students.",
+    },
+  ];
+
+  const [activeFilter, setActiveFilter] = useState("All");
+
+  const filteredTestimonials =
+    activeFilter === "All"
+      ? allTestimonials
+      : allTestimonials.filter((item) => item.type === activeFilter);
 
   return (
     <div className="bg-white overflow-hidden">
@@ -181,6 +276,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+
       {/* TESTIMONIALS */}
       <section className="py-24 bg-slate-50">
 
@@ -204,17 +300,20 @@ export default function Home() {
 
             <div className="bg-white shadow-lg rounded-full p-2 flex items-center gap-2 border border-slate-100">
 
-              <button className="px-8 py-3 rounded-full bg-blue-600 text-white font-semibold text-sm shadow-md">
-                All
-              </button>
-
-              <button className="px-8 py-3 rounded-full text-slate-600 font-semibold text-sm hover:bg-slate-100 transition">
-                Students
-              </button>
-
-              <button className="px-8 py-3 rounded-full text-slate-600 font-semibold text-sm hover:bg-slate-100 transition">
-                Teachers
-              </button>
+              {["All", "Students", "Teachers"].map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setActiveFilter(filter === "Students" ? "Student" : filter === "Teachers" ? "Teacher" : "All")}
+                  className={`px-8 py-3 rounded-full font-semibold text-sm transition ${(filter === "All" && activeFilter === "All") ||
+                    (filter === "Students" && activeFilter === "Student") ||
+                    (filter === "Teachers" && activeFilter === "Teacher")
+                    ? "bg-blue-600 text-white shadow-md"
+                    : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                >
+                  {filter}
+                </button>
+              ))}
 
             </div>
 
@@ -223,92 +322,7 @@ export default function Home() {
           {/* TESTIMONIAL GRID */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
 
-            {[
-              {
-                name: "Rahul Kumar",
-                role: "B.Tech Student",
-                type: "Student",
-                review:
-                  "Internmitra helped me gain real internship experience with live projects.",
-              },
-              {
-                name: "Priya Sharma",
-                role: "MBA Student",
-                type: "Student",
-                review:
-                  "The training sessions and internship tasks were very practical.",
-              },
-              {
-                name: "Aman Raj",
-                role: "BCA Student",
-                type: "Student",
-                review:
-                  "Amazing platform for students and certification support.",
-              },
-              {
-                name: "Neha Singh",
-                role: "BBA Student",
-                type: "Student",
-                review:
-                  "Very professional internship management system.",
-              },
-              {
-                name: "Ritesh Kumar",
-                role: "MCA Student",
-                type: "Student",
-                review:
-                  "Mentorship support was excellent throughout the internship.",
-              },
-              {
-                name: "Pooja Verma",
-                role: "B.Sc Student",
-                type: "Student",
-                review:
-                  "Internmitra improved my communication and technical skills.",
-              },
-              {
-                name: "Dr. Rajesh Kumar",
-                role: "College Professor",
-                type: "Teacher",
-                review:
-                  "Very useful internship platform for colleges and students.",
-              },
-              {
-                name: "Anjali Sinha",
-                role: "Training Mentor",
-                type: "Teacher",
-                review:
-                  "Easy dashboard and proper internship workflow system.",
-              },
-              {
-                name: "Deepak Sir",
-                role: "Faculty",
-                type: "Teacher",
-                review:
-                  "Professional certification and tracking process.",
-              },
-              {
-                name: "Ravi Sir",
-                role: "Placement Trainer",
-                type: "Teacher",
-                review:
-                  "Students are getting real industry exposure.",
-              },
-              {
-                name: "Meena Ma'am",
-                role: "Mentor",
-                type: "Teacher",
-                review:
-                  "Excellent support and learning management.",
-              },
-              {
-                name: "Abhishek Sir",
-                role: "Technical Trainer",
-                type: "Teacher",
-                review:
-                  "One of the best internship platforms for students.",
-              },
-            ].map((item, index) => (
+            {filteredTestimonials.map((item, index) => (
 
               <motion.div
                 key={index}
@@ -367,6 +381,7 @@ export default function Home() {
         </div>
 
       </section>
+
       {/* INTERNSHIP FLOW */}
       <section className="py-24 bg-[#071B4D] text-white">
 
