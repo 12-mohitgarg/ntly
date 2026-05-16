@@ -69,7 +69,7 @@ export default function Navbar() {
                   <Button variant="ghost" className="text-slate-500 font-black uppercase text-[10px] tracking-[0.2em] italic hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all">Login</Button>
                 </Link>
                 <Link to="/register">
-                  <Button className="bg-slate-900 hover:bg-blue-600 text-white rounded-2xl px-10 h-12 font-black uppercase text-[10px] tracking-[0.2em] italic shadow-xl shadow-slate-900/20 transition-all duration-300">Join Engine</Button>
+                  <Button className="bg-slate-900 hover:bg-blue-600 text-white rounded-2xl px-10 h-12 font-black uppercase text-[10px] tracking-[0.2em] italic shadow-xl shadow-slate-900/20 transition-all duration-300">Join Now</Button>
                 </Link>
               </div>
             )}
