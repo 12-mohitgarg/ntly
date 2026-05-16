@@ -13,9 +13,10 @@ declare global {
   }
 }
 
-interface Course {
+interface College {
   id: string;
   name: string;
+  districtId: string;
   price: number;
 }
 
@@ -24,37 +25,36 @@ export default function Payment() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [colleges, setColleges] = useState<College[]>([]);
   const [amount, setAmount] = useState(1000);
 
   useEffect(() => {
-    fetchCourses();
+    fetchColleges();
   }, []);
 
-  const fetchCourses = async () => {
+  const fetchColleges = async () => {
     try {
-      const coursesRef = collection(db, 'courses');
-      const coursesQuery = query(coursesRef, orderBy('name'));
-      const coursesSnapshot = await getDocs(coursesQuery);
-      const coursesData = coursesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course));
-      setCourses(coursesData);
+      const collegesRef = collection(db, 'colleges');
+      const collegesSnapshot = await getDocs(collegesRef);
+      const collegesData = collegesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as College));
+      setColleges(collegesData);
 
-      // Get price for user's selected course
-      if (profile?.internshipDomain) {
-        const userCourse = coursesData.find(c => c.name === profile.internshipDomain);
-        setAmount(userCourse?.price || 1000);
+      // Get price for user's selected college
+      if (profile?.college) {
+        const userCollege = collegesData.find(c => c.name === profile.college);
+        setAmount(userCollege?.price || 1000);
       }
     } catch (error) {
-      console.error('Error fetching courses:', error);
+      console.error('Error fetching colleges:', error);
     }
   };
 
   useEffect(() => {
-    if (profile?.internshipDomain && courses.length > 0) {
-      const userCourse = courses.find(c => c.name === profile.internshipDomain);
-      setAmount(userCourse?.price || 1000);
+    if (profile?.college && colleges.length > 0) {
+      const userCollege = colleges.find(c => c.name === profile.college);
+      setAmount(userCollege?.price || 1000);
     }
-  }, [profile, courses]);
+  }, [profile, colleges]);
 
   const handlePayment = async () => {
     if (!user) return;

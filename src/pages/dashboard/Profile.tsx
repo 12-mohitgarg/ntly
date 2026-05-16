@@ -155,7 +155,7 @@ export default function Profile() {
                  </div>
 
                  <div className="pt-8">
-                    <Button disabled={loading} className="w-full md:w-auto h-16 px-12 bg-blue-600 hover:bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-2xl shadow-blue-600/20 flex items-center justify-center gap-3 transition-all duration-500 hover:scale-105 active:scale-95">
+                    <Button type="submit" disabled={loading} className="w-full md:w-auto h-16 px-12 bg-blue-600 hover:bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-2xl shadow-blue-600/20 flex items-center justify-center gap-3 transition-all duration-500 hover:scale-105 active:scale-95">
                       <Save size={20} />
                       {loading ? 'Commiting Changes...' : 'Synchronize Profile'}
                     </Button>

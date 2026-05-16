@@ -16,6 +16,7 @@ interface College {
   id: string;
   name: string;
   districtId: string;
+  price: number;
 }
 
 export default function ManageColleges() {
@@ -26,8 +27,10 @@ export default function ManageColleges() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDistrictId, setEditDistrictId] = useState('');
+  const [editPrice, setEditPrice] = useState('');
   const [newCollegeName, setNewCollegeName] = useState('');
   const [newDistrictId, setNewDistrictId] = useState('');
+  const [newPrice, setNewPrice] = useState('1000');
 
   useEffect(() => {
     fetchData();
@@ -67,10 +70,12 @@ export default function ManageColleges() {
       await addDoc(collection(db, 'colleges'), {
         name: newCollegeName.trim(),
         districtId: newDistrictId,
+        price: parseInt(newPrice) || 1000,
         createdAt: new Date().toISOString()
       });
       setNewCollegeName('');
       setNewDistrictId('');
+      setNewPrice('1000');
       fetchData();
     } catch (error) {
       console.error('Error adding college:', error);
@@ -81,17 +86,20 @@ export default function ManageColleges() {
     setEditingId(college.id);
     setEditName(college.name);
     setEditDistrictId(college.districtId);
+    setEditPrice(college.price.toString());
   };
 
   const handleSave = async (id: string) => {
     try {
       await updateDoc(doc(db, 'colleges', id), {
         name: editName.trim(),
-        districtId: editDistrictId
+        districtId: editDistrictId,
+        price: parseInt(editPrice) || 1000
       });
       setEditingId(null);
       setEditName('');
       setEditDistrictId('');
+      setEditPrice('');
       fetchData();
     } catch (error) {
       console.error('Error updating college:', error);
@@ -102,6 +110,7 @@ export default function ManageColleges() {
     setEditingId(null);
     setEditName('');
     setEditDistrictId('');
+    setEditPrice('');
   };
 
   const handleDelete = async (id: string) => {
@@ -163,6 +172,16 @@ export default function ManageColleges() {
                 ))}
               </select>
             </div>
+            <div className="w-32">
+              <Label className="uppercase tracking-[0.2em] text-[10px] font-black text-slate-400 mb-2 block">Price (₹)</Label>
+              <Input
+                type="number"
+                value={newPrice}
+                onChange={(e) => setNewPrice(e.target.value)}
+                className="h-12 rounded-xl"
+                placeholder="1000"
+              />
+            </div>
             <Button type="submit" className="h-12 px-6 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl mt-6">
               <Plus size={20} />
               Add
@@ -201,6 +220,13 @@ export default function ManageColleges() {
                           <option key={district.id} value={district.id}>{district.name}</option>
                         ))}
                       </select>
+                      <Input
+                        type="number"
+                        value={editPrice}
+                        onChange={(e) => setEditPrice(e.target.value)}
+                        className="h-10 rounded-xl w-24"
+                        placeholder="1000"
+                      />
                       <Button onClick={() => handleSave(college.id)} className="h-10 px-4 bg-green-600 hover:bg-green-700 text-white rounded-xl">
                         <Save size={16} />
                       </Button>
@@ -213,6 +239,7 @@ export default function ManageColleges() {
                       <div>
                         <span className="font-bold text-slate-900">{college.name}</span>
                         <span className="text-slate-500 text-sm ml-2">({getDistrictName(college.districtId)})</span>
+                        <span className="text-blue-600 text-sm ml-2 font-bold">₹{college.price}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button onClick={() => handleEdit(college)} className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">

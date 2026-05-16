@@ -5,12 +5,11 @@ import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy 
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { ArrowLeft, Plus, Trash2, Edit2, Save, X, IndianRupee } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
 
 interface Course {
   id: string;
   name: string;
-  price: number;
 }
 
 export default function ManageCourses() {
@@ -19,9 +18,7 @@ export default function ManageCourses() {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [editPrice, setEditPrice] = useState('');
   const [newCourseName, setNewCourseName] = useState('');
-  const [newCoursePrice, setNewCoursePrice] = useState('');
 
   useEffect(() => {
     fetchCourses();
@@ -43,16 +40,14 @@ export default function ManageCourses() {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCourseName.trim() || !newCoursePrice) return;
+    if (!newCourseName.trim()) return;
 
     try {
       await addDoc(collection(db, 'courses'), {
         name: newCourseName.trim(),
-        price: parseInt(newCoursePrice),
         createdAt: new Date().toISOString()
       });
       setNewCourseName('');
-      setNewCoursePrice('');
       fetchCourses();
     } catch (error) {
       console.error('Error adding course:', error);
@@ -62,18 +57,15 @@ export default function ManageCourses() {
   const handleEdit = (course: Course) => {
     setEditingId(course.id);
     setEditName(course.name);
-    setEditPrice(course.price.toString());
   };
 
   const handleSave = async (id: string) => {
     try {
       await updateDoc(doc(db, 'courses', id), {
-        name: editName.trim(),
-        price: parseInt(editPrice)
+        name: editName.trim()
       });
       setEditingId(null);
       setEditName('');
-      setEditPrice('');
       fetchCourses();
     } catch (error) {
       console.error('Error updating course:', error);
@@ -83,7 +75,6 @@ export default function ManageCourses() {
   const handleCancel = () => {
     setEditingId(null);
     setEditName('');
-    setEditPrice('');
   };
 
   const handleDelete = async (id: string) => {
@@ -131,19 +122,6 @@ export default function ManageCourses() {
                 placeholder="Enter course name"
               />
             </div>
-            <div className="w-48">
-              <Label className="uppercase tracking-[0.2em] text-[10px] font-black text-slate-400 mb-2 block">Price (INR)</Label>
-              <div className="relative">
-                <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <Input
-                  type="number"
-                  value={newCoursePrice}
-                  onChange={(e) => setNewCoursePrice(e.target.value)}
-                  className="h-12 rounded-xl pl-10"
-                  placeholder="0"
-                />
-              </div>
-            </div>
             <Button type="submit" className="h-12 px-6 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl mt-6">
               <Plus size={20} />
               Add
@@ -173,15 +151,6 @@ export default function ManageCourses() {
                         onChange={(e) => setEditName(e.target.value)}
                         className="h-10 rounded-xl flex-1"
                       />
-                      <div className="relative w-32">
-                        <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                        <Input
-                          type="number"
-                          value={editPrice}
-                          onChange={(e) => setEditPrice(e.target.value)}
-                          className="h-10 rounded-xl pl-8"
-                        />
-                      </div>
                       <Button onClick={() => handleSave(course.id)} className="h-10 px-4 bg-green-600 hover:bg-green-700 text-white rounded-xl">
                         <Save size={16} />
                       </Button>
@@ -191,10 +160,7 @@ export default function ManageCourses() {
                     </div>
                   ) : (
                     <>
-                      <div>
-                        <span className="font-bold text-slate-900">{course.name}</span>
-                        <span className="text-slate-500 text-sm ml-2">₹{course.price}</span>
-                      </div>
+                      <span className="font-bold text-slate-900">{course.name}</span>
                       <div className="flex items-center gap-2">
                         <Button onClick={() => handleEdit(course)} className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
                           <Edit2 size={16} />

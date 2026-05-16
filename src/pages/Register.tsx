@@ -26,6 +26,7 @@ interface College {
   id: string;
   name: string;
   districtId: string;
+  price: number;
 }
 
 interface University {
@@ -126,6 +127,11 @@ export default function Register() {
   const getCoursePrice = (courseName: string) => {
     const course = courses.find(c => c.name === courseName);
     return course?.price || 0;
+  };
+
+  const getCollegePrice = (collegeName: string) => {
+    const college = colleges.find(c => c.name === collegeName);
+    return college?.price || 0;
   };
 
   const nextStep = () => {
@@ -357,11 +363,8 @@ export default function Register() {
                     <Label htmlFor="internshipDomain" className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Target Domain</Label>
                     <select name="internshipDomain" value={formData.internshipDomain} onChange={handleChange} className="w-full h-14 rounded-2xl border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 transition-all font-bold text-sm">
                       <option value="">Select Domain</option>
-                      {courses.map(c => <option key={c.id} value={c.name}>{c.name} </option>)}
+                      {courses.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                     </select>
-                    {/* {formData.internshipDomain && (
-                      <p className="text-xs text-slate-500 font-bold">Course Price: ₹{getCoursePrice(formData.internshipDomain)}</p>
-                    )} */}
                   </div>
                 </div>
               )}
