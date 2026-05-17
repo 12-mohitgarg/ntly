@@ -3,7 +3,7 @@ import { useAuth } from '../components/AuthContext';
 import { db } from '../lib/firebase';
 import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { Button } from '../components/ui/button';
-import { Users, LogOut, Mail, Phone, CheckCircle2, XCircle, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2 } from 'lucide-react';
+import { Users, LogOut, Mail, Phone, CheckCircle2, XCircle, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { useNavigate, Link } from 'react-router-dom';
@@ -134,7 +134,13 @@ export default function AdminDashboard() {
                 Universities
               </Button>
             </Link>
-            <Button 
+            <Link to="/admin/subjects">
+              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
+                <List size={18} />
+                Subjects
+              </Button>
+            </Link>
+            <Button
               onClick={handleLogout}
               variant="ghost"
               className="text-white hover:bg-white/10 flex items-center gap-2"

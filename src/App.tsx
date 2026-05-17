@@ -11,15 +11,16 @@ import Home from './pages/Home';
 import About from './pages/About';
 import Features from './pages/Features';
 import Contact from './pages/Contact';
-import Login from './pages/Login';
 import Register from './pages/Register';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Payment from './pages/Payment';
 import AdminDashboard from './pages/AdminDashboard';
+import Payment from './pages/Payment';
 import ManageDistricts from './pages/admin/ManageDistricts';
 import ManageColleges from './pages/admin/ManageColleges';
 import ManageCourses from './pages/admin/ManageCourses';
 import ManageUniversities from './pages/admin/ManageUniversities';
+import ManageSubjects from './pages/admin/ManageSubjects';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth();
@@ -61,6 +62,7 @@ export default function App() {
             <Route path="/admin/colleges" element={<AdminRoute><ManageColleges /></AdminRoute>} />
             <Route path="/admin/courses" element={<AdminRoute><ManageCourses /></AdminRoute>} />
             <Route path="/admin/universities" element={<AdminRoute><ManageUniversities /></AdminRoute>} />
+            <Route path="/admin/subjects" element={<AdminRoute><ManageSubjects /></AdminRoute>} />
           </Routes>
         </div>
       </AuthProvider>

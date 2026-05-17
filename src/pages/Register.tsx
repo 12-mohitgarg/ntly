@@ -9,9 +9,8 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import {
-  GENDERS,
   DEGREES,
-  DEPARTMENTS,
+  GENDERS,
   SESSIONS,
   SEMESTERS
 } from '../lib/constants';
@@ -40,6 +39,12 @@ interface Course {
   price: number;
 }
 
+interface Degree {
+  id: string;
+  name: string;
+  subjects: string[];
+}
+
 export default function Register() {
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +55,7 @@ export default function Register() {
   const [colleges, setColleges] = useState<College[]>([]);
   const [universities, setUniversities] = useState<University[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [degrees, setDegrees] = useState<Degree[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
   const [formData, setFormData] = useState({
@@ -111,6 +117,12 @@ export default function Register() {
       const collegesSnapshot = await getDocs(collegesRef);
       setColleges(collegesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as College)));
 
+      // Fetch degrees with subjects
+      const degreesRef = collection(db, 'degrees');
+      const degreesQuery = query(degreesRef, orderBy('name'));
+      const degreesSnapshot = await getDocs(degreesQuery);
+      setDegrees(degreesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Degree)));
+
       setDataLoading(false);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -132,6 +144,11 @@ export default function Register() {
   const getCollegePrice = (collegeName: string) => {
     const college = colleges.find(c => c.name === collegeName);
     return college?.price || 0;
+  };
+
+  const getSubjectsForDegree = (degreeName: string) => {
+    const degree = degrees.find(d => d.name === degreeName);
+    return degree?.subjects || [];
   };
 
   const nextStep = () => {
@@ -326,7 +343,7 @@ export default function Register() {
                       <Label htmlFor="department" className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Branch</Label>
                       <select name="department" value={formData.department} onChange={handleChange} className="w-full h-14 rounded-2xl border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 transition-all font-bold text-sm">
                         <option value="">Branch</option>
-                        {formData.degree && Object.keys(DEPARTMENTS).filter(d => formData.degree === 'UG' ? d.startsWith('B') : d.startsWith('M')).map(d => <option key={d} value={d}>{d}</option>)}
+                        {degrees.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
                       </select>
                     </div>
                   </div>
@@ -335,7 +352,7 @@ export default function Register() {
                       <Label htmlFor="subject" className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Subject</Label>
                       <select name="subject" value={formData.subject} onChange={handleChange} className="w-full h-14 rounded-2xl border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 transition-all font-bold text-sm">
                         <option value="">Subject</option>
-                        {formData.department && DEPARTMENTS[formData.department]?.map(s => <option key={s} value={s}>{s}</option>)}
+                        {formData.department && getSubjectsForDegree(formData.department).map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
                     <div className="space-y-2">

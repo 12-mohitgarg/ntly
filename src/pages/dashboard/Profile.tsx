@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../components/AuthContext';
 import { db } from '../../lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../../lib/firebase';
 import { INTERNSHIP_DOMAINS } from '../../lib/constants';
 import { motion } from 'motion/react';
-import { 
-  UserCircle, 
-  Mail, 
-  Phone, 
-  MapPin, 
+import {
+  UserCircle,
+  Mail,
+  Phone,
+  MapPin,
   BookMarked,
   ShieldCheck,
   CreditCard,
@@ -20,15 +20,43 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 
+interface Degree {
+  id: string;
+  name: string;
+  subjects: string[];
+}
+
 export default function Profile() {
   const { profile, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [degrees, setDegrees] = useState<Degree[]>([]);
   const [formData, setFormData] = useState({
     fullName: profile?.fullName || '',
     contactNumber: profile?.contactNumber || '',
     internshipDomain: profile?.internshipDomain || ''
   });
+
+  useEffect(() => {
+    fetchDegrees();
+  }, []);
+
+  const fetchDegrees = async () => {
+    try {
+      const degreesRef = collection(db, 'degrees');
+      const degreesQuery = query(degreesRef, orderBy('name'));
+      const degreesSnapshot = await getDocs(degreesQuery);
+      const degreesData = degreesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Degree));
+      setDegrees(degreesData);
+    } catch (error) {
+      console.error('Error fetching degrees:', error);
+    }
+  };
+
+  const getSubjectsForDegree = (degreeName: string) => {
+    const degree = degrees.find(d => d.name === degreeName);
+    return degree?.subjects || [];
+  };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
