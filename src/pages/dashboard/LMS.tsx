@@ -41,8 +41,10 @@ export default function LMS() {
 
   useEffect(() => {
     // Re-check completion status after videos are loaded
-    const completedCount = Object.values(videoProgress).filter(v => v).length;
-    setIsCourseCompleted(completedCount === 15);
+    if (dailyVideos.length > 0) {
+      const completedCount = Object.values(videoProgress).filter(v => v).length;
+      setIsCourseCompleted(completedCount === dailyVideos.length);
+    }
   }, [dailyVideos, videoProgress]);
 
   const calculateCurrentDay = () => {
@@ -109,9 +111,9 @@ export default function LMS() {
         const progressData = progressDoc.data();
         setVideoProgress(progressData.completedVideos || {});
         
-        // Check if exactly 15 videos are completed
+        // Check if all uploaded videos are completed
         const completedCount = Object.values(progressData.completedVideos || {}).filter(v => v).length;
-        setIsCourseCompleted(completedCount === 15);
+        setIsCourseCompleted(completedCount === dailyVideos.length && dailyVideos.length > 0);
       }
     } catch (error) {
       console.error('Error fetching video progress:', error);
@@ -141,9 +143,9 @@ export default function LMS() {
         lastVideoCompletedAt: new Date().toISOString()
       });
       
-      // Check if exactly 15 videos are completed
+      // Check if all uploaded videos are completed
       const completedCount = Object.values(newProgress).filter(v => v).length;
-      setIsCourseCompleted(completedCount === 15);
+      setIsCourseCompleted(completedCount === dailyVideos.length && dailyVideos.length > 0);
     } catch (error) {
       console.error('Error marking video as done:', error);
       alert('Error marking video as done');
