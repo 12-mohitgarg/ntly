@@ -3,10 +3,10 @@ import { useAuth } from '../../components/AuthContext';
 import { db } from '../../lib/firebase';
 import { collection, getDocs, query, orderBy, where, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { motion } from 'motion/react';
-import { 
-  PlayCircle, 
-  FileText, 
-  FileVideo, 
+import {
+  PlayCircle,
+  FileText,
+  FileVideo,
   Search,
   Filter,
   Download,
@@ -17,7 +17,7 @@ import {
   CheckCircle2,
   Lock
 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
+import { generateCertificate } from './generateCertificate';
 
 interface VideoProgress {
   [day: number]: boolean;
@@ -50,28 +50,28 @@ export default function LMS() {
   const calculateCurrentDay = () => {
     console.log('Profile:', profile);
     console.log('Registration date from profile:', profile?.registrationDate);
-    
+
     if (!profile?.registrationDate) {
       console.log('No registrationDate in profile, defaulting to Day 1');
       setCurrentDay(1);
       return;
     }
-    
+
     // Fix single-digit day in date format (e.g., 2026-05-1T -> 2026-05-01T)
     let dateStr = profile.registrationDate;
     dateStr = dateStr.replace(/-(\d)T/g, '-0$1T');
-    
+
     const registrationDate = new Date(dateStr);
     console.log('Fixed date string:', dateStr);
     console.log('Parsed registration date:', registrationDate);
     console.log('Is valid date:', !isNaN(registrationDate.getTime()));
-    
+
     if (isNaN(registrationDate.getTime())) {
       console.log('Invalid registration date, defaulting to Day 1');
       setCurrentDay(1);
       return;
     }
-    
+
     const today = new Date();
     const diffTime = Math.abs(today.getTime() - registrationDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -110,7 +110,7 @@ export default function LMS() {
       if (progressDoc.exists()) {
         const progressData = progressDoc.data();
         setVideoProgress(progressData.completedVideos || {});
-        
+
         // Check if all uploaded videos are completed
         const completedCount = Object.values(progressData.completedVideos || {}).filter(v => v).length;
         setIsCourseCompleted(completedCount === dailyVideos.length && dailyVideos.length > 0);
@@ -125,7 +125,7 @@ export default function LMS() {
     try {
       const progressRef = doc(db, 'userVideoProgress', `${user.uid}-${profile?.internshipDomain}`);
       const newProgress = { ...videoProgress, [day]: true };
-      
+
       await setDoc(progressRef, {
         userId: user.uid,
         course: profile?.internshipDomain,
@@ -133,16 +133,16 @@ export default function LMS() {
         totalHours: Object.keys(newProgress).length, // 1 hour per video
         updatedAt: new Date().toISOString()
       }, { merge: true });
-      
+
       setVideoProgress(newProgress);
-      
+
       // Update user profile with total hours
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, {
         totalHoursCompleted: Object.keys(newProgress).length,
         lastVideoCompletedAt: new Date().toISOString()
       });
-      
+
       // Check if all uploaded videos are completed
       const completedCount = Object.values(newProgress).filter(v => v).length;
       setIsCourseCompleted(completedCount === dailyVideos.length && dailyVideos.length > 0);
@@ -152,58 +152,58 @@ export default function LMS() {
     }
   };
 
-  const generateCertificate = () => {
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const W = 297, H = 210;
-    const courseName = profile?.internshipDomain || 'Course Name';
-    
-    // Background
-    doc.setFillColor(240, 249, 255);
-    doc.rect(0, 0, W, H, 'F');
-    
-    // Border
-    doc.setDrawColor(37, 99, 235);
-    doc.setLineWidth(3);
-    doc.rect(10, 10, W - 20, H - 20);
-    doc.setLineWidth(1);
-    doc.rect(15, 15, W - 30, H - 30);
-    
-    // Header
-    doc.setFontSize(36);
-    doc.setTextColor(37, 99, 235);
-    doc.setFont('Helvetica', 'bold');
-    doc.text('Certificate of Completion', W / 2, 50, { align: 'center' });
-    
-    // Content
-    doc.setFontSize(16);
-    doc.setTextColor(71, 85, 105);
-    doc.setFont('Helvetica', 'normal');
-    doc.text('This is to certify that', W / 2, 75, { align: 'center' });
-    
-    doc.setFontSize(28);
-    doc.setTextColor(15, 23, 42);
-    doc.setFont('Helvetica', 'bold');
-    doc.text(profile?.fullName || 'Student Name', W / 2, 95, { align: 'center' });
-    
-    doc.setFontSize(16);
-    doc.setTextColor(71, 85, 105);
-    doc.setFont('Helvetica', 'normal');
-    doc.text('has successfully completed the learning program in', W / 2, 115, { align: 'center' });
-    
-    doc.setFontSize(24);
-    doc.setTextColor(37, 99, 235);
-    doc.setFont('Helvetica', 'bold');
-    doc.text(courseName, W / 2, 135, { align: 'center' });
-    
-    // Footer
-    doc.setFontSize(12);
-    doc.setTextColor(107, 114, 128);
-    doc.setFont('Helvetica', 'normal');
-    doc.text('InternMitra - Internship Program', W / 2, 175, { align: 'center' });
-    doc.text(new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }), W / 2, 185, { align: 'center' });
-    
-    doc.save(`${profile?.fullName || 'Certificate'}_${courseName.replace(/\s+/g, '_')}_Certificate.pdf`);
-  };
+  // const generateCertificate = () => {
+  //   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  //   const W = 297, H = 210;
+  //   const courseName = profile?.internshipDomain || 'Course Name';
+
+  //   // Background
+  //   doc.setFillColor(240, 249, 255);
+  //   doc.rect(0, 0, W, H, 'F');
+
+  //   // Border
+  //   doc.setDrawColor(37, 99, 235);
+  //   doc.setLineWidth(3);
+  //   doc.rect(10, 10, W - 20, H - 20);
+  //   doc.setLineWidth(1);
+  //   doc.rect(15, 15, W - 30, H - 30);
+
+  //   // Header
+  //   doc.setFontSize(36);
+  //   doc.setTextColor(37, 99, 235);
+  //   doc.setFont('Helvetica', 'bold');
+  //   doc.text('Certificate of Completion', W / 2, 50, { align: 'center' });
+
+  //   // Content
+  //   doc.setFontSize(16);
+  //   doc.setTextColor(71, 85, 105);
+  //   doc.setFont('Helvetica', 'normal');
+  //   doc.text('This is to certify that', W / 2, 75, { align: 'center' });
+
+  //   doc.setFontSize(28);
+  //   doc.setTextColor(15, 23, 42);
+  //   doc.setFont('Helvetica', 'bold');
+  //   doc.text(profile?.fullName || 'Student Name', W / 2, 95, { align: 'center' });
+
+  //   doc.setFontSize(16);
+  //   doc.setTextColor(71, 85, 105);
+  //   doc.setFont('Helvetica', 'normal');
+  //   doc.text('has successfully completed the learning program in', W / 2, 115, { align: 'center' });
+
+  //   doc.setFontSize(24);
+  //   doc.setTextColor(37, 99, 235);
+  //   doc.setFont('Helvetica', 'bold');
+  //   doc.text(courseName, W / 2, 135, { align: 'center' });
+
+  //   // Footer
+  //   doc.setFontSize(12);
+  //   doc.setTextColor(107, 114, 128);
+  //   doc.setFont('Helvetica', 'normal');
+  //   doc.text('InternMitra - Internship Program', W / 2, 175, { align: 'center' });
+  //   doc.text(new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }), W / 2, 185, { align: 'center' });
+
+  //   doc.save(`${profile?.fullName || 'Certificate'}_${courseName.replace(/\s+/g, '_')}_Certificate.pdf`);
+  // };
 
   return (
     <div className="space-y-12">
@@ -213,19 +213,19 @@ export default function LMS() {
           <p className="text-xl text-slate-500 font-bold italic leading-relaxed">Access your curated library for <span className="text-slate-900 border-b-4 border-blue-50">{profile?.internshipDomain}</span>.</p>
         </div>
         <div className="flex items-center gap-4">
-           <div className="text-right">
-             <div className="text-sm font-black text-slate-400 uppercase tracking-widest">Day {currentDay} of 15</div>
-             <div className="text-xs font-bold text-slate-500">{Object.values(videoProgress).filter(v => v).length} videos completed • {Object.values(videoProgress).filter(v => v).length} hours</div>
-           </div>
-           {isCourseCompleted && (
-             <button
-               onClick={generateCertificate}
-               className="bg-green-600 text-white p-5 px-10 rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-green-600/20 hover:bg-green-700 transition uppercase tracking-widest text-xs"
-             >
-               <Download size={20} />
-               Download Certificate
-             </button>
-           )}
+          <div className="text-right">
+            <div className="text-sm font-black text-slate-400 uppercase tracking-widest">Day {currentDay} of 15</div>
+            <div className="text-xs font-bold text-slate-500">{Object.values(videoProgress).filter(v => v).length} videos completed • {Object.values(videoProgress).filter(v => v).length} hours</div>
+          </div>
+          {isCourseCompleted && (
+            <button
+              onClick={() => generateCertificate(profile)}
+              className="bg-green-600 text-white p-5 px-10 rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-green-600/20 hover:bg-green-700 transition uppercase tracking-widest text-xs"
+            >
+              <Download size={20} />
+              Download Certificate
+            </button>
+          )}
         </div>
       </header>
 
@@ -233,9 +233,9 @@ export default function LMS() {
       <div className="flex flex-col md:flex-row gap-6">
         <div className="relative flex-grow group">
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={24} />
-          <input 
-            type="text" 
-            placeholder="Search for videos, PPTs, or assignments..." 
+          <input
+            type="text"
+            placeholder="Search for videos, PPTs, or assignments..."
             className="w-full h-16 pl-16 pr-6 bg-white border border-slate-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all font-bold text-slate-900 placeholder:text-slate-400"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -254,7 +254,7 @@ export default function LMS() {
               <div className="w-2 h-2 bg-red-600 rounded-full" />
               Live Training Session
             </div>
-            <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mb-8 tracking-tighter leading-tight uppercase italic">Watch Daily <br/><span className="text-blue-600">Live Classes</span></h2>
+            <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mb-8 tracking-tighter leading-tight uppercase italic">Watch Daily <br /><span className="text-blue-600">Live Classes</span></h2>
             <p className="text-slate-500 font-bold italic mb-10 text-xl leading-relaxed max-w-lg">
               "Direct access to our YouTube live broadcast. Join the daily 4-hour immersive sessions with industry experts."
             </p>
@@ -273,7 +273,7 @@ export default function LMS() {
               </div>
             </div>
           </div>
-          
+
           <div className="aspect-video w-full bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl relative group-hover:scale-[1.02] transition-transform duration-700">
             {videoActive ? (
               <iframe
@@ -306,28 +306,26 @@ export default function LMS() {
           dailyVideos.map((video, i) => {
             const isLocked = video.day > currentDay;
             const isCompleted = videoProgress[video.day];
-            
+
             return (
               <motion.div
                 key={video.id}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.1 }}
-                className={`bg-white p-10 rounded-[3rem] border shadow-xl flex flex-col group transition-all duration-500 relative overflow-hidden ${
-                  isLocked 
-                    ? 'border-slate-100 opacity-60' 
-                    : isCompleted 
-                      ? 'border-green-200 shadow-green-900/[0.02]' 
-                      : 'border-slate-100 shadow-slate-900/[0.02] hover:shadow-2xl hover:border-blue-100'
-                }`}
+                className={`bg-white p-10 rounded-[3rem] border shadow-xl flex flex-col group transition-all duration-500 relative overflow-hidden ${isLocked
+                  ? 'border-slate-100 opacity-60'
+                  : isCompleted
+                    ? 'border-green-200 shadow-green-900/[0.02]'
+                    : 'border-slate-100 shadow-slate-900/[0.02] hover:shadow-2xl hover:border-blue-100'
+                  }`}
               >
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-10 border border-white shadow-md group-hover:rotate-12 transition-transform relative z-10 ${
-                  isLocked 
-                    ? 'bg-slate-100 text-slate-400' 
-                    : isCompleted 
-                      ? 'bg-green-50 text-green-600' 
-                      : 'bg-blue-50 text-blue-600'
-                }`}>
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-10 border border-white shadow-md group-hover:rotate-12 transition-transform relative z-10 ${isLocked
+                  ? 'bg-slate-100 text-slate-400'
+                  : isCompleted
+                    ? 'bg-green-50 text-green-600'
+                    : 'bg-blue-50 text-blue-600'
+                  }`}>
                   {isLocked ? <Lock size={32} /> : isCompleted ? <CheckCircle2 size={32} /> : <PlayCircle size={32} />}
                 </div>
                 <div className="flex-grow relative z-10">
@@ -337,9 +335,8 @@ export default function LMS() {
                     <Calendar size={12} />
                     Day {video.day}
                   </div>
-                  <h3 className={`text-2xl font-black mb-6 leading-tight uppercase tracking-tighter ${
-                    isLocked ? 'text-slate-400' : 'text-slate-900 group-hover:text-blue-600 transition-colors'
-                  }`}>{video.title}</h3>
+                  <h3 className={`text-2xl font-black mb-6 leading-tight uppercase tracking-tighter ${isLocked ? 'text-slate-400' : 'text-slate-900 group-hover:text-blue-600 transition-colors'
+                    }`}>{video.title}</h3>
                   {video.description && (
                     <p className="text-slate-500 italic font-bold mb-10 text-sm line-clamp-2">{video.description}</p>
                   )}
@@ -378,16 +375,16 @@ export default function LMS() {
 
         {/* Feature Teaser Card */}
         <div className="bg-slate-900 p-10 rounded-[3rem] text-white flex flex-col justify-between shadow-2xl shadow-slate-900/40 overflow-hidden relative group">
-           <div className="relative z-10">
-             <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mb-10 shadow-xl shadow-blue-600/20 group-hover:scale-110 transition-transform">
-               <BookOpenCheck size={36} />
-             </div>
-             <h3 className="text-3xl font-black mb-6 tracking-tighter leading-tight italic uppercase">Live Training <br/>Archive</h3>
-             <p className="text-slate-400 font-bold leading-relaxed italic mb-10 text-sm">Access all past 4-hour daily sessions for reference.</p>
-             <button className="w-full py-5 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition shadow-xl">Watch Recordings</button>
-           </div>
-           
-           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[80px] -translate-y-1/2 translate-x-1/2 rounded-full group-hover:scale-150 transition-all duration-700" />
+          <div className="relative z-10">
+            <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mb-10 shadow-xl shadow-blue-600/20 group-hover:scale-110 transition-transform">
+              <BookOpenCheck size={36} />
+            </div>
+            <h3 className="text-3xl font-black mb-6 tracking-tighter leading-tight italic uppercase">Live Training <br />Archive</h3>
+            <p className="text-slate-400 font-bold leading-relaxed italic mb-10 text-sm">Access all past 4-hour daily sessions for reference.</p>
+            <button className="w-full py-5 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition shadow-xl">Watch Recordings</button>
+          </div>
+
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[80px] -translate-y-1/2 translate-x-1/2 rounded-full group-hover:scale-150 transition-all duration-700" />
         </div>
       </div>
     </div>

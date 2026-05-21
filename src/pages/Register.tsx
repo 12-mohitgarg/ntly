@@ -212,7 +212,13 @@ export default function Register() {
 
       navigate('/payment');
     } catch (err: any) {
-      setError(err.message);
+      // ✅ Email already exists → Step 1 pe wapas bhejo
+      if (err.code === 'auth/email-already-in-use') {
+        setError("This email is already registered. Please use a different email.");
+        setStep(1); // ← Step 1 pe wapas
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
