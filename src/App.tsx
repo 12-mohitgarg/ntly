@@ -23,6 +23,7 @@ import ManageColleges from './pages/admin/ManageColleges';
 import ManageCourses from './pages/admin/ManageCourses';
 import ManageUniversities from './pages/admin/ManageUniversities';
 import ManageSubjects from './pages/admin/ManageSubjects';
+import ManageDailyVideos from './pages/admin/ManageDailyVideos';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth();
@@ -67,6 +68,7 @@ export default function App() {
             <Route path="/admin/courses" element={<AdminRoute><ManageCourses /></AdminRoute>} />
             <Route path="/admin/universities" element={<AdminRoute><ManageUniversities /></AdminRoute>} />
             <Route path="/admin/subjects" element={<AdminRoute><ManageSubjects /></AdminRoute>} />
+            <Route path="/admin/daily-videos" element={<AdminRoute><ManageDailyVideos /></AdminRoute>} />
           </Routes>
         </div>
       </AuthProvider>

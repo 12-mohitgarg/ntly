@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../components/AuthContext';
+import { db } from '../../lib/firebase';
+import { collection, getDocs, query, orderBy, where, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import { 
   PlayCircle, 
@@ -10,21 +12,196 @@ import {
   Download,
   BookOpenCheck,
   ChevronRight,
-  MonitorPlay
+  MonitorPlay,
+  Calendar,
+  CheckCircle2,
+  Lock
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+
+interface VideoProgress {
+  [day: number]: boolean;
+}
 
 export default function LMS() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [videoActive, setVideoActive] = useState(false);
+  const [dailyVideos, setDailyVideos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [videoProgress, setVideoProgress] = useState<VideoProgress>({});
+  const [currentDay, setCurrentDay] = useState(0);
+  const [isCourseCompleted, setIsCourseCompleted] = useState(false);
 
-  const materials = [
-    { title: 'Introduction to ' + profile?.internshipDomain, type: 'Video', duration: '45 mins', size: '250MB', icon: PlayCircle, color: 'text-blue-600', bg: 'bg-blue-50', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-    { title: 'Advanced Concepts & Best Practices', type: 'PPT', duration: '12 Slides', size: '15MB', icon: FileVideo, color: 'text-orange-600', bg: 'bg-orange-50', url: 'https://drive.google.com/drive/folders/internmitra-ppt' },
-    { title: 'Industry Project Case Studies', type: 'PDF', duration: '20 Pages', size: '4MB', icon: FileText, color: 'text-green-600', bg: 'bg-green-50', url: 'https://drive.google.com/drive/folders/internmitra-pdf' },
-    { title: 'Development Tools & Setup Guide', type: 'Video', duration: '30 mins', size: '120MB', icon: PlayCircle, color: 'text-purple-600', bg: 'bg-purple-50', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-    { title: 'Assessment Preparation Guide', type: 'PDF', duration: '5 Pages', size: '2MB', icon: FileText, color: 'text-red-600', bg: 'bg-red-50', url: 'https://drive.google.com/drive/folders/internmitra-pdf' },
-  ];
+  useEffect(() => {
+    fetchDailyVideos();
+    fetchVideoProgress();
+    calculateCurrentDay();
+  }, [profile]);
+
+  useEffect(() => {
+    // Re-check completion status after videos are loaded
+    const completedCount = Object.values(videoProgress).filter(v => v).length;
+    setIsCourseCompleted(completedCount === 15);
+  }, [dailyVideos, videoProgress]);
+
+  const calculateCurrentDay = () => {
+    console.log('Profile:', profile);
+    console.log('Registration date from profile:', profile?.registrationDate);
+    
+    if (!profile?.registrationDate) {
+      console.log('No registrationDate in profile, defaulting to Day 1');
+      setCurrentDay(1);
+      return;
+    }
+    
+    // Fix single-digit day in date format (e.g., 2026-05-1T -> 2026-05-01T)
+    let dateStr = profile.registrationDate;
+    dateStr = dateStr.replace(/-(\d)T/g, '-0$1T');
+    
+    const registrationDate = new Date(dateStr);
+    console.log('Fixed date string:', dateStr);
+    console.log('Parsed registration date:', registrationDate);
+    console.log('Is valid date:', !isNaN(registrationDate.getTime()));
+    
+    if (isNaN(registrationDate.getTime())) {
+      console.log('Invalid registration date, defaulting to Day 1');
+      setCurrentDay(1);
+      return;
+    }
+    
+    const today = new Date();
+    const diffTime = Math.abs(today.getTime() - registrationDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const calculatedDay = Math.min(diffDays, 15);
+    console.log('Today:', today);
+    console.log('Days difference:', diffDays);
+    console.log('Calculated current day:', calculatedDay);
+    setCurrentDay(calculatedDay);
+  };
+
+  const fetchDailyVideos = async () => {
+    try {
+      const videosRef = collection(db, 'dailyVideos');
+      const userCourse = profile?.internshipDomain || '';
+      console.log('Fetching videos for course:', userCourse);
+      const q = query(videosRef, where('course', '==', userCourse), orderBy('day'));
+      const snapshot = await getDocs(q);
+      const videosData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log('Fetched videos:', videosData);
+      setDailyVideos(videosData);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching daily videos:', error);
+      setLoading(false);
+    }
+  };
+
+  const fetchVideoProgress = async () => {
+    if (!user) return;
+    try {
+      const progressRef = doc(db, 'userVideoProgress', `${user.uid}-${profile?.internshipDomain}`);
+      const progressDoc = await getDoc(progressRef);
+      if (progressDoc.exists()) {
+        const progressData = progressDoc.data();
+        setVideoProgress(progressData.completedVideos || {});
+        
+        // Check if exactly 15 videos are completed
+        const completedCount = Object.values(progressData.completedVideos || {}).filter(v => v).length;
+        setIsCourseCompleted(completedCount === 15);
+      }
+    } catch (error) {
+      console.error('Error fetching video progress:', error);
+    }
+  };
+
+  const markVideoAsDone = async (day: number) => {
+    if (!user) return;
+    try {
+      const progressRef = doc(db, 'userVideoProgress', `${user.uid}-${profile?.internshipDomain}`);
+      const newProgress = { ...videoProgress, [day]: true };
+      
+      await setDoc(progressRef, {
+        userId: user.uid,
+        course: profile?.internshipDomain,
+        completedVideos: newProgress,
+        totalHours: Object.keys(newProgress).length, // 1 hour per video
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      
+      setVideoProgress(newProgress);
+      
+      // Update user profile with total hours
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        totalHoursCompleted: Object.keys(newProgress).length,
+        lastVideoCompletedAt: new Date().toISOString()
+      });
+      
+      // Check if exactly 15 videos are completed
+      const completedCount = Object.values(newProgress).filter(v => v).length;
+      setIsCourseCompleted(completedCount === 15);
+    } catch (error) {
+      console.error('Error marking video as done:', error);
+      alert('Error marking video as done');
+    }
+  };
+
+  const generateCertificate = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const W = 297, H = 210;
+    const courseName = profile?.internshipDomain || 'Course Name';
+    
+    // Background
+    doc.setFillColor(240, 249, 255);
+    doc.rect(0, 0, W, H, 'F');
+    
+    // Border
+    doc.setDrawColor(37, 99, 235);
+    doc.setLineWidth(3);
+    doc.rect(10, 10, W - 20, H - 20);
+    doc.setLineWidth(1);
+    doc.rect(15, 15, W - 30, H - 30);
+    
+    // Header
+    doc.setFontSize(36);
+    doc.setTextColor(37, 99, 235);
+    doc.setFont('Helvetica', 'bold');
+    doc.text('Certificate of Completion', W / 2, 50, { align: 'center' });
+    
+    // Content
+    doc.setFontSize(16);
+    doc.setTextColor(71, 85, 105);
+    doc.setFont('Helvetica', 'normal');
+    doc.text('This is to certify that', W / 2, 75, { align: 'center' });
+    
+    doc.setFontSize(28);
+    doc.setTextColor(15, 23, 42);
+    doc.setFont('Helvetica', 'bold');
+    doc.text(profile?.fullName || 'Student Name', W / 2, 95, { align: 'center' });
+    
+    doc.setFontSize(16);
+    doc.setTextColor(71, 85, 105);
+    doc.setFont('Helvetica', 'normal');
+    doc.text('has successfully completed the learning program in', W / 2, 115, { align: 'center' });
+    
+    doc.setFontSize(24);
+    doc.setTextColor(37, 99, 235);
+    doc.setFont('Helvetica', 'bold');
+    doc.text(courseName, W / 2, 135, { align: 'center' });
+    
+    // Footer
+    doc.setFontSize(12);
+    doc.setTextColor(107, 114, 128);
+    doc.setFont('Helvetica', 'normal');
+    doc.text('InternMitra - Internship Program', W / 2, 175, { align: 'center' });
+    doc.text(new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }), W / 2, 185, { align: 'center' });
+    
+    doc.save(`${profile?.fullName || 'Certificate'}_${courseName.replace(/\s+/g, '_')}_Certificate.pdf`);
+  };
 
   return (
     <div className="space-y-12">
@@ -34,10 +211,19 @@ export default function LMS() {
           <p className="text-xl text-slate-500 font-bold italic leading-relaxed">Access your curated library for <span className="text-slate-900 border-b-4 border-blue-50">{profile?.internshipDomain}</span>.</p>
         </div>
         <div className="flex items-center gap-4">
-           <button className="bg-blue-600 text-white p-5 px-10 rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-blue-600/20 hover:bg-blue-700 transition uppercase tracking-widest text-xs">
-             <MonitorPlay size={20} />
-             Start Learning
-           </button>
+           <div className="text-right">
+             <div className="text-sm font-black text-slate-400 uppercase tracking-widest">Day {currentDay} of 15</div>
+             <div className="text-xs font-bold text-slate-500">{Object.values(videoProgress).filter(v => v).length} videos completed • {Object.values(videoProgress).filter(v => v).length} hours</div>
+           </div>
+           {isCourseCompleted && (
+             <button
+               onClick={generateCertificate}
+               className="bg-green-600 text-white p-5 px-10 rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-green-600/20 hover:bg-green-700 transition uppercase tracking-widest text-xs"
+             >
+               <Download size={20} />
+               Download Certificate
+             </button>
+           )}
         </div>
       </header>
 
@@ -110,39 +296,83 @@ export default function LMS() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {materials.map((item, i) => (
-          <motion.div
-            key={item.title}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: i * 0.1 }}
-            className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-900/[0.02] flex flex-col group hover:shadow-2xl hover:border-blue-100 transition-all duration-500 relative overflow-hidden"
-          >
-            <div className={`w-16 h-16 ${item.bg} ${item.color} rounded-2xl flex items-center justify-center mb-10 border border-white shadow-md group-hover:rotate-12 transition-transform relative z-10`}>
-              <item.icon size={32} />
-            </div>
-            <div className="flex-grow relative z-10">
-              <div className="text-[10px] text-blue-600 font-black uppercase tracking-[0.3em] mb-3">{item.type} • <span className="text-slate-400">{item.size}</span></div>
-              <h3 className="text-2xl font-black text-slate-900 mb-6 leading-tight group-hover:text-blue-600 transition-colors uppercase tracking-tighter">{item.title}</h3>
-              <p className="text-slate-500 italic font-bold mb-10 text-sm">Session Duration: {item.duration}</p>
-            </div>
-            <div className="pt-8 border-t border-slate-50 flex items-center justify-between relative z-10">
-               <button
-                 onClick={() => window.open(item.url, '_blank')}
-                 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition underline underline-offset-8"
-               >
-                 <Download size={14} /> Download Asset
-               </button>
-               <button
-                 onClick={() => window.open(item.url, '_blank')}
-                 className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all duration-300 shadow-inner group/btn"
-               >
-                 <ChevronRight size={24} className="group-hover/btn:translate-x-0.5 transition-transform" />
-               </button>
-            </div>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full translate-x-1/2 -translate-y-1/2 -z-0" />
-          </motion.div>
-        ))}
+        {loading ? (
+          <div className="col-span-full text-center py-12 text-slate-500 font-bold italic">Loading daily videos...</div>
+        ) : dailyVideos.length === 0 ? (
+          <div className="col-span-full text-center py-12 text-slate-500 font-bold italic">No daily videos available yet.</div>
+        ) : (
+          dailyVideos.map((video, i) => {
+            const isLocked = video.day > currentDay;
+            const isCompleted = videoProgress[video.day];
+            
+            return (
+              <motion.div
+                key={video.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.1 }}
+                className={`bg-white p-10 rounded-[3rem] border shadow-xl flex flex-col group transition-all duration-500 relative overflow-hidden ${
+                  isLocked 
+                    ? 'border-slate-100 opacity-60' 
+                    : isCompleted 
+                      ? 'border-green-200 shadow-green-900/[0.02]' 
+                      : 'border-slate-100 shadow-slate-900/[0.02] hover:shadow-2xl hover:border-blue-100'
+                }`}
+              >
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-10 border border-white shadow-md group-hover:rotate-12 transition-transform relative z-10 ${
+                  isLocked 
+                    ? 'bg-slate-100 text-slate-400' 
+                    : isCompleted 
+                      ? 'bg-green-50 text-green-600' 
+                      : 'bg-blue-50 text-blue-600'
+                }`}>
+                  {isLocked ? <Lock size={32} /> : isCompleted ? <CheckCircle2 size={32} /> : <PlayCircle size={32} />}
+                </div>
+                <div className="flex-grow relative z-10">
+                  <div className="text-[10px] font-black uppercase tracking-[0.3em] mb-3 flex items-center gap-2 ${
+                    isLocked ? 'text-slate-400' : isCompleted ? 'text-green-600' : 'text-blue-600'
+                  }">
+                    <Calendar size={12} />
+                    Day {video.day}
+                  </div>
+                  <h3 className={`text-2xl font-black mb-6 leading-tight uppercase tracking-tighter ${
+                    isLocked ? 'text-slate-400' : 'text-slate-900 group-hover:text-blue-600 transition-colors'
+                  }`}>{video.title}</h3>
+                  {video.description && (
+                    <p className="text-slate-500 italic font-bold mb-10 text-sm line-clamp-2">{video.description}</p>
+                  )}
+                </div>
+                <div className="pt-8 border-t border-slate-50 flex items-center justify-between relative z-10">
+                  {isLocked ? (
+                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      <Lock size={14} className="inline mr-1" /> Unlocks Day {video.day}
+                    </div>
+                  ) : isCompleted ? (
+                    <div className="text-[10px] font-black uppercase tracking-widest text-green-600">
+                      <CheckCircle2 size={14} className="inline mr-1" /> Completed
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => markVideoAsDone(video.day)}
+                      className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition underline underline-offset-8"
+                    >
+                      <CheckCircle2 size={14} /> Mark as Done
+                    </button>
+                  )}
+                  {!isLocked && (
+                    <button
+                      onClick={() => window.open(video.youtubeUrl, '_blank')}
+                      className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all duration-300 shadow-inner group/btn"
+                    >
+                      <ChevronRight size={24} className="group-hover/btn:translate-x-0.5 transition-transform" />
+                    </button>
+                  )}
+                </div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full translate-x-1/2 -translate-y-1/2 -z-0" />
+              </motion.div>
+            );
+          })
+        )}
 
         {/* Feature Teaser Card */}
         <div className="bg-slate-900 p-10 rounded-[3rem] text-white flex flex-col justify-between shadow-2xl shadow-slate-900/40 overflow-hidden relative group">

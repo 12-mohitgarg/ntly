@@ -90,5 +90,14 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isSignedIn();
     }
+
+    match /dailyVideos/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /userVideoProgress/{docId} {
+      allow read, write: if isSignedIn();
+    }
   }
 }
