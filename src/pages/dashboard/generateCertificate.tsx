@@ -1,268 +1,526 @@
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
+import { db } from '../../lib/firebase';
 
-export const generateCertificate = async (profile: any) => {
-    const doc = new jsPDF({
+import {
+    doc,
+    getDoc,
+    updateDoc,
+    runTransaction
+} from 'firebase/firestore';
+
+export const generateCertificate = async (
+    profile: any,
+    userId: string
+) => {
+
+    // =========================
+    // CERTIFICATE NUMBER
+    // =========================
+
+    const getCertificateNumber = async (): Promise<string> => {
+
+        if (!userId) {
+            throw new Error('User ID missing');
+        }
+
+        const userDoc = await getDoc(
+            doc(db, 'users', userId)
+        );
+
+        const userData = userDoc.data();
+
+        // already exists
+        if (userData?.certificateNumber) {
+            return userData.certificateNumber;
+        }
+
+        // sequential counter
+        const counterRef = doc(
+            db,
+            'counters',
+            'certificate'
+        );
+
+        const nextNumber = await runTransaction(
+            db,
+            async (transaction) => {
+
+                const counterDoc =
+                    await transaction.get(counterRef);
+
+                // first time
+                if (!counterDoc.exists()) {
+
+                    transaction.set(counterRef, {
+                        count: 10001,
+                        lastUpdated:
+                            new Date().toISOString()
+                    });
+
+                    return 10001;
+                }
+
+                const currentCount =
+                    counterDoc.data().count;
+
+                const newCount =
+                    currentCount + 1;
+
+                transaction.update(counterRef, {
+                    count: newCount,
+                    lastUpdated:
+                        new Date().toISOString()
+                });
+
+                return newCount;
+            }
+        );
+
+        // save in user profile
+        await updateDoc(
+            doc(db, 'users', userId),
+            {
+                certificateNumber:
+                    nextNumber.toString()
+            }
+        );
+
+        return nextNumber.toString();
+    };
+
+    // =========================
+    // GET CERTIFICATE NUMBER
+    // =========================
+
+    const certificateNumber =
+        await getCertificateNumber();
+
+    // =========================
+    // PDF INIT
+    // =========================
+
+    const docPDF = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
     });
 
-    const pageWidth = 210;
-    const pageHeight = 297;
+    const W = 210;
+    const H = 297;
+    const ML = 14;
 
     // =========================
-    // DEMO / DYNAMIC DATA
+    // LOAD IMAGES
     // =========================
 
-    const studentName = profile?.fullName || 'Rahul Kumar';
-    const fatherName = profile?.fatherName || 'Ramesh Kumar';
-    const registrationNo = profile?.registrationNo || 'IM20260001';
-    const instituteName =
-        profile?.collegeName || 'ABC Engineering College';
+    const loadImage = (src: string) => {
+        return new Promise<string>((resolve) => {
 
-    const subject = profile?.internshipDomain || 'Web Development';
+            const img = new Image();
 
-    const year = profile?.year || '2026';
+            img.crossOrigin = 'Anonymous';
 
-    const startDate = profile?.startDate || '01 Jan 2026';
-    const endDate = profile?.endDate || '30 Jan 2026';
+            img.onload = () => {
+
+                const canvas =
+                    document.createElement('canvas');
+
+                canvas.width =
+                    img.naturalWidth;
+
+                canvas.height =
+                    img.naturalHeight;
+
+                const ctx =
+                    canvas.getContext('2d');
+
+                if (ctx) {
+
+                    ctx.drawImage(
+                        img,
+                        0,
+                        0
+                    );
+
+                    resolve(
+                        canvas.toDataURL(
+                            'image/png'
+                        )
+                    );
+                }
+            };
+
+            img.src = src;
+        });
+    };
+
+    const headerImg =
+        await loadImage('/ii.png');
+
+    const footerImg =
+        await loadImage('/ff.png');
+
+    const watermarkImg =
+        await loadImage('/dded.jpeg');
+
+    // =========================
+    // STUDENT DATA
+    // =========================
+
+    const studentName =
+        profile?.fullName ||
+        '[Student Full Name]';
+
+    const rollNumber =
+        profile?.universityRoll ||
+        '[Roll Number]';
+
+    const college =
+        profile?.college ||
+        '[College Name]';
+
+    const department =
+        profile?.department ||
+        '[Department]';
+
+    const semester =
+        profile?.semester ||
+        '[Semester]';
+
+    const domain =
+        profile?.internshipDomain ||
+        '[Domain]';
 
     const totalHours =
-        profile?.totalHoursCompleted || '120 Hours';
-
-    const project =
-        profile?.project ||
-        'React.js, Node.js & Full Stack Development';
+        profile?.totalHoursCompleted ||
+        '120';
 
     // =========================
-    // BACKGROUND
+    // DATE FORMAT
     // =========================
 
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, pageWidth, pageHeight, 'F');
+    const formatDate = (
+        iso: string | undefined
+    ) => {
 
-    // Top Design
-    doc.setFillColor(25, 25, 112);
-    doc.rect(0, 0, pageWidth, 12, 'F');
+        if (!iso)
+            return '01/01/2026';
 
-    // Bottom Design
-    doc.setFillColor(25, 25, 112);
-    doc.rect(0, 285, pageWidth, 12, 'F');
+        const d = new Date(iso);
 
-    // Border
-    doc.setDrawColor(60, 60, 60);
-    doc.rect(5, 5, 200, 287);
+        const dd = String(
+            d.getDate()
+        ).padStart(2, '0');
+
+        const mm = String(
+            d.getMonth() + 1
+        ).padStart(2, '0');
+
+        const yyyy =
+            d.getFullYear();
+
+        return `${dd}/${mm}/${yyyy}`;
+    };
+
+    const letterDate =
+        formatDate(
+            profile?.registrationDate
+        );
+
+    // =========================
+    // IMAGE DIMENSIONS
+    // =========================
+
+    const headerH =
+        (252 / 998) * W;
+
+    const footerH =
+        (322 / 1002) * W;
 
     // =========================
     // HEADER
     // =========================
 
-    doc.setFontSize(30);
-    doc.setTextColor(30, 40, 120);
-    doc.setFont('helvetica', 'bold');
-    doc.text('InternMitra', 20, 28);
-
-    doc.setFontSize(10);
-    doc.setTextColor(80);
-    doc.text('Learn Skills . Earn stipend', 21, 34);
-
-    // Right Side Contact
-    doc.setFontSize(10);
-    doc.setTextColor(0);
-
-    doc.text('www.internmitra.com', 145, 20);
-    doc.text('9693921517, 9631185896', 145, 27);
-    doc.text('info@internmitra.com', 145, 34);
-    doc.text('Kisan Colony, Khagaul, Patna', 145, 41);
-
-    // CIN
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text('CIN : U78300BR2025PTC081140', 15, 48);
-
-    // Line
-    doc.line(10, 52, 200, 52);
-
-    // =========================
-    // TITLE
-    // =========================
-
-    doc.setTextColor(40, 40, 180);
-
-    doc.setFontSize(18);
-    doc.text(
-        'INTERNSHIP COMPLETION CERTIFICATE',
-        pageWidth / 2,
-        60,
-        {
-            align: 'center'
-        }
+    docPDF.addImage(
+        headerImg,
+        'PNG',
+        0,
+        0,
+        W,
+        headerH
     );
 
-    doc.line(10, 64, 200, 64);
-
     // =========================
-    // REF NO
+    // WATERMARK
     // =========================
 
-    doc.setTextColor(0);
+    const wmSize = 90;
 
-    doc.setFontSize(12);
+    const wmX =
+        (W - wmSize) / 2;
 
-    doc.setFont('helvetica', 'normal');
+    const wmY =
+        (H - wmSize) / 2;
 
-    doc.text(
-        'Letter Ref. No.:',
-        10,
-        72
+    (docPDF as any)
+        .saveGraphicsState();
+
+    (docPDF as any)
+        .setGState(
+            (docPDF as any).GState({
+                opacity: 0.10
+            })
+        );
+
+    docPDF.addImage(
+        watermarkImg,
+        'JPEG',
+        wmX,
+        wmY,
+        wmSize,
+        wmSize
     );
 
-    doc.setFont('helvetica', 'bold');
-
-    doc.text(
-        'IM/2026/ICC/10000',
-        45,
-        72
-    );
-
-    doc.text(
-        `Date: ${new Date().toLocaleDateString()}`,
-        145,
-        72
-    );
+    (docPDF as any)
+        .restoreGraphicsState();
 
     // =========================
     // BODY
     // =========================
 
-    doc.setFont('helvetica', 'normal');
+    let y = headerH + 5;
 
-    doc.setFontSize(12);
+    docPDF.setFontSize(8.5);
+
+    // =========================
+    // REF NO
+    // =========================
+
+    docPDF.setFont(
+        'Helvetica',
+        'normal'
+    );
+
+    docPDF.text(
+        'Letter Ref. No.: ',
+        ML,
+        y
+    );
+
+    docPDF.setFont(
+        'Helvetica',
+        'bold'
+    );
+
+    docPDF.text(
+        `IM/2026/ICC/${certificateNumber}`,
+        ML +
+        docPDF.getTextWidth(
+            'Letter Ref. No.: '
+        ),
+        y
+    );
+
+    docPDF.setFont(
+        'Helvetica',
+        'normal'
+    );
+
+    docPDF.text(
+        `Date: ${letterDate}`,
+        W - ML,
+        y,
+        {
+            align: 'right'
+        }
+    );
+
+    y += 12;
+
+    // =========================
+    // TITLE
+    // =========================
+
+    docPDF.setFontSize(18);
+
+    docPDF.setFont(
+        'Helvetica',
+        'bold'
+    );
+
+    docPDF.text(
+        'INTERNSHIP COMPLETION CERTIFICATE',
+        W / 2,
+        y,
+        {
+            align: 'center'
+        }
+    );
+
+    y += 14;
+
+    // =========================
+    // BODY TEXT
+    // =========================
+
+    docPDF.setFontSize(11);
+
+    docPDF.setFont(
+        'Helvetica',
+        'normal'
+    );
 
     const bodyText = `
-This is certify that Mr./Ms. ${studentName}. 
-S/o or D/o ${fatherName}, bearing University Registration / Enrolment No. ${registrationNo} 
-of ${instituteName}. Session ${year} with Major in ${subject}, 
-has successfully completed his/her internship with InternMitra.
-  `;
-
-    const splitText = doc.splitTextToSize(bodyText, 180);
-
-    doc.text(splitText, 10, 85);
-
-    // Duration
-    doc.setFont('helvetica', 'bold');
-
-    doc.text(
-        `Internship Duration: `,
-        10,
-        120
-    );
-
-    doc.setFont('helvetica', 'normal');
-
-    doc.text(
-        `From ${startDate} to ${endDate}`,
-        58,
-        120
-    );
-
-    // Hours
-    doc.setFont('helvetica', 'bold');
-
-    doc.text(
-        `Total Hours Completed: `,
-        10,
-        128
-    );
-
-    doc.setFont('helvetica', 'normal');
-
-    doc.text(
-        `${totalHours}`,
-        60,
-        128
-    );
-
-    // Assessment Heading
-    doc.setFont('helvetica', 'bold');
-
-    doc.setFontSize(16);
-
-    doc.text(
-        'Internship Performance Assessment',
-        10,
-        145
-    );
-
-    // Project
-    doc.setFontSize(12);
-
-    doc.setFont('helvetica', 'normal');
-
-    const projectText = `
-During the internship, the student worked on ${project}. 
-Based on our observation and mentorship, we assess the student's performance as follows
+This is to certify that ${studentName},
+bearing University Roll Number ${rollNumber},
+from ${college},
+Department ${department},
+Semester ${semester},
+has successfully completed the internship programme in ${domain}
+at InternMitra Technologies Private Limited.
 `;
 
-    const splitProject = doc.splitTextToSize(
-        projectText,
-        180
+    const splitBody =
+        docPDF.splitTextToSize(
+            bodyText,
+            W - 2 * ML
+        );
+
+    docPDF.text(
+        splitBody,
+        ML,
+        y
     );
 
-    doc.text(splitProject, 10, 155);
+    y +=
+        splitBody.length * 6 + 10;
 
     // =========================
-    // TABLE
+    // DETAILS HEADING
     // =========================
 
-    const startY = 175;
+    docPDF.setFont(
+        'Helvetica',
+        'bold'
+    );
+
+    docPDF.text(
+        'Internship Details',
+        ML,
+        y
+    );
+
+    y += 10;
+
+    // =========================
+    // DETAILS TABLE
+    // =========================
 
     const rows = [
-        ['1', 'Technical Knowledge & Application', 'Outstanding'],
-        ['2', 'Quality of Work & Task Completion', 'Good'],
-        ['3', 'Initiative & Problem-Solving Ability', 'Outstanding'],
-        ['4', 'Communication & Interpersonal Skills', 'Good'],
-        ['5', 'Punctuality, Discipline & Professional Conduct', 'Outstanding']
+        [
+            'Student Name',
+            studentName
+        ],
+        [
+            'University Roll Number',
+            rollNumber
+        ],
+        [
+            'College / Institution',
+            college
+        ],
+        [
+            'Department',
+            department
+        ],
+        [
+            'Semester',
+            semester
+        ],
+        [
+            'Internship Domain',
+            domain
+        ],
+        [
+            'Total Hours Completed',
+            `${totalHours} Hours`
+        ],
+        [
+            'Certificate Number',
+            `IM/2026/ICC/${certificateNumber}`
+        ]
     ];
 
-    // Header
-    doc.setFillColor(230, 230, 230);
+    rows.forEach(
+        ([label, value]) => {
 
-    doc.rect(10, startY, 15, 15, 'FD');
-    doc.rect(25, startY, 95, 15, 'FD');
-    doc.rect(120, startY, 75, 15, 'FD');
+            docPDF.setFont(
+                'Helvetica',
+                'normal'
+            );
 
-    doc.text('S.No.', 14, startY + 9);
+            docPDF.text(
+                String(label),
+                ML + 5,
+                y
+            );
 
-    doc.text(
-        'Assessment Criteria',
-        55,
-        startY + 9
+            docPDF.text(
+                ':',
+                78,
+                y
+            );
+
+            docPDF.setFont(
+                'Helvetica',
+                'bold'
+            );
+
+            docPDF.text(
+                String(value),
+                85,
+                y
+            );
+
+            y += 8;
+        }
     );
 
-    doc.text(
-        'Rating',
-        148,
-        startY + 9
+    y += 8;
+
+    // =========================
+    // PERFORMANCE TEXT
+    // =========================
+
+    docPDF.setFont(
+        'Helvetica',
+        'normal'
     );
 
-    let y = startY + 15;
+    const closingText = `
+The student has successfully completed all assigned internship tasks,
+training sessions and practical learning modules under the supervision
+of InternMitra mentors and coordinators.
 
-    rows.forEach((row) => {
-        doc.rect(10, y, 15, 15);
-        doc.rect(25, y, 95, 15);
-        doc.rect(120, y, 75, 15);
+We appreciate the dedication, discipline and participation shown during
+the internship programme and wish the student success in future endeavors.
+`;
 
-        doc.text(row[0], 17, y + 9);
+    const splitClosing =
+        docPDF.splitTextToSize(
+            closingText,
+            W - 2 * ML
+        );
 
-        doc.text(row[1], 28, y + 9);
+    docPDF.text(
+        splitClosing,
+        ML,
+        y
+    );
 
-        doc.text(row[2], 125, y + 9);
-
-        y += 15;
-    });
+    y +=
+        splitClosing.length * 5 + 10;
 
     // =========================
     // QR CODE
@@ -270,39 +528,73 @@ Based on our observation and mentorship, we assess the student's performance as 
 
     const qrData = `
 Name: ${studentName}
-Course: ${subject}
-Hours: ${totalHours}
+Roll Number: ${rollNumber}
+College: ${college}
+Domain: ${domain}
+Certificate No: IM/2026/ICC/${certificateNumber}
 `;
 
-    const qrImage = await QRCode.toDataURL(qrData);
+    const qrImage =
+        await QRCode.toDataURL(
+            qrData
+        );
 
-    doc.addImage(qrImage, 'PNG', 15, 255, 30, 30);
+    docPDF.addImage(
+        qrImage,
+        'PNG',
+        ML,
+        H - 80,
+        32,
+        32
+    );
 
     // =========================
     // SIGNATURE
     // =========================
 
-    doc.setFont('helvetica', 'bold');
-
-    doc.text(
-        'Mr. Amarjeet kumar',
-        145,
-        270
+    docPDF.setFont(
+        'Helvetica',
+        'bold'
     );
 
-    doc.setFont('helvetica', 'normal');
+    docPDF.text(
+        'Mr. Amarjeet Kumar',
+        W - 65,
+        H - 40
+    );
 
-    doc.text(
+    docPDF.setFont(
+        'Helvetica',
+        'normal'
+    );
+
+    docPDF.text(
         'Founder & CEO',
-        155,
-        277
+        W - 55,
+        H - 34
     );
 
     // =========================
-    // SAVE
+    // FOOTER
     // =========================
 
-    doc.save(
-        `${studentName}_Internship_Certificate.pdf`
+    docPDF.addImage(
+        footerImg,
+        'PNG',
+        0,
+        H - footerH,
+        W,
+        footerH
+    );
+
+    // =========================
+    // SAVE PDF
+    // =========================
+
+    docPDF.save(
+        `InternMitra_Certificate_${studentName.replace(
+            /\s+/g,
+            '_'
+        )}.pdf`
     );
 };

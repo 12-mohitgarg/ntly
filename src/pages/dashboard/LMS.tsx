@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../components/AuthContext';
 import { db } from '../../lib/firebase';
-import { collection, getDocs, query, orderBy, where, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, doc, getDoc, setDoc, updateDoc, } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import {
   PlayCircle,
@@ -15,7 +15,9 @@ import {
   MonitorPlay,
   Calendar,
   CheckCircle2,
-  Lock
+  Lock,
+  SearchCheck
+
 } from 'lucide-react';
 import { generateCertificate } from './generateCertificate';
 
@@ -32,6 +34,8 @@ export default function LMS() {
   const [videoProgress, setVideoProgress] = useState<VideoProgress>({});
   const [currentDay, setCurrentDay] = useState(0);
   const [isCourseCompleted, setIsCourseCompleted] = useState(false);
+  const [certificateNo, setCertificateNo] = useState('');
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     fetchDailyVideos();
@@ -151,7 +155,58 @@ export default function LMS() {
       alert('Error marking video as done');
     }
   };
+  const verifyCertificate = async () => {
 
+    if (!certificateNo) {
+      alert('Please enter certificate number');
+      return;
+    }
+
+    try {
+
+      setVerifying(true);
+
+      const usersRef = collection(db, 'users');
+
+      const q = query(
+        usersRef,
+        where(
+          'certificateNumber',
+          '==',
+          certificateNo
+        )
+      );
+
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+
+        alert('Certificate not found');
+
+        setVerifying(false);
+
+        return;
+      }
+
+      const userData =
+        snapshot.docs[0].data();
+
+      await generateCertificate(
+        userData,
+        snapshot.docs[0].id
+      );
+
+      setVerifying(false);
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert('Error verifying certificate');
+
+      setVerifying(false);
+    }
+  };
   // const generateCertificate = () => {
   //   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   //   const W = 297, H = 210;
@@ -217,15 +272,63 @@ export default function LMS() {
             <div className="text-sm font-black text-slate-400 uppercase tracking-widest">Day {currentDay} of 15</div>
             <div className="text-xs font-bold text-slate-500">{Object.values(videoProgress).filter(v => v).length} videos completed • {Object.values(videoProgress).filter(v => v).length} hours</div>
           </div>
-          {isCourseCompleted && (
-            <button
-              onClick={() => generateCertificate(profile)}
-              className="bg-green-600 text-white p-5 px-10 rounded-2xl font-black flex items-center gap-2 shadow-xl shadow-green-600/20 hover:bg-green-700 transition uppercase tracking-widest text-xs"
-            >
-              <Download size={20} />
-              Download Certificate
-            </button>
-          )}
+          <div className="flex flex-col gap-4">
+
+            {isCourseCompleted && (
+
+              <button
+                onClick={() => {
+
+                  if (!user?.uid) {
+                    alert("User not found");
+                    return;
+                  }
+
+                  generateCertificate(
+                    profile,
+                    user.uid
+                  );
+                }}
+                className="bg-green-600 text-white p-5 px-10 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-green-600/20 hover:bg-green-700 transition uppercase tracking-widest text-xs"
+              >
+                <Download size={20} />
+                Download Certificate
+              </button>
+            )}
+
+            {/* VERIFY CERTIFICATE */}
+
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-lg flex flex-col gap-3">
+
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                Verify Existing Certificate
+              </div>
+
+              <input
+                type="text"
+                placeholder="Enter Certificate No."
+                value={certificateNo}
+                onChange={(e) =>
+                  setCertificateNo(e.target.value)
+                }
+                className="h-14 px-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold"
+              />
+
+              <button
+                onClick={verifyCertificate}
+                disabled={verifying}
+                className="bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition"
+              >
+                <SearchCheck size={18} />
+
+                {verifying
+                  ? 'VERIFYING...'
+                  : 'VERIFY & DOWNLOAD'}
+              </button>
+
+            </div>
+
+          </div>
         </div>
       </header>
 

@@ -1,6 +1,11 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { db } from "../lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
 import { Link } from "react-router-dom";
+import { query, where } from "firebase/firestore";
+import { SearchCheck, Download } from "lucide-react";
+import { generateCertificate } from "./dashboard/generateCertificate";
 import {
   ArrowRight,
   BadgeCheck,
@@ -141,7 +146,89 @@ export default function Home() {
   ];
 
   const [activeFilter, setActiveFilter] = useState("All");
+  const [certificateNo, setCertificateNo] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [universities, setUniversities] = useState<any[]>([]);
 
+  useEffect(() => {
+    fetchUniversities();
+  }, []);
+
+  const fetchUniversities = async () => {
+
+    try {
+
+      const snapshot = await getDocs(
+        collection(db, "universities")
+      );
+
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      setUniversities(data);
+
+    } catch (error) {
+
+      console.error(error);
+
+    }
+  };
+  const verifyCertificate = async () => {
+
+    if (!certificateNo) {
+
+      alert("Please enter certificate number");
+
+      return;
+    }
+
+    try {
+
+      setVerifying(true);
+
+      const usersRef = collection(db, "users");
+
+      const q = query(
+        usersRef,
+        where(
+          "certificateNumber",
+          "==",
+          certificateNo
+        )
+      );
+
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+
+        alert("Certificate not found");
+
+        setVerifying(false);
+
+        return;
+      }
+
+      const userData =
+        snapshot.docs[0].data();
+
+      await generateCertificate(
+        userData,
+        snapshot.docs[0].id
+      );
+
+      setVerifying(false);
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert("Error verifying certificate");
+
+      setVerifying(false);
+    }
+  };
   const filteredTestimonials =
     activeFilter === "All"
       ? allTestimonials
@@ -233,6 +320,95 @@ export default function Home() {
         </div>
       </section>
 
+      {/* CERTIFICATE VERIFY */}
+      <section className="py-20 bg-white">
+
+        <div className="max-w-5xl mx-auto px-4">
+
+          <div className="bg-gradient-to-r from-[#071B4D] to-blue-700 rounded-[40px] p-10 lg:p-16 shadow-2xl overflow-hidden relative">
+
+            <div className="absolute top-0 right-0 w-72 h-72 bg-cyan-400/10 rounded-full blur-3xl" />
+
+            <div className="relative z-10">
+
+              <div className="text-center mb-12">
+
+                <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-5 py-2 rounded-full mb-6">
+
+                  <SearchCheck className="w-4 h-4 text-cyan-300" />
+
+                  <span className="text-white text-sm font-semibold">
+                    Verify Certificate
+                  </span>
+
+                </div>
+
+                <h2 className="text-4xl lg:text-5xl font-extrabold text-white mb-5">
+                  Download Verified
+                  <span className="text-cyan-300">
+                    {" "}Certificate
+                  </span>
+                </h2>
+
+                <p className="text-slate-300 text-lg max-w-2xl mx-auto">
+
+                  Enter your certificate number to verify and download your official internship certificate.  This certificate is verified by Internmitra.org
+                </p>
+
+              </div>
+
+              <div className="max-w-2xl mx-auto flex flex-col md:flex-row gap-4">
+
+                <input
+                  type="text"
+                  placeholder="Enter Certificate Number"
+                  value={certificateNo}
+                  onChange={(e) => setCertificateNo(e.target.value)}
+                  className="
+      flex-1
+      h-16
+      px-6
+      rounded-2xl
+      bg-white
+      text-slate-900
+      placeholder:text-gray-400
+      text-lg
+      font-semibold
+      border-2
+      border-gray-200
+      outline-none
+      focus:border-cyan-400
+      focus:ring-4
+      focus:ring-cyan-200
+      transition-all
+      duration-300
+      shadow-lg
+    "
+                />
+
+                <button
+                  onClick={verifyCertificate}
+                  disabled={verifying}
+                  className="h-16 px-8 rounded-2xl bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-bold flex items-center justify-center gap-3 transition-all duration-300 shadow-xl hover:scale-105"
+                >
+
+                  <Download className="w-5 h-5" />
+
+                  {verifying
+                    ? "VERIFYING..."
+                    : "VERIFY & DOWNLOAD"}
+
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
       {/* FEATURES */}
       <section className="py-24 bg-slate-50">
 
@@ -277,6 +453,146 @@ export default function Home() {
         </div>
       </section>
 
+      {/* SIMPLE STEPS */}
+      <section className="py-24 bg-white">
+
+        <div className="max-w-7xl mx-auto px-4">
+
+          <div className="text-center mb-20">
+
+            <h2 className="text-5xl font-bold text-slate-900 mb-5">
+              How It Works —
+              <span className="text-blue-600">
+                {" "}4 Simple Steps
+              </span>
+            </h2>
+
+            <p className="text-slate-500 text-lg">
+              From registration to certificate in easy steps.
+            </p>
+
+          </div>
+
+          <div className="relative">
+
+            {/* CONNECTING LINE */}
+            <div className="hidden md:block absolute top-10 left-0 w-full h-1 bg-slate-200 z-0" />
+
+            <div className="grid md:grid-cols-4 gap-10 relative z-10">
+
+              {[
+                {
+                  title: "Register",
+                  desc: "Fill form with academic details and choose domain."
+                },
+                {
+                  title: "Pay & Verify",
+                  desc: "Complete payment and get verification instantly."
+                },
+                {
+                  title: "Training",
+                  desc: "Attend live sessions and complete assignments."
+                },
+                {
+                  title: "Certificate",
+                  desc: "Download your verified digital certificate."
+                }
+              ].map((item, index) => (
+
+                <div
+                  key={index}
+                  className="relative text-center"
+                >
+
+                  {/* NUMBER CIRCLE */}
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white flex items-center justify-center text-2xl font-bold mx-auto mb-6 shadow-xl border-8 border-white">
+                    {index + 1}
+                  </div>
+
+                  <h3 className="text-2xl font-bold mb-3 text-slate-900">
+                    {item.title}
+                  </h3>
+
+                  <p className="text-slate-500 leading-7">
+                    {item.desc}
+                  </p>
+
+                </div>
+
+              ))}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      {/* UNIVERSITIES */}
+      <section className="py-24 bg-slate-50 overflow-hidden">
+
+        <div className="max-w-7xl mx-auto px-4">
+
+          <div className="text-center mb-16">
+
+            <h2 className="text-5xl font-bold text-slate-900 mb-5">
+              Universities
+              <span className="text-blue-600">
+                {" "}Covered
+              </span>
+            </h2>
+
+            <p className="text-slate-500 text-lg">
+              Trusted by universities across Bihar.
+            </p>
+
+          </div>
+
+        </div>
+
+        <div className="relative">
+
+          <motion.div
+            className="flex gap-8"
+            animate={{
+              x: ["0%", "-100%"]
+            }}
+            transition={{
+              repeat: Infinity,
+              duration: 25,
+              ease: "linear"
+            }}
+          >
+
+            {[...universities, ...universities].map((item, index) => (
+
+              <div
+                key={index}
+                className="min-w-[320px] bg-white rounded-3xl p-8 shadow-lg border border-slate-100"
+              >
+
+                <div className="w-20 h-20 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-3xl mb-6">
+                  🎓
+                </div>
+
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">
+                  {item.name}
+                </h3>
+
+                <p className="text-green-600 font-semibold text-sm">
+                  PARTNER UNIVERSITY
+                </p>
+
+              </div>
+
+            ))}
+
+          </motion.div>
+
+        </div>
+
+      </section>
       {/* TESTIMONIALS */}
       <section className="py-24 bg-slate-50">
 

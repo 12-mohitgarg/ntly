@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
-import { 
-  BarChart3, 
-  BookOpen, 
-  MessageSquare, 
-  FileCheck, 
-  UserCircle, 
-  Download, 
+import {
+  BarChart3,
+  BookOpen,
+  MessageSquare,
+  FileCheck,
+  UserCircle,
+  Download,
   Video,
   Award,
   ChevronRight,
@@ -51,7 +51,7 @@ export default function Dashboard() {
     const roll = profile?.universityRoll || 'N/A';
     const paymentId = paymentRecord?.razorpayPaymentId || 'N/A';
     const orderId = paymentRecord?.razorpayOrderId || 'N/A';
-    const amount = paymentRecord?.amount ? `Rs. ${paymentRecord.amount}.00` : 'Rs. 500.00';
+    const amount = paymentRecord?.amount ? `Rs. ${paymentRecord.amount}.00` : 'Rs. 700.00';
     const paidOn = paymentRecord?.timestamp
       ? new Date(paymentRecord.timestamp).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
       : 'N/A';
@@ -192,7 +192,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-[calc(100vh-80px)] bg-slate-50 flex flex-col lg:flex-row overflow-hidden relative">
       <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-600/5 blur-[150px] rounded-full pointer-events-none -mr-40 -mt-40" />
-      
+
       {/* Sidebar */}
       <aside className="w-full lg:w-80 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 lg:sticky lg:top-24 lg:h-[calc(100vh-96px)] relative z-20">
         <div className="p-10 flex-1 flex flex-col">
@@ -205,7 +205,7 @@ export default function Dashboard() {
               <h4 className="text-sm font-black text-white truncate tracking-tighter uppercase italic">{profile?.fullName}</h4>
             </div>
           </div>
-          
+
           <div className="space-y-6">
             <h3 className="text-[10px] text-slate-500 font-black uppercase tracking-[0.4em] mb-4 pl-2 opacity-50 italic">Control Subsystems</h3>
             <nav className="space-y-3">
@@ -215,11 +215,10 @@ export default function Dashboard() {
                   <Link
                     key={item.name}
                     to={item.path}
-                    className={`flex items-center justify-between p-4 rounded-2xl transition-all duration-500 group ${
-                      isActive 
-                        ? 'bg-blue-600 text-white shadow-2xl shadow-blue-600/20 translate-x-2' 
+                    className={`flex items-center justify-between p-4 rounded-2xl transition-all duration-500 group ${isActive
+                        ? 'bg-blue-600 text-white shadow-2xl shadow-blue-600/20 translate-x-2'
                         : 'text-slate-500 hover:text-white hover:bg-slate-800'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-4">
                       <item.icon size={20} className={isActive ? 'text-white' : 'text-slate-600 group-hover:text-blue-500 transition-colors'} />
@@ -235,29 +234,29 @@ export default function Dashboard() {
 
         <div className="p-10 mt-auto">
           <div className="bg-slate-800/80 backdrop-blur-sm rounded-[2.5rem] p-8 border border-white/5 relative overflow-hidden group">
-             <div className="relative z-10">
-               <div className="flex items-center justify-between text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4 italic">
-                 <span>Efficiency</span>
-                 <span>{profile?.progress || 0}%</span>
-               </div>
-               <div className="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden mb-6 shadow-inner">
-                 <motion.div 
-                   initial={{ width: 0 }}
-                   animate={{ width: `${profile?.progress || 0}%` }}
-                   className="bg-blue-600 h-full rounded-full shadow-lg shadow-blue-600/40"
-                 />
-               </div>
-               <button
-                 onClick={downloadPaymentSlip}
-                 className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 mb-3 shadow-lg shadow-blue-600/20"
-               >
-                 <Receipt size={14} /> Payment Slip
-               </button>
-               <button className="w-full h-12 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/5">
-                 Resume Track
-               </button>
-             </div>
-             <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-blue-600/10 blur-3xl rounded-full" />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4 italic">
+                <span>Efficiency</span>
+                <span>{profile?.progress || 0}%</span>
+              </div>
+              <div className="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden mb-6 shadow-inner">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${profile?.progress || 0}%` }}
+                  className="bg-blue-600 h-full rounded-full shadow-lg shadow-blue-600/40"
+                />
+              </div>
+              <button
+                onClick={downloadPaymentSlip}
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 mb-3 shadow-lg shadow-blue-600/20"
+              >
+                <Receipt size={14} /> Payment Slip
+              </button>
+              <button className="w-full h-12 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/5">
+                Resume Track
+              </button>
+            </div>
+            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-blue-600/10 blur-3xl rounded-full" />
           </div>
         </div>
       </aside>

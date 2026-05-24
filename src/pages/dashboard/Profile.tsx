@@ -129,7 +129,7 @@ export default function Profile() {
                </div>
                <div>
                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] leading-none mb-1">Escrow Balance</p>
-                 <p className="text-sm font-black tracking-widest uppercase italic text-emerald-400">₹500.00 IN</p>
+                 <p className="text-sm font-black tracking-widest uppercase italic text-emerald-400">₹1000.00 IN</p>
                </div>
              </div>
              <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-blue-600/5 blur-3xl rounded-full" />

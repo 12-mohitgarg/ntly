@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../components/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, doc, updateDoc, addDoc, getDoc, } from 'firebase/firestore';
 import { Button } from '../components/ui/button';
 import { Users, LogOut, Mail, Phone, CheckCircle2, XCircle, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube } from 'lucide-react';
 import { signOut } from 'firebase/auth';
@@ -15,6 +15,7 @@ interface UserProfile {
   contactNumber: string;
   college: string;
   department: string;
+  internshipDomain: string;
   isPaid: boolean;
   registrationDate: string;
 }
@@ -32,6 +33,8 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [collegeFilter, setCollegeFilter] = useState('');
+  const [domainFilter, setDomainFilter] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -67,7 +70,159 @@ export default function AdminDashboard() {
     await signOut(auth);
     navigate('/login');
   };
+  const updatePaymentStatus = async (
+    userId: string
+  ) => {
 
+    try {
+
+      // payment find
+      const paymentQuery = query(
+        collection(db, 'payments'),
+        where('userId', '==', userId)
+      );
+
+      const paymentSnapshot = await getDocs(paymentQuery);
+
+      // agar payment already h
+      if (!paymentSnapshot.empty) {
+
+        paymentSnapshot.forEach(async (paymentDoc) => {
+
+          await updateDoc(
+            doc(db, 'payments', paymentDoc.id),
+            {
+              status: 'success'
+            }
+          );
+
+        });
+
+      } else {
+
+        // new payment entry create
+        // user document get
+        const userDocRef = doc(db, 'users', userId);
+
+        const userDocSnap = await getDoc(userDocRef);
+
+        let amount = 1000;
+
+        if (userDocSnap.exists()) {
+
+          const userData = userDocSnap.data();
+
+          // college find
+          const collegesQuery = await getDocs(
+            collection(db, 'colleges')
+          );
+
+          const collegeData = collegesQuery.docs.find(
+            (c) => c.data().name === userData.college
+          );
+
+          if (collegeData) {
+            amount = collegeData.data().price || 1000;
+          }
+        }
+
+        // payment entry create
+        await addDoc(
+          collection(db, 'payments'),
+          {
+            userId: userId,
+            amount: amount,
+            status: 'success',
+            timestamp: new Date().toISOString()
+          }
+        );
+
+      }
+
+      // user find
+      const userQuery = query(
+        collection(db, 'users'),
+        where('uid', '==', userId)
+      );
+
+      const userSnapshot = await getDocs(userQuery);
+
+      userSnapshot.forEach(async (userDoc) => {
+
+        await updateDoc(
+          doc(db, 'users', userDoc.id),
+          {
+            isPaid: true
+          }
+        );
+
+      });
+
+      alert('Payment verified successfully');
+
+      fetchData();
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert('Error verifying payment');
+    }
+  };
+  const uniqueColleges = [
+    ...new Set(users.map(user => user.college))
+  ];
+
+  const uniqueDomains = [
+    ...new Set(users.map(user => user.internshipDomain))
+  ];
+
+  const filteredUsers = users.filter(user => {
+
+    const collegeMatch =
+      !collegeFilter ||
+      user.college === collegeFilter;
+
+    const domainMatch =
+      !domainFilter ||
+      user.internshipDomain === domainFilter;
+
+    return collegeMatch && domainMatch;
+  });
+  const successUsers = filteredUsers.filter((user) => {
+
+    const payment = payments.find(
+      (p) =>
+        p.userId === user.uid &&
+        p.status === 'success'
+    );
+
+    return payment;
+  });
+
+  const collegeCount = successUsers.reduce(
+    (acc: any, user) => {
+
+      acc[user.college] =
+        (acc[user.college] || 0) + 1;
+
+      return acc;
+
+    },
+    {}
+  );
+
+  const domainCount = filteredUsers.reduce(
+    (acc: any, user) => {
+
+      acc[user.internshipDomain] =
+        (acc[user.internshipDomain] || 0) + 1;
+
+      return acc;
+
+    },
+    {}
+  );
   // Calculate payment statistics
   const successfulPayments = payments.filter(p => p.status === 'success').length;
   const pendingPayments = payments.filter(p => p.status === 'pending').length;
@@ -192,13 +347,157 @@ export default function AdminDashboard() {
             <p className="text-4xl font-black text-slate-900">{pendingPayments}</p>
           </div>
         </div>
+        {/* FILTERS */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
 
+          {/* COLLEGE FILTER */}
+          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+
+            <h3 className="font-black text-slate-900 mb-4">
+              Filter By College
+            </h3>
+
+            <select
+              value={collegeFilter}
+              onChange={(e) =>
+                setCollegeFilter(e.target.value)
+              }
+              className="w-full h-14 rounded-xl border border-slate-200 px-4 font-bold"
+            >
+
+              <option value="">
+                All Colleges
+              </option>
+
+              {uniqueColleges.map((college) => (
+
+                <option
+                  key={college}
+                  value={college}
+                >
+                  {college}
+                </option>
+
+              ))}
+
+            </select>
+
+          </div>
+
+          {/* DOMAIN FILTER */}
+          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+
+            <h3 className="font-black text-slate-900 mb-4">
+              Filter By Domain
+            </h3>
+
+            <select
+              value={domainFilter}
+              onChange={(e) =>
+                setDomainFilter(e.target.value)
+              }
+              className="w-full h-14 rounded-xl border border-slate-200 px-4 font-bold"
+            >
+
+              <option value="">
+                All Domains
+              </option>
+
+              {uniqueDomains.map((domain) => (
+
+                <option
+                  key={domain}
+                  value={domain}
+                >
+                  {domain}
+                </option>
+
+              ))}
+
+            </select>
+
+          </div>
+
+        </div>
+
+        {/* FILTER SUMMARY */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+
+          {/* COLLEGE SUMMARY */}
+          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+
+            <h3 className="text-xl font-black mb-4">
+              College Wise Users
+            </h3>
+
+            <div className="space-y-3">
+
+              {Object.entries(collegeCount).map(
+                ([college, count]) => (
+
+                  <div
+                    key={college}
+                    className="flex justify-between items-center border-b border-slate-100 pb-2"
+                  >
+
+                    <span className="text-slate-700 font-bold">
+                      {college}
+                    </span>
+
+                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-black">
+                      {count as number}
+                    </span>
+
+                  </div>
+
+                )
+              )}
+
+            </div>
+
+          </div>
+
+          {/* DOMAIN SUMMARY */}
+          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+
+            <h3 className="text-xl font-black mb-4">
+              Domain Wise Users
+            </h3>
+
+            <div className="space-y-3">
+
+              {Object.entries(domainCount).map(
+                ([domain, count]) => (
+
+                  <div
+                    key={domain}
+                    className="flex justify-between items-center border-b border-slate-100 pb-2"
+                  >
+
+                    <span className="text-slate-700 font-bold">
+                      {domain}
+                    </span>
+
+                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-black">
+                      {count as number}
+                    </span>
+
+                  </div>
+
+                )
+              )}
+
+            </div>
+
+          </div>
+
+        </div>
         {/* Users Table */}
         <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
           <div className="p-6 border-b border-slate-100">
             <h2 className="text-xl font-black text-slate-900">Registered Users</h2>
           </div>
-          
+
           {users.length === 0 ? (
             <div className="p-12 text-center">
               <Users size={48} className="text-slate-300 mx-auto mb-4" />
@@ -214,12 +513,16 @@ export default function AdminDashboard() {
                     <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Phone</th>
                     <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">College</th>
                     <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Department</th>
+                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Domain</th>
                     <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Payment Status</th>
                     <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Registered</th>
+                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {filteredUsers.map((user) => (
                     <tr key={user.uid} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                       <td className="p-4">
                         <div className="font-black text-slate-900">{user.fullName}</div>
@@ -239,6 +542,7 @@ export default function AdminDashboard() {
                       </td>
                       <td className="p-4 text-slate-600">{user.college}</td>
                       <td className="p-4 text-slate-600">{user.department}</td>
+                      <td className="p-4 text-slate-600 font-bold">{user.internshipDomain}</td>
                       <td className="p-4">
                         {(() => {
                           const paymentStatus = getUserPaymentStatus(user.uid);
@@ -251,11 +555,28 @@ export default function AdminDashboard() {
                         })()}
                       </td>
                       <td className="p-4 text-slate-600 text-sm">
-                        {new Date(user.registrationDate).toLocaleDateString('en-IN', { 
-                          day: '2-digit', 
-                          month: 'short', 
-                          year: 'numeric' 
+
+                        {new Date(user.registrationDate).toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric'
                         })}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex gap-2">
+
+                          <button
+                            onClick={() =>
+                              updatePaymentStatus(user.uid)
+                            }
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700"
+                          >
+                            Verify
+                          </button>
+
+
+
+                        </div>
                       </td>
                     </tr>
                   ))}
