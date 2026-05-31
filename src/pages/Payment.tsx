@@ -78,6 +78,9 @@ export default function Payment() {
           console.log('Payment received:', response.razorpay_payment_id);
           try {
             // Update Firestore directly after successful payment
+             if (!response.razorpay_payment_id ) {
+              throw new Error('Missing Razorpay payment/order id');
+            }
             await updateDoc(doc(db, 'users', user.uid), {
               isPaid: true
             });
@@ -92,7 +95,7 @@ export default function Payment() {
             setSuccess(true);
           } catch (err) {
             console.error('Firestore update error:', err);
-            alert('Payment successful but profile update failed. Please contact support with payment ID: ' + response.razorpay_payment_id);
+            alert('Payment received but verification request could not be saved. Please contact support with payment ID: ' + response.razorpay_payment_id);
           }
         },
         prefill: {

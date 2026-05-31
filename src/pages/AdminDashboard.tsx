@@ -22,6 +22,8 @@ interface UserProfile {
 
 interface Payment {
   userId: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
   amount: number;
   status: string;
   timestamp: string;
@@ -131,6 +133,8 @@ export default function AdminDashboard() {
           collection(db, 'payments'),
           {
             userId: userId,
+            razorpayOrderId: `manual_order_${Date.now()}`,
+            razorpayPaymentId: `manual_pay_${Date.now()}`,
             amount: amount,
             status: 'success',
             timestamp: new Date().toISOString()
