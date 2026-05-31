@@ -1,12 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
-import { collection, getDocs, doc, setDoc, deleteDoc, query, orderBy, where } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  doc,
+  setDoc,
+  deleteDoc,
+  query,
+  orderBy,
+  where,
+  getDoc
+} from 'firebase/firestore';
+
 import { motion } from 'motion/react';
-import { 
-  Youtube, 
-  Save, 
-  Edit2, 
-  Trash2, 
+import {
+  Youtube,
+  Save,
+  Edit2,
+  Trash2,
   Plus,
   Calendar,
   X,
@@ -34,6 +45,7 @@ export default function ManageDailyVideos() {
   const [loading, setLoading] = useState(true);
   const [editingVideo, setEditingVideo] = useState<DailyVideo | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
+  const [courseCompleted, setCourseCompleted] = useState(false);
   const [formData, setFormData] = useState({
     day: 1,
     title: '',
@@ -45,7 +57,12 @@ export default function ManageDailyVideos() {
   useEffect(() => {
     if (selectedCourse) {
       fetchVideos();
-      setFormData(prev => ({ ...prev, course: selectedCourse }));
+      fetchCourseStatus();
+
+      setFormData(prev => ({
+        ...prev,
+        course: selectedCourse
+      }));
     }
   }, [selectedCourse]);
 
@@ -60,12 +77,12 @@ export default function ManageDailyVideos() {
       const videosRef = collection(db, 'dailyVideos');
       const q = query(videosRef, where('course', '==', selectedCourse), orderBy('day'));
       const snapshot = await getDocs(q);
-      const videosData = snapshot.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data() 
+      const videosData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
       } as DailyVideo));
       setVideos(videosData);
-      
+
       // Calculate next available day
       if (videosData.length > 0) {
         const maxDay = Math.max(...videosData.map(v => v.day));
@@ -74,14 +91,29 @@ export default function ManageDailyVideos() {
       } else {
         setFormData(prev => ({ ...prev, day: 1 }));
       }
-      
+
       setLoading(false);
     } catch (error) {
       console.error('Error fetching videos:', error);
       setLoading(false);
     }
   };
+  const fetchCourseStatus = async () => {
+    if (!selectedCourse) return;
 
+    try {
+      const docRef = doc(db, "courseCompletion", selectedCourse);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        setCourseCompleted(docSnap.data().completed || false);
+      } else {
+        setCourseCompleted(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
   const extractVideoId = (url: string): string => {
     const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const match = url.match(regex);
@@ -154,7 +186,27 @@ export default function ManageDailyVideos() {
       alert('Error deleting video');
     }
   };
+  const markCourseCompleted = async () => {
+    if (!selectedCourse) return;
 
+    try {
+      await setDoc(
+        doc(db, "courseCompletion", selectedCourse),
+        {
+          course: selectedCourse,
+          completed: true,
+          completedAt: new Date().toISOString()
+        }
+      );
+
+      setCourseCompleted(true);
+
+      alert("Course marked as completed");
+    } catch (error) {
+      console.log(error);
+      alert("Error");
+    }
+  };
   const resetForm = () => {
     setEditingVideo(null);
     setFormData({
@@ -225,6 +277,23 @@ export default function ManageDailyVideos() {
             <h2 className="text-2xl font-black text-slate-900 uppercase italic">
               {editingVideo ? 'Edit Video' : 'Add New Video'}
             </h2>
+            <div className="mb-4">
+              {courseCompleted ? (
+                <button
+                  className="bg-green-600 text-white px-5 py-2 rounded-lg"
+                  disabled
+                >
+                  Course Completed
+                </button>
+              ) : (
+                <button
+                  onClick={markCourseCompleted}
+                  className="bg-blue-600 text-white px-5 py-2 rounded-lg"
+                >
+                  Mark Course As Done
+                </button>
+              )}
+            </div>
             <span className="bg-blue-100 text-blue-600 text-xs font-black px-4 py-2 rounded-full uppercase ml-auto">
               {selectedCourse}
             </span>
@@ -233,7 +302,7 @@ export default function ManageDailyVideos() {
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Label className="text-slate-700 font-bold mb-2 block">Day (1-15)</Label>
+                <Label className="text-slate-700 font-bold mb-2 block">Day (1-20)</Label>
                 <div className="relative">
                   <Input
                     type="number"
@@ -288,17 +357,17 @@ export default function ManageDailyVideos() {
             </div>
 
             <div className="flex gap-4 pt-4">
-              <Button 
-                onClick={handleSave} 
+              <Button
+                onClick={handleSave}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-xl shadow-blue-600/20 flex-1"
               >
                 <Save size={20} className="mr-2" />
                 {editingVideo ? 'Update Video' : 'Add Video'}
               </Button>
               {editingVideo && (
-                <Button 
-                  onClick={resetForm} 
-                  variant="outline" 
+                <Button
+                  onClick={resetForm}
+                  variant="outline"
                   className="border-slate-200 hover:bg-slate-50 hover:border-slate-300"
                 >
                   <X size={20} className="mr-2" />
@@ -320,7 +389,7 @@ export default function ManageDailyVideos() {
               <span className="text-sm font-bold text-slate-600">{videos.length} / 15 videos</span>
             </div>
           </div>
-          
+
           {loading ? (
             <div className="text-center py-16">
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-spin">
@@ -368,9 +437,9 @@ export default function ManageDailyVideos() {
                     {video.description && (
                       <p className="text-slate-500 text-sm truncate mb-1">{video.description}</p>
                     )}
-                    <a 
-                      href={video.youtubeUrl} 
-                      target="_blank" 
+                    <a
+                      href={video.youtubeUrl}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 text-xs font-bold hover:underline truncate block"
                     >

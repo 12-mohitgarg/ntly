@@ -34,12 +34,14 @@ export default function LMS() {
   const [videoProgress, setVideoProgress] = useState<VideoProgress>({});
   const [currentDay, setCurrentDay] = useState(0);
   const [isCourseCompleted, setIsCourseCompleted] = useState(false);
+  const [adminApproved, setAdminApproved] = useState(false);
   const [certificateNo, setCertificateNo] = useState('');
   const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     fetchDailyVideos();
     fetchVideoProgress();
+    fetchAdminApproval();
     calculateCurrentDay();
   }, [profile]);
 
@@ -123,7 +125,27 @@ export default function LMS() {
       console.error('Error fetching video progress:', error);
     }
   };
+  const fetchAdminApproval = async () => {
+    if (!profile?.internshipDomain) return;
 
+    try {
+      const docRef = doc(
+        db,
+        "courseCompletion",
+        profile.internshipDomain
+      );
+
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        setAdminApproved(
+          docSnap.data().completed === true
+        );
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
   const markVideoAsDone = async (day: number) => {
     if (!user) return;
     try {
@@ -274,7 +296,7 @@ export default function LMS() {
           </div>
           <div className="flex flex-col gap-4">
 
-            {isCourseCompleted && (
+            {adminApproved && (
 
               <button
                 onClick={() => {
