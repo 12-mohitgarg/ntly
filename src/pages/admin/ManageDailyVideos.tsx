@@ -115,7 +115,9 @@ export default function ManageDailyVideos() {
     }
   };
   const extractVideoId = (url: string): string => {
-    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const regex =
+      /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+
     const match = url.match(regex);
     return match ? match[1] : '';
   };
