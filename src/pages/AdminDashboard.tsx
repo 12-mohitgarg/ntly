@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../components/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, getDocs, query, orderBy, where, doc, updateDoc, addDoc, getDoc, } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, doc, updateDoc, addDoc, getDoc, setDoc } from 'firebase/firestore';
 import { Button } from '../components/ui/button';
-import { Users, LogOut, Mail, Phone, CheckCircle2, XCircle, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube } from 'lucide-react';
-import { signOut } from 'firebase/auth';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus } from 'lucide-react';
+import { createUserWithEmailAndPassword, deleteUser, getAuth, signOut, User as FirebaseUser } from 'firebase/auth';
+import { initializeApp, getApp, getApps } from 'firebase/app';
 import { auth } from '../lib/firebase';
 import { useNavigate, Link } from 'react-router-dom';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 interface UserProfile {
   uid: string;
@@ -29,14 +34,30 @@ interface Payment {
   timestamp: string;
 }
 
+interface TeacherProfile {
+  uid: string;
+  fullName: string;
+  email: string;
+  role: string;
+  createdAt?: string;
+  isActive: boolean;
+}
+
 export default function AdminDashboard() {
   const { user, adminProfile } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [teachers, setTeachers] = useState<TeacherProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [collegeFilter, setCollegeFilter] = useState('');
   const [domainFilter, setDomainFilter] = useState('');
+  const [teacherForm, setTeacherForm] = useState({
+    fullName: '',
+    email: '',
+    password: ''
+  });
+  const [savingTeacher, setSavingTeacher] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -61,6 +82,14 @@ export default function AdminDashboard() {
       const paymentsSnapshot = await getDocs(paymentsRef);
       const paymentsData = paymentsSnapshot.docs.map(doc => doc.data() as Payment);
       setPayments(paymentsData);
+
+      // Fetch teachers
+      const teachersQuery = query(collection(db, 'admins'), where('role', '==', 'teacher'));
+      const teachersSnapshot = await getDocs(teachersQuery);
+      const teachersData = teachersSnapshot.docs
+        .map(doc => ({ uid: doc.id, ...doc.data() } as TeacherProfile))
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      setTeachers(teachersData);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -71,6 +100,63 @@ export default function AdminDashboard() {
   const handleLogout = async () => {
     await signOut(auth);
     navigate('/login');
+  };
+
+  const handleAddTeacher = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const fullName = teacherForm.fullName.trim();
+    const email = teacherForm.email.trim().toLowerCase();
+    const password = teacherForm.password;
+
+    if (!fullName || !email || !password) {
+      alert('Please fill in teacher name, email, and password');
+      return;
+    }
+
+    if (password.length < 6) {
+      alert('Password must be at least 6 characters');
+      return;
+    }
+
+    setSavingTeacher(true);
+    let createdTeacher: FirebaseUser | null = null;
+
+    try {
+      const teacherAppName = 'teacher-create-app';
+      const teacherApp = getApps().some(app => app.name === teacherAppName)
+        ? getApp(teacherAppName)
+        : initializeApp(firebaseConfig, teacherAppName);
+      const teacherAuth = getAuth(teacherApp);
+      const credential = await createUserWithEmailAndPassword(teacherAuth, email, password);
+      createdTeacher = credential.user;
+
+      await setDoc(doc(db, 'admins', credential.user.uid), {
+        uid: credential.user.uid,
+        fullName,
+        email,
+        password: '',
+        role: 'teacher',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        createdBy: user?.uid || adminProfile?.email || 'admin'
+      });
+
+      await signOut(teacherAuth);
+      setTeacherForm({ fullName: '', email: '', password: '' });
+      fetchData();
+      alert('Teacher added successfully');
+    } catch (error: any) {
+      if (createdTeacher) {
+        await deleteUser(createdTeacher).catch((deleteError) => {
+          console.error('Error cleaning up teacher auth user:', deleteError);
+        });
+      }
+      console.error('Error adding teacher:', error);
+      alert(error?.message || 'Error adding teacher');
+    } finally {
+      setSavingTeacher(false);
+    }
   };
   const updatePaymentStatus = async (
     userId: string
@@ -319,8 +405,21 @@ export default function AdminDashboard() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto p-8">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <Tabs defaultValue="dashboard" className="gap-6">
+          <TabsList className="bg-white border border-slate-100 shadow-lg h-12 p-1">
+            <TabsTrigger value="dashboard" className="px-6 py-2 font-black">
+              <LayoutDashboard size={16} />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="teachers" className="px-6 py-2 font-black">
+              <UserPlus size={16} />
+              Teachers
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="dashboard">
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
             <div className="flex items-center gap-3 mb-2">
               <Users className="text-blue-600" size={24} />
@@ -350,9 +449,9 @@ export default function AdminDashboard() {
             </div>
             <p className="text-4xl font-black text-slate-900">{pendingPayments}</p>
           </div>
-        </div>
-        {/* FILTERS */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+            </div>
+            {/* FILTERS */}
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
 
           {/* COLLEGE FILTER */}
           <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
@@ -587,8 +686,137 @@ export default function AdminDashboard() {
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
+            )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="teachers">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
+                    <UserPlus size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900">Teacher Management</h2>
+                    <p className="text-slate-500 text-sm font-bold">Teachers can access only Daily Videos.</p>
+                  </div>
+                </div>
+                <span className="bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-black uppercase">
+                  {teachers.length} Teachers
+                </span>
+              </div>
+
+              <Tabs defaultValue="add" className="gap-6">
+                <TabsList className="bg-slate-100 h-11 p-1">
+                  <TabsTrigger value="add" className="px-5 py-2 font-black">
+                    <UserPlus size={16} />
+                    Add Teacher
+                  </TabsTrigger>
+                  <TabsTrigger value="list" className="px-5 py-2 font-black">
+                    <Users size={16} />
+                    Teacher List
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="add">
+                  <form onSubmit={handleAddTeacher} className="border border-slate-100 rounded-2xl p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                      <div>
+                        <Label className="text-slate-500 text-xs font-black uppercase">Teacher Name</Label>
+                        <Input
+                          value={teacherForm.fullName}
+                          onChange={(event) => setTeacherForm({ ...teacherForm, fullName: event.target.value })}
+                          placeholder="Teacher name"
+                          className="mt-2 h-12"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-slate-500 text-xs font-black uppercase">Email</Label>
+                        <Input
+                          type="email"
+                          value={teacherForm.email}
+                          onChange={(event) => setTeacherForm({ ...teacherForm, email: event.target.value })}
+                          placeholder="teacher@example.com"
+                          className="mt-2 h-12"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-slate-500 text-xs font-black uppercase">Password</Label>
+                        <Input
+                          type="password"
+                          value={teacherForm.password}
+                          onChange={(event) => setTeacherForm({ ...teacherForm, password: event.target.value })}
+                          placeholder="Minimum 6 characters"
+                          className="mt-2 h-12"
+                        />
+                      </div>
+                      <Button type="submit" disabled={savingTeacher} className="h-12 bg-blue-600 hover:bg-blue-700 text-white font-black">
+                        <UserPlus size={18} />
+                        {savingTeacher ? 'Adding...' : 'Add Teacher'}
+                      </Button>
+                    </div>
+                  </form>
+                </TabsContent>
+
+                <TabsContent value="list">
+                  {teachers.length === 0 ? (
+                    <div className="border border-dashed border-slate-200 rounded-2xl p-12 text-center">
+                      <Users size={48} className="text-slate-300 mx-auto mb-4" />
+                      <p className="text-slate-500 font-bold">No teachers added yet</p>
+                    </div>
+                  ) : (
+                    <div className="border border-slate-100 rounded-2xl overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-slate-50">
+                            <tr>
+                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Teacher</th>
+                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Email</th>
+                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
+                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Created</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {teachers.map((teacher) => (
+                              <tr key={teacher.uid} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                                <td className="p-4">
+                                  <div className="font-black text-slate-900">{teacher.fullName}</div>
+                                  <div className="text-xs text-slate-400">{teacher.uid}</div>
+                                </td>
+                                <td className="p-4">
+                                  <div className="flex items-center gap-2 text-slate-600">
+                                    <Mail size={16} />
+                                    {teacher.email}
+                                  </div>
+                                </td>
+                                <td className="p-4">
+                                  <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black ${teacher.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                                    {teacher.isActive ? <CheckCircle2 size={14} /> : <Clock size={14} />}
+                                    {teacher.isActive ? 'Active' : 'Inactive'}
+                                  </span>
+                                </td>
+                                <td className="p-4 text-slate-600 text-sm">
+                                  {teacher.createdAt
+                                    ? new Date(teacher.createdAt).toLocaleDateString('en-IN', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      year: 'numeric'
+                                    })
+                                    : '-'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
