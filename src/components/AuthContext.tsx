@@ -6,6 +6,7 @@ import { UserProfile } from '../types';
 import { handleFirestoreError, OperationType } from '../lib/firebase';
 
 interface AdminProfile {
+  uid?: string;
   email: string;
   password: string;
   role: string;
@@ -68,10 +69,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProfile(null);
             setIsAdmin(true);
           } else {
-            // Check Firestore admin document
-            const adminDoc = await getDoc(doc(db, 'admins', 'admin_001'));
-            if (adminDoc.exists() && adminDoc.data().email === user.email) {
-              setAdminProfile(adminDoc.data() as AdminProfile);
+            // Check Firestore admin/teacher document by Firebase Auth UID
+            const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+            if (adminDoc.exists() && adminDoc.data().isActive === true) {
+              setAdminProfile({ uid: adminDoc.id, ...adminDoc.data() } as AdminProfile);
               setProfile(null);
               setIsAdmin(true);
             } else {

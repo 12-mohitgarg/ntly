@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthContext';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
@@ -36,11 +36,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, adminProfile, loading } = useAuth();
+  const location = useLocation();
   
   if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
   if (!user) return <Navigate to="/login" />;
   if (!isAdmin) return <Navigate to="/login" />;
+  if (adminProfile?.role === 'teacher' && location.pathname !== '/admin/daily-videos') {
+    return <Navigate to="/admin/daily-videos" replace />;
+  }
   
   return <>{children}</>;
 }

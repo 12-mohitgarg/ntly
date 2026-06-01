@@ -11,7 +11,18 @@ service cloud.firestore {
     function isAdmin() { 
       return isSignedIn() && 
         (request.auth.token.get('email', '').lower() == "mrmunsi2014@gmail.com" ||
-         request.auth.token.get('email', '').lower() == "admin@internmitra.com");
+         request.auth.token.get('email', '').lower() == "admin@internmitra.com" ||
+         (
+           exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+           get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true &&
+           get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['admin', 'super_admin']
+         ));
+    }
+    function isTeacher() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'teacher';
     }
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
@@ -57,7 +68,9 @@ service cloud.firestore {
     }
 
     match /admins/{adminId} {
-      allow read: if isAdmin();
+      allow get: if isAdmin() || (isSignedIn() && adminId == request.auth.uid);
+      allow list: if isAdmin();
+      allow create, update: if isAdmin();
     }
 
     // Master data collections - public read, admin write
@@ -93,7 +106,7 @@ service cloud.firestore {
 
     match /dailyVideos/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isTeacher();
     }
 
     match /userVideoProgress/{docId} {

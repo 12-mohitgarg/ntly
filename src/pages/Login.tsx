@@ -32,8 +32,16 @@ export default function Login() {
         // Regular user - navigate to dashboard
         navigate('/dashboard');
       } else {
-        // Not in users collection - assume admin (will be verified in AuthContext)
-        navigate('/admin-dashboard');
+        // Not in users collection - admin or teacher
+        if (user.email === 'admin@internmitra.com') {
+          navigate('/admin-dashboard');
+          return;
+        }
+
+        const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+        const adminData = adminDoc.exists() ? adminDoc.data() : null;
+
+        navigate(adminData?.role === 'teacher' ? '/admin/daily-videos' : '/admin-dashboard');
       }
     } catch (err: any) {
       setError("Invalid credentials. Please try again.");
