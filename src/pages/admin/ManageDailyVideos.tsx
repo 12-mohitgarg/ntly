@@ -30,6 +30,8 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { INTERNSHIP_DOMAINS } from '../../lib/constants';
+import { useAuth } from '../../components/AuthContext';
+import { AttendanceEntry, generateCourseAttendanceReport } from '../dashboard/generateAttendanceReport';
 
 interface DailyVideo {
   id: string;
@@ -41,11 +43,13 @@ interface DailyVideo {
 }
 
 export default function ManageDailyVideos() {
+  const { adminProfile } = useAuth();
   const [videos, setVideos] = useState<DailyVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingVideo, setEditingVideo] = useState<DailyVideo | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [courseCompleted, setCourseCompleted] = useState(false);
+  const [attendanceEntries, setAttendanceEntries] = useState<AttendanceEntry[]>([]);
   const [formData, setFormData] = useState({
     day: 1,
     title: '',
@@ -53,11 +57,20 @@ export default function ManageDailyVideos() {
     description: '',
     course: ''
   });
+  const isTeacher = adminProfile?.role === 'teacher';
+  const assignedCourse = adminProfile?.course || '';
+
+  useEffect(() => {
+    if (isTeacher) {
+      setSelectedCourse(assignedCourse);
+    }
+  }, [isTeacher, assignedCourse]);
 
   useEffect(() => {
     if (selectedCourse) {
       fetchVideos();
       fetchCourseStatus();
+      fetchAttendance();
 
       setFormData(prev => ({
         ...prev,
@@ -114,6 +127,24 @@ export default function ManageDailyVideos() {
       console.log(error);
     }
   };
+  const fetchAttendance = async () => {
+    if (!selectedCourse) {
+      setAttendanceEntries([]);
+      return;
+    }
+
+    try {
+      const attendanceQuery = query(
+        collection(db, 'attendance'),
+        where('course', '==', selectedCourse),
+        orderBy('day')
+      );
+      const snapshot = await getDocs(attendanceQuery);
+      setAttendanceEntries(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceEntry)));
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+    }
+  };
   const extractVideoId = (url: string): string => {
     const regex =
       /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
@@ -123,6 +154,11 @@ export default function ManageDailyVideos() {
   };
 
   const handleSave = async () => {
+    if (isTeacher && formData.course !== assignedCourse) {
+      alert('You can add videos only for your assigned course');
+      return;
+    }
+
     if (!formData.title || !formData.youtubeUrl || !formData.course) {
       alert('Please fill in title, YouTube URL, and select a course');
       return;
@@ -241,9 +277,10 @@ export default function ManageDailyVideos() {
             <select
               value={selectedCourse}
               onChange={(e) => setSelectedCourse(e.target.value)}
-              className="h-12 px-6 bg-white/20 backdrop-blur-sm border-2 border-white/30 rounded-2xl font-bold text-white focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer"
+              disabled={isTeacher}
+              className={`h-12 px-6 bg-white/20 backdrop-blur-sm border-2 border-white/30 rounded-2xl font-bold text-white focus:outline-none focus:ring-2 focus:ring-white/50 ${isTeacher ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
             >
-              <option value="" className="text-slate-900">-- Select Course --</option>
+              <option value="" className="text-slate-900">{isTeacher ? 'No course assigned' : '-- Select Course --'}</option>
               {INTERNSHIP_DOMAINS.map((course) => (
                 <option key={course} value={course} className="text-slate-900">{course}</option>
               ))}
@@ -281,12 +318,20 @@ export default function ManageDailyVideos() {
             </h2>
             <div className="mb-4">
               {courseCompleted ? (
-                <button
-                  className="bg-green-600 text-white px-5 py-2 rounded-lg"
-                  disabled
-                >
-                  Course Completed
-                </button>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    className="bg-green-600 text-white px-5 py-2 rounded-lg"
+                    disabled
+                  >
+                    Course Completed
+                  </button>
+                  <button
+                    onClick={() => generateCourseAttendanceReport(selectedCourse, attendanceEntries)}
+                    className="bg-slate-900 text-white px-5 py-2 rounded-lg"
+                  >
+                    Generate Attendance Report
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={markCourseCompleted}
@@ -468,6 +513,53 @@ export default function ManageDailyVideos() {
                   </div>
                 </motion.div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {selectedCourse && (
+        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
+          <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 uppercase italic">Attendance Entries</h2>
+              <p className="text-slate-500 text-sm font-bold">{selectedCourse}</p>
+            </div>
+            <span className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-xs font-black uppercase">
+              {attendanceEntries.length} Entries
+            </span>
+          </div>
+
+          {attendanceEntries.length === 0 ? (
+            <div className="p-10 text-center text-slate-500 font-bold">
+              No attendance entries yet.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Student</th>
+                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Email</th>
+                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Day</th>
+                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Video</th>
+                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Attendance Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attendanceEntries.map((entry) => (
+                    <tr key={entry.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                      <td className="p-4 font-black text-slate-900">{entry.studentName}</td>
+                      <td className="p-4 text-slate-600">{entry.email || '-'}</td>
+                      <td className="p-4 text-slate-600 font-bold">Day {entry.day}</td>
+                      <td className="p-4 text-slate-600">{entry.videoTitle}</td>
+                      <td className="p-4 text-slate-600 text-sm">
+                        {new Date(entry.watchedAt).toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

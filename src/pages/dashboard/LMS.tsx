@@ -20,6 +20,7 @@ import {
 
 } from 'lucide-react';
 import { generateCertificate } from './generateCertificate';
+import { AttendanceEntry, generateAttendanceReport } from './generateAttendanceReport';
 
 interface VideoProgress {
   [day: number]: boolean;
@@ -37,11 +38,13 @@ export default function LMS() {
   const [adminApproved, setAdminApproved] = useState(false);
   const [certificateNo, setCertificateNo] = useState('');
   const [verifying, setVerifying] = useState(false);
+  const [attendanceEntries, setAttendanceEntries] = useState<AttendanceEntry[]>([]);
 
   useEffect(() => {
     fetchDailyVideos();
     fetchVideoProgress();
     fetchAdminApproval();
+    fetchAttendance();
     calculateCurrentDay();
   }, [profile]);
 
@@ -146,11 +149,41 @@ export default function LMS() {
       console.log(error);
     }
   };
-  const markVideoAsDone = async (day: number) => {
+  const fetchAttendance = async () => {
+    if (!user || !profile?.internshipDomain) return;
+
+    try {
+      const attendanceQuery = query(
+        collection(db, 'attendance'),
+        where('userId', '==', user.uid),
+        where('course', '==', profile.internshipDomain),
+        orderBy('day')
+      );
+      const snapshot = await getDocs(attendanceQuery);
+      setAttendanceEntries(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceEntry)));
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+    }
+  };
+
+  const markVideoAsDone = async (video: any) => {
     if (!user) return;
     try {
+      const day = video.day;
       const progressRef = doc(db, 'userVideoProgress', `${user.uid}-${profile?.internshipDomain}`);
       const newProgress = { ...videoProgress, [day]: true };
+      const attendanceRef = doc(db, 'attendance', `${user.uid}-${profile?.internshipDomain}-day-${day}`);
+
+      await setDoc(attendanceRef, {
+        userId: user.uid,
+        studentName: profile?.fullName || '',
+        email: profile?.email || user.email || '',
+        course: profile?.internshipDomain,
+        day,
+        videoId: video.id,
+        videoTitle: video.title,
+        watchedAt: new Date().toISOString()
+      });
 
       await setDoc(progressRef, {
         userId: user.uid,
@@ -172,6 +205,7 @@ export default function LMS() {
       // Check if all uploaded videos are completed
       const completedCount = Object.values(newProgress).filter(v => v).length;
       setIsCourseCompleted(completedCount === dailyVideos.length && dailyVideos.length > 0);
+      await fetchAttendance();
     } catch (error) {
       console.error('Error marking video as done:', error);
       alert('Error marking video as done');
@@ -297,6 +331,7 @@ export default function LMS() {
           <div className="flex flex-col gap-4">
 
             {adminApproved && (
+              <>
 
               <button
                 onClick={() => {
@@ -316,6 +351,14 @@ export default function LMS() {
                 <Download size={20} />
                 Download Certificate
               </button>
+              <button
+                onClick={() => generateAttendanceReport(profile, attendanceEntries)}
+                className="bg-slate-900 text-white p-5 px-10 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition uppercase tracking-widest text-xs"
+              >
+                <FileText size={20} />
+                Attendance Report
+              </button>
+              </>
             )}
 
             {/* VERIFY CERTIFICATE */}
@@ -477,10 +520,10 @@ export default function LMS() {
                     </div>
                   ) : (
                     <button
-                      onClick={() => markVideoAsDone(video.day)}
+                      onClick={() => markVideoAsDone(video)}
                       className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition underline underline-offset-8"
                     >
-                      <CheckCircle2 size={14} /> Mark as Done
+                      <CheckCircle2 size={14} /> Mark Attendance
                     </button>
                   )}
                   {!isLocked && (
