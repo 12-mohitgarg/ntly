@@ -111,7 +111,7 @@ export default function ManageDailyVideos() {
         setCourseCompleted(false);
       }
     } catch (error) {
-      console.log(error);  
+      console.log(error);
     }
   };
   const extractVideoId = (url: string): string => {
