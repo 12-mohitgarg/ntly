@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../components/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, getDocs, query, orderBy, where, doc, updateDoc, addDoc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, doc, updateDoc, addDoc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -259,6 +259,53 @@ export default function AdminDashboard() {
       alert('Error verifying payment');
     }
   };
+
+  const rejectPaymentStatus = async (userId: string) => {
+    try {
+
+      // payment find
+      const paymentQuery = query(
+        collection(db, 'payments'),
+        where('userId', '==', userId)
+      );
+
+      const paymentSnapshot = await getDocs(paymentQuery);
+
+      // payment records delete
+      paymentSnapshot.forEach(async (paymentDoc) => {
+        await deleteDoc(
+          doc(db, 'payments', paymentDoc.id)
+        );
+      });
+
+      // user find
+      const userQuery = query(
+        collection(db, 'users'),
+        where('uid', '==', userId)
+      );
+
+      const userSnapshot = await getDocs(userQuery);
+
+      userSnapshot.forEach(async (userDoc) => {
+        await updateDoc(
+          doc(db, 'users', userDoc.id),
+          {
+            isPaid: false
+          }
+        );
+      });
+
+      alert('Payment rejected successfully');
+
+      fetchData();
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert('Error rejecting payment');
+    }
+  };
   const uniqueColleges = [
     ...new Set(users.map(user => user.college))
   ];
@@ -420,273 +467,278 @@ export default function AdminDashboard() {
           <TabsContent value="dashboard">
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-            <div className="flex items-center gap-3 mb-2">
-              <Users className="text-blue-600" size={24} />
-              <span className="text-slate-500 font-black uppercase text-xs">Total Users</span>
-            </div>
-            <p className="text-4xl font-black text-slate-900">{users.length}</p>
-          </div>
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-            <div className="flex items-center gap-3 mb-2">
-              <CreditCard className="text-green-600" size={24} />
-              <span className="text-slate-500 font-black uppercase text-xs">Total Amount</span>
-            </div>
-            <p className="text-4xl font-black text-slate-900">₹{totalAmount.toLocaleString()}</p>
-            <p className="text-sm text-slate-400 font-bold">{successfulPayments} successful payments</p>
-          </div>
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-            <div className="flex items-center gap-3 mb-2">
-              <CheckCircle2 className="text-green-600" size={24} />
-              <span className="text-slate-500 font-black uppercase text-xs">Success</span>
-            </div>
-            <p className="text-4xl font-black text-slate-900">{successfulPayments}</p>
-          </div>
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-            <div className="flex items-center gap-3 mb-2">
-              <Clock className="text-yellow-600" size={24} />
-              <span className="text-slate-500 font-black uppercase text-xs">Pending</span>
-            </div>
-            <p className="text-4xl font-black text-slate-900">{pendingPayments}</p>
-          </div>
+              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+                <div className="flex items-center gap-3 mb-2">
+                  <Users className="text-blue-600" size={24} />
+                  <span className="text-slate-500 font-black uppercase text-xs">Total Users</span>
+                </div>
+                <p className="text-4xl font-black text-slate-900">{users.length}</p>
+              </div>
+              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+                <div className="flex items-center gap-3 mb-2">
+                  <CreditCard className="text-green-600" size={24} />
+                  <span className="text-slate-500 font-black uppercase text-xs">Total Amount</span>
+                </div>
+                <p className="text-4xl font-black text-slate-900">₹{totalAmount.toLocaleString()}</p>
+                <p className="text-sm text-slate-400 font-bold">{successfulPayments} successful payments</p>
+              </div>
+              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+                <div className="flex items-center gap-3 mb-2">
+                  <CheckCircle2 className="text-green-600" size={24} />
+                  <span className="text-slate-500 font-black uppercase text-xs">Success</span>
+                </div>
+                <p className="text-4xl font-black text-slate-900">{successfulPayments}</p>
+              </div>
+              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+                <div className="flex items-center gap-3 mb-2">
+                  <Clock className="text-yellow-600" size={24} />
+                  <span className="text-slate-500 font-black uppercase text-xs">Pending</span>
+                </div>
+                <p className="text-4xl font-black text-slate-900">{pendingPayments}</p>
+              </div>
             </div>
             {/* FILTERS */}
             <div className="grid md:grid-cols-2 gap-6 mb-8">
 
-          {/* COLLEGE FILTER */}
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+              {/* COLLEGE FILTER */}
+              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
 
-            <h3 className="font-black text-slate-900 mb-4">
-              Filter By College
-            </h3>
+                <h3 className="font-black text-slate-900 mb-4">
+                  Filter By College
+                </h3>
 
-            <select
-              value={collegeFilter}
-              onChange={(e) =>
-                setCollegeFilter(e.target.value)
-              }
-              className="w-full h-14 rounded-xl border border-slate-200 px-4 font-bold"
-            >
-
-              <option value="">
-                All Colleges
-              </option>
-
-              {uniqueColleges.map((college) => (
-
-                <option
-                  key={college}
-                  value={college}
+                <select
+                  value={collegeFilter}
+                  onChange={(e) =>
+                    setCollegeFilter(e.target.value)
+                  }
+                  className="w-full h-14 rounded-xl border border-slate-200 px-4 font-bold"
                 >
-                  {college}
-                </option>
 
-              ))}
+                  <option value="">
+                    All Colleges
+                  </option>
 
-            </select>
+                  {uniqueColleges.map((college) => (
 
-          </div>
-
-          {/* DOMAIN FILTER */}
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-
-            <h3 className="font-black text-slate-900 mb-4">
-              Filter By Domain
-            </h3>
-
-            <select
-              value={domainFilter}
-              onChange={(e) =>
-                setDomainFilter(e.target.value)
-              }
-              className="w-full h-14 rounded-xl border border-slate-200 px-4 font-bold"
-            >
-
-              <option value="">
-                All Domains
-              </option>
-
-              {uniqueDomains.map((domain) => (
-
-                <option
-                  key={domain}
-                  value={domain}
-                >
-                  {domain}
-                </option>
-
-              ))}
-
-            </select>
-
-          </div>
-
-        </div>
-
-        {/* FILTER SUMMARY */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-
-          {/* COLLEGE SUMMARY */}
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-
-            <h3 className="text-xl font-black mb-4">
-              College Wise Users
-            </h3>
-
-            <div className="space-y-3">
-
-              {Object.entries(collegeCount).map(
-                ([college, count]) => (
-
-                  <div
-                    key={college}
-                    className="flex justify-between items-center border-b border-slate-100 pb-2"
-                  >
-
-                    <span className="text-slate-700 font-bold">
+                    <option
+                      key={college}
+                      value={college}
+                    >
                       {college}
-                    </span>
+                    </option>
 
-                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-black">
-                      {count as number}
-                    </span>
-
-                  </div>
-
-                )
-              )}
-
-            </div>
-
-          </div>
-
-          {/* DOMAIN SUMMARY */}
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-
-            <h3 className="text-xl font-black mb-4">
-              Domain Wise Users
-            </h3>
-
-            <div className="space-y-3">
-
-              {Object.entries(domainCount).map(
-                ([domain, count]) => (
-
-                  <div
-                    key={domain}
-                    className="flex justify-between items-center border-b border-slate-100 pb-2"
-                  >
-
-                    <span className="text-slate-700 font-bold">
-                      {domain}
-                    </span>
-
-                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-black">
-                      {count as number}
-                    </span>
-
-                  </div>
-
-                )
-              )}
-
-            </div>
-
-          </div>
-
-        </div>
-        {/* Users Table */}
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-          <div className="p-6 border-b border-slate-100">
-            <h2 className="text-xl font-black text-slate-900">Registered Users</h2>
-          </div>
-
-          {users.length === 0 ? (
-            <div className="p-12 text-center">
-              <Users size={48} className="text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 font-bold">No users found</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Name</th>
-                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Email</th>
-                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Phone</th>
-                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">College</th>
-                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Department</th>
-                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Domain</th>
-                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Payment Status</th>
-                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Registered</th>
-                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user) => (
-                    <tr key={user.uid} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                      <td className="p-4">
-                        <div className="font-black text-slate-900">{user.fullName}</div>
-                        <div className="text-xs text-slate-400">{user.uid}</div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2 text-slate-600">
-                          <Mail size={16} />
-                          {user.email}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2 text-slate-600">
-                          <Phone size={16} />
-                          {user.contactNumber}
-                        </div>
-                      </td>
-                      <td className="p-4 text-slate-600">{user.college}</td>
-                      <td className="p-4 text-slate-600">{user.department}</td>
-                      <td className="p-4 text-slate-600 font-bold">{user.internshipDomain}</td>
-                      <td className="p-4">
-                        {(() => {
-                          const paymentStatus = getUserPaymentStatus(user.uid);
-                          return (
-                            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black ${paymentStatus.class}`}>
-                              {paymentStatus.status === 'Success' ? <CheckCircle2 size={14} /> : <Clock size={14} />}
-                              {paymentStatus.status}
-                            </span>
-                          );
-                        })()}
-                      </td>
-                      <td className="p-4 text-slate-600 text-sm">
-
-                        {new Date(user.registrationDate).toLocaleDateString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex gap-2">
-
-                          <button
-                            onClick={() =>
-                              updatePaymentStatus(user.uid)
-                            }
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700"
-                          >
-                            Verify
-                          </button>
-
-
-
-                        </div>
-                      </td>
-                    </tr>
                   ))}
-                </tbody>
-              </table>
+
+                </select>
+
+              </div>
+
+              {/* DOMAIN FILTER */}
+              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+
+                <h3 className="font-black text-slate-900 mb-4">
+                  Filter By Domain
+                </h3>
+
+                <select
+                  value={domainFilter}
+                  onChange={(e) =>
+                    setDomainFilter(e.target.value)
+                  }
+                  className="w-full h-14 rounded-xl border border-slate-200 px-4 font-bold"
+                >
+
+                  <option value="">
+                    All Domains
+                  </option>
+
+                  {uniqueDomains.map((domain) => (
+
+                    <option
+                      key={domain}
+                      value={domain}
+                    >
+                      {domain}
+                    </option>
+
+                  ))}
+
+                </select>
+
+              </div>
+
             </div>
-            )}
+
+            {/* FILTER SUMMARY */}
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+
+              {/* COLLEGE SUMMARY */}
+              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+
+                <h3 className="text-xl font-black mb-4">
+                  College Wise Users
+                </h3>
+
+                <div className="space-y-3">
+
+                  {Object.entries(collegeCount).map(
+                    ([college, count]) => (
+
+                      <div
+                        key={college}
+                        className="flex justify-between items-center border-b border-slate-100 pb-2"
+                      >
+
+                        <span className="text-slate-700 font-bold">
+                          {college}
+                        </span>
+
+                        <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-black">
+                          {count as number}
+                        </span>
+
+                      </div>
+
+                    )
+                  )}
+
+                </div>
+
+              </div>
+
+              {/* DOMAIN SUMMARY */}
+              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+
+                <h3 className="text-xl font-black mb-4">
+                  Domain Wise Users
+                </h3>
+
+                <div className="space-y-3">
+
+                  {Object.entries(domainCount).map(
+                    ([domain, count]) => (
+
+                      <div
+                        key={domain}
+                        className="flex justify-between items-center border-b border-slate-100 pb-2"
+                      >
+
+                        <span className="text-slate-700 font-bold">
+                          {domain}
+                        </span>
+
+                        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-black">
+                          {count as number}
+                        </span>
+
+                      </div>
+
+                    )
+                  )}
+
+                </div>
+
+              </div>
+
+            </div>
+            {/* Users Table */}
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+              <div className="p-6 border-b border-slate-100">
+                <h2 className="text-xl font-black text-slate-900">Registered Users</h2>
+              </div>
+
+              {users.length === 0 ? (
+                <div className="p-12 text-center">
+                  <Users size={48} className="text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-500 font-bold">No users found</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Name</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Email</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Phone</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">College</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Department</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Domain</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Payment Status</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Registered</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredUsers.map((user) => (
+                        <tr key={user.uid} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                          <td className="p-4">
+                            <div className="font-black text-slate-900">{user.fullName}</div>
+                            <div className="text-xs text-slate-400">{user.uid}</div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <Mail size={16} />
+                              {user.email}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <Phone size={16} />
+                              {user.contactNumber}
+                            </div>
+                          </td>
+                          <td className="p-4 text-slate-600">{user.college}</td>
+                          <td className="p-4 text-slate-600">{user.department}</td>
+                          <td className="p-4 text-slate-600 font-bold">{user.internshipDomain}</td>
+                          <td className="p-4">
+                            {(() => {
+                              const paymentStatus = getUserPaymentStatus(user.uid);
+                              return (
+                                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black ${paymentStatus.class}`}>
+                                  {paymentStatus.status === 'Success' ? <CheckCircle2 size={14} /> : <Clock size={14} />}
+                                  {paymentStatus.status}
+                                </span>
+                              );
+                            })()}
+                          </td>
+                          <td className="p-4 text-slate-600 text-sm">
+
+                            {new Date(user.registrationDate).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </td>
+                          <td className="p-4">
+                            <div className="flex gap-2">
+
+                              <button
+                                onClick={() =>
+                                  updatePaymentStatus(user.uid)
+                                }
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700"
+                              >
+                                Verify
+                              </button>
+
+                              <button
+                                onClick={() => rejectPaymentStatus(user.uid)}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700"
+                              >
+                                Reject
+                              </button>
+
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </TabsContent>
 

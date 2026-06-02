@@ -207,75 +207,72 @@ export default function OfferLetter() {
   ];
 
   return (
-    <div className="space-y-12">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <div>
-           <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter leading-tight mb-4 uppercase italic">Internship / <span className="text-blue-600">Offer Letter</span></h1>
-           <p className="text-xl text-slate-500 font-bold italic leading-relaxed">"Your official authorization to begin the industrial scholarship program."</p>
-        </div>
-        <div className="p-6 px-8 bg-emerald-50 text-emerald-600 rounded-[2rem] border border-emerald-100 flex items-center gap-4 shadow-xl shadow-emerald-500/5 relative overflow-hidden group">
-          <CheckCircle2 size={32} className="relative z-10" />
-          <span className="text-xs font-black uppercase tracking-[0.2em] leading-tight relative z-10">Application <br/>Approved</span>
-          <div className="absolute top-0 right-0 w-12 h-12 bg-emerald-600/5 rounded-full translate-x-1/2 -translate-y-1/2 group-hover:scale-150 transition-transform" />
+    <div className="student-page">
+      <header className="student-card overflow-hidden p-5 sm:p-7 lg:p-8">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="student-kicker">Document Desk</p>
+            <h1 className="student-title mt-2">Internship Offer Letter</h1>
+            <p className="student-subtitle">Your verified internship joining document is ready from the details saved in your profile.</p>
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-emerald-700">
+            <CheckCircle2 size={24} />
+            <span className="text-[11px] font-black uppercase tracking-[0.16em] leading-tight">Application Approved</span>
+          </div>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {details.map((item, i) => (
           <motion.div
             key={item.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-900/[0.02] flex items-center gap-4"
+            className="student-card flex items-center gap-4 p-4 sm:p-5"
           >
-            <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-blue-600">
+            <div className="student-icon">
               <item.icon size={20} />
             </div>
-            <div>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{item.label}</p>
-              <p className="text-sm font-black text-slate-900 truncate max-w-[150px]">{item.value || 'Not Set'}</p>
+            <div className="min-w-0">
+              <p className="student-label">{item.label}</p>
+              <p className="truncate text-sm font-black text-slate-900">{item.value || 'Not Set'}</p>
             </div>
           </motion.div>
         ))}
       </div>
 
-      <div className="bg-white p-10 lg:p-20 rounded-[4rem] border border-slate-100 shadow-2xl shadow-slate-900/[0.02] text-center relative overflow-hidden group">
-        <div className="relative z-10 max-w-3xl mx-auto">
-          <div className="w-24 h-24 bg-blue-600 rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 shadow-2xl shadow-blue-600/20 group-hover:rotate-12 transition-transform">
-            <FileText size={48} className="text-white" />
+      <div className="student-card relative overflow-hidden p-6 text-center sm:p-10 lg:p-14">
+        <div className="relative z-10 mx-auto max-w-3xl">
+          <div className="mx-auto mb-7 flex size-20 items-center justify-center rounded-3xl bg-slate-950 text-white shadow-2xl shadow-slate-950/15">
+            <FileText size={38} />
           </div>
-          <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mb-8 tracking-tighter uppercase italic leading-none">Generate Official <br/>Offer Letter</h2>
-          <p className="text-slate-500 font-bold italic mb-12 text-xl leading-relaxed">
-            "Your offer letter is generated dynamically based on your verified registration records. Ensure all profile details are correct before downloading."
+          <h2 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">Generate Official Offer Letter</h2>
+          <p className="mx-auto mb-8 mt-4 max-w-2xl text-sm font-semibold leading-7 text-slate-600 sm:text-base">
+            Your PDF uses verified registration records. Please confirm your name, roll number, college, and domain before downloading.
           </p>
-          
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <button 
-              onClick={generatePDF}
-              className="w-full sm:w-auto h-20 px-12 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-2xl hover:bg-blue-600 transition-all duration-500 flex items-center justify-center gap-4 group/btn"
-            >
-              <Download size={24} className="group-hover/btn:translate-y-1 transition-transform" />
+
+          <div className="flex flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center">
+            <button onClick={generatePDF} className="student-button-primary w-full sm:w-auto">
+              <Download size={20} />
               Download Official PDF
             </button>
-            <div className="flex items-center gap-4 text-slate-400 font-black text-[10px] uppercase tracking-widest italic">
+            <div className="flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
               <Calendar size={16} />
               Valid for IM/2026 Session
             </div>
           </div>
         </div>
 
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-600/5 blur-[120px] rounded-full translate-y-1/2 -translate-x-1/2" />
+        <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-blue-100/60 blur-3xl" />
       </div>
 
-      <div className="bg-slate-900 p-12 rounded-[3.5rem] text-white flex flex-col md:flex-row items-center justify-between gap-12 shadow-2xl shadow-slate-900/40 relative overflow-hidden">
+      <div className="student-panel flex flex-col gap-6 overflow-hidden p-6 sm:p-8 md:flex-row md:items-center md:justify-between">
         <div className="relative z-10">
-          <h3 className="text-2xl font-black mb-4 tracking-tighter uppercase italic">Need Changes?</h3>
-          <p className="text-slate-400 font-bold italic text-lg leading-relaxed max-w-xl">"If your college or university details have changed, please update your profile before generating the document."</p>
+          <h3 className="text-xl font-black tracking-tight sm:text-2xl">Need to update details?</h3>
+          <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-slate-400">Update your profile before generating the document if any academic detail has changed.</p>
         </div>
-        <button onClick={() => navigate('/dashboard/profile')} className="relative z-10 h-16 px-10 bg-white/10 hover:bg-white/20 border border-white/5 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all">Go to Profile</button>
-        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-blue-600/10 blur-[80px] rounded-full" />
+        <button onClick={() => navigate('/dashboard/profile')} className="relative z-10 w-full rounded-2xl border border-white/10 bg-white/10 px-6 py-4 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:bg-white/15 sm:w-auto">Go to Profile</button>
       </div>
     </div>
   );

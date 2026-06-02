@@ -2,16 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
 import {
-  BarChart3,
   BookOpen,
-  MessageSquare,
   FileCheck,
   UserCircle,
   Download,
   Video,
   Award,
   ChevronRight,
-  Receipt
+  Receipt,
+  GraduationCap,
+  Sparkles
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { db } from '../lib/firebase';
@@ -187,44 +187,60 @@ export default function Dashboard() {
     { name: 'Learning', path: '/dashboard/lms', icon: Video },
     { name: 'Assignments', path: '/dashboard/assignments', icon: FileCheck },
     { name: 'Certifications', path: '/dashboard/certs', icon: Award },
+    { name: 'Profile', path: '/dashboard/profile', icon: UserCircle },
   ];
 
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-slate-50 flex flex-col lg:flex-row overflow-hidden relative">
-      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-600/5 blur-[150px] rounded-full pointer-events-none -mr-40 -mt-40" />
+    <div className="student-shell flex flex-col lg:flex-row overflow-hidden relative">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(circle_at_20%_20%,rgba(37,99,235,0.14),transparent_32%),radial-gradient(circle_at_85%_8%,rgba(16,185,129,0.12),transparent_30%)]" />
 
       {/* Sidebar */}
-      <aside className="w-full lg:w-80 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 lg:sticky lg:top-24 lg:h-[calc(100vh-96px)] relative z-20">
-        <div className="p-10 flex-1 flex flex-col">
-          <div className="flex items-center gap-5 mb-14 bg-slate-800/50 p-5 rounded-[2rem] border border-slate-700/50">
-            <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-2xl shadow-xl shadow-blue-600/20 border-4 border-slate-800 transition-transform hover:rotate-6">
-              {profile?.fullName.charAt(0)}
+      <aside className="relative z-20 w-full shrink-0 border-b border-white/20 bg-slate-950/95 text-white shadow-2xl shadow-slate-950/20 backdrop-blur lg:sticky lg:top-24 lg:h-[calc(100vh-96px)] lg:w-80 lg:border-b-0 lg:border-r lg:border-white/10">
+        <div className="flex h-full flex-col p-4 sm:p-6 lg:p-7">
+          <div className="mb-5 rounded-3xl border border-white/10 bg-white/[0.06] p-4 lg:mb-8">
+            <div className="mb-5 flex items-center gap-4">
+              <div className="flex size-14 items-center justify-center rounded-2xl bg-white text-2xl font-black text-blue-700 shadow-xl shadow-blue-950/20">
+                {profile?.fullName?.charAt(0) || 'S'}
+              </div>
+              <div className="min-w-0">
+                <p className="student-kicker text-blue-300">Student Workspace</p>
+                <h4 className="truncate text-base font-black tracking-tight text-white">{profile?.fullName || 'Learner'}</h4>
+              </div>
             </div>
-            <div className="overflow-hidden">
-              <p className="text-[10px] text-blue-500 font-black uppercase tracking-[0.2em] mb-1 italic">Authorized</p>
-              <h4 className="text-sm font-black text-white truncate tracking-tighter uppercase italic">{profile?.fullName}</h4>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-2xl bg-white/[0.06] p-3">
+                <p className="text-slate-400">Track</p>
+                <p className="mt-1 truncate font-bold text-white">{profile?.internshipDomain || 'Not selected'}</p>
+              </div>
+              <div className="rounded-2xl bg-white/[0.06] p-3">
+                <p className="text-slate-400">Progress</p>
+                <p className="mt-1 font-bold text-emerald-300">{profile?.progress || 0}%</p>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <h3 className="text-[10px] text-slate-500 font-black uppercase tracking-[0.4em] mb-4 pl-2 opacity-50 italic">Control Subsystems</h3>
-            <nav className="space-y-3">
+          <div className="flex-1">
+            <div className="mb-3 hidden items-center gap-2 px-2 text-[11px] font-black uppercase tracking-[0.24em] text-slate-500 lg:flex">
+              <GraduationCap size={14} />
+              Study Menu
+            </div>
+            <nav className="flex gap-2 overflow-x-auto pb-1 lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
               {menuItems.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
                   <Link
                     key={item.name}
                     to={item.path}
-                    className={`flex items-center justify-between p-4 rounded-2xl transition-all duration-500 group ${isActive
-                        ? 'bg-blue-600 text-white shadow-2xl shadow-blue-600/20 translate-x-2'
-                        : 'text-slate-500 hover:text-white hover:bg-slate-800'
+                    className={`group flex min-w-fit items-center justify-between gap-3 rounded-2xl px-4 py-3 transition lg:w-full ${isActive
+                        ? 'bg-white text-slate-950 shadow-xl shadow-white/10'
+                        : 'bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white'
                       }`}
                   >
-                    <div className="flex items-center gap-4">
-                      <item.icon size={20} className={isActive ? 'text-white' : 'text-slate-600 group-hover:text-blue-500 transition-colors'} />
-                      <span className={`text-[10px] font-black uppercase tracking-[0.15em] italic ${isActive ? 'text-white' : ''}`}>{item.name}</span>
+                    <div className="flex items-center gap-3">
+                      <item.icon size={18} className={isActive ? 'text-blue-600' : 'text-slate-500 group-hover:text-blue-300'} />
+                      <span className="text-[11px] font-black uppercase tracking-[0.12em]">{item.name}</span>
                     </div>
-                    {isActive && <ChevronRight size={14} className="text-white/50" />}
+                    {isActive && <ChevronRight size={14} className="hidden text-slate-400 lg:block" />}
                   </Link>
                 );
               })}
@@ -232,38 +248,38 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="p-10 mt-auto">
-          <div className="bg-slate-800/80 backdrop-blur-sm rounded-[2.5rem] p-8 border border-white/5 relative overflow-hidden group">
+        <div className="hidden p-7 pt-0 lg:block">
+          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.06] p-5">
             <div className="relative z-10">
-              <div className="flex items-center justify-between text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4 italic">
-                <span>Efficiency</span>
+              <div className="mb-4 flex items-center justify-between text-[11px] font-black uppercase tracking-[0.18em] text-blue-200">
+                <span>Learning Pace</span>
                 <span>{profile?.progress || 0}%</span>
               </div>
-              <div className="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden mb-6 shadow-inner">
+              <div className="mb-5 h-2.5 w-full overflow-hidden rounded-full bg-slate-900 shadow-inner">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${profile?.progress || 0}%` }}
-                  className="bg-blue-600 h-full rounded-full shadow-lg shadow-blue-600/40"
+                  className="h-full rounded-full bg-gradient-to-r from-blue-400 via-cyan-300 to-emerald-300 shadow-lg shadow-blue-600/30"
                 />
               </div>
               <button
                 onClick={downloadPaymentSlip}
-                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 mb-3 shadow-lg shadow-blue-600/20"
+                className="mb-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 text-[11px] font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-500"
               >
                 <Receipt size={14} /> Payment Slip
               </button>
-              <button className="w-full h-12 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/5">
+              <button className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 text-[11px] font-black uppercase tracking-[0.16em] text-white transition hover:bg-white/10">
+                <Sparkles size={14} />
                 Resume Track
               </button>
             </div>
-            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-blue-600/10 blur-3xl rounded-full" />
           </div>
         </div>
       </aside>
 
       {/* Content Area */}
-      <main className="flex-1 p-10 lg:p-20 overflow-y-auto w-full relative z-10">
-        <div className="max-w-6xl mx-auto h-full">
+      <main className="relative z-10 w-full flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-10 lg:py-10 xl:px-14">
+        <div className="mx-auto h-full max-w-6xl">
           <Routes>
             <Route index element={<OfferLetter />} />
             <Route path="lms" element={<LMS />} />
