@@ -13,6 +13,7 @@ interface AdminProfile {
   fullName: string;
   createdAt: string;
   isActive: boolean;
+  course?: string;
 }
 
 interface AuthContextType {

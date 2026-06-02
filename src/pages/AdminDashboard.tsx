@@ -12,6 +12,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { auth } from '../lib/firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import firebaseConfig from '../../firebase-applet-config.json';
+import { INTERNSHIP_DOMAINS } from '../lib/constants';
 
 interface UserProfile {
   uid: string;
@@ -39,6 +40,7 @@ interface TeacherProfile {
   fullName: string;
   email: string;
   role: string;
+  course?: string;
   createdAt?: string;
   isActive: boolean;
 }
@@ -55,7 +57,8 @@ export default function AdminDashboard() {
   const [teacherForm, setTeacherForm] = useState({
     fullName: '',
     email: '',
-    password: ''
+    password: '',
+    course: ''
   });
   const [savingTeacher, setSavingTeacher] = useState(false);
 
@@ -108,9 +111,10 @@ export default function AdminDashboard() {
     const fullName = teacherForm.fullName.trim();
     const email = teacherForm.email.trim().toLowerCase();
     const password = teacherForm.password;
+    const course = teacherForm.course;
 
-    if (!fullName || !email || !password) {
-      alert('Please fill in teacher name, email, and password');
+    if (!fullName || !email || !password || !course) {
+      alert('Please fill in teacher name, email, password, and course');
       return;
     }
 
@@ -137,13 +141,14 @@ export default function AdminDashboard() {
         email,
         password: '',
         role: 'teacher',
+        course,
         isActive: true,
         createdAt: new Date().toISOString(),
         createdBy: user?.uid || adminProfile?.email || 'admin'
       });
 
       await signOut(teacherAuth);
-      setTeacherForm({ fullName: '', email: '', password: '' });
+      setTeacherForm({ fullName: '', email: '', password: '', course: '' });
       fetchData();
       alert('Teacher added successfully');
     } catch (error: any) {
@@ -405,7 +410,7 @@ export default function AdminDashboard() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto p-8">
-        <Tabs defaultValue="dashboard" className="gap-6">
+        <Tabs defaultValue="dashboard" className="gap-6 flex-col">
           <TabsList className="bg-white border border-slate-100 shadow-lg h-12 p-1">
             <TabsTrigger value="dashboard" className="px-6 py-2 font-black">
               <LayoutDashboard size={16} />
@@ -721,7 +726,7 @@ export default function AdminDashboard() {
 
                 <TabsContent value="add">
                   <form onSubmit={handleAddTeacher} className="border border-slate-100 rounded-2xl p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                       <div>
                         <Label className="text-slate-500 text-xs font-black uppercase">Teacher Name</Label>
                         <Input
@@ -751,6 +756,21 @@ export default function AdminDashboard() {
                           className="mt-2 h-12"
                         />
                       </div>
+                      <div>
+                        <Label className="text-slate-500 text-xs font-black uppercase">Course</Label>
+                        <select
+                          value={teacherForm.course}
+                          onChange={(event) => setTeacherForm({ ...teacherForm, course: event.target.value })}
+                          className="mt-2 w-full h-12 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        >
+                          <option value="">Select course</option>
+                          {INTERNSHIP_DOMAINS.map((course) => (
+                            <option key={course} value={course}>
+                              {course}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       <Button type="submit" disabled={savingTeacher} className="h-12 bg-blue-600 hover:bg-blue-700 text-white font-black">
                         <UserPlus size={18} />
                         {savingTeacher ? 'Adding...' : 'Add Teacher'}
@@ -773,6 +793,7 @@ export default function AdminDashboard() {
                             <tr>
                               <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Teacher</th>
                               <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Email</th>
+                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Course</th>
                               <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
                               <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Created</th>
                             </tr>
@@ -789,6 +810,9 @@ export default function AdminDashboard() {
                                     <Mail size={16} />
                                     {teacher.email}
                                   </div>
+                                </td>
+                                <td className="p-4 text-slate-600 font-bold">
+                                  {teacher.course || '-'}
                                 </td>
                                 <td className="p-4">
                                   <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black ${teacher.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
