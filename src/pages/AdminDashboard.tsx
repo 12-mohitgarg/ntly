@@ -6,13 +6,15 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus } from 'lucide-react';
+import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus, Download } from 'lucide-react';
 import { createUserWithEmailAndPassword, deleteUser, getAuth, signOut, User as FirebaseUser } from 'firebase/auth';
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { auth } from '../lib/firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { INTERNSHIP_DOMAINS } from '../lib/constants';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface UserProfile {
   uid: string;
@@ -54,6 +56,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [collegeFilter, setCollegeFilter] = useState('');
   const [domainFilter, setDomainFilter] = useState('');
+  const [exportCollege, setExportCollege] = useState('');
   const [teacherForm, setTeacherForm] = useState({
     fullName: '',
     email: '',
@@ -311,42 +314,46 @@ export default function AdminDashboard() {
       alert('Error rejecting payment');
     }
   };
+  const getGroupName = (value?: string) => value?.trim() || 'Not specified';
+
+  const successfulUserIds = new Set(
+    payments
+      .filter((payment) => payment.status === 'success' && payment.userId)
+      .map((payment) => payment.userId)
+  );
+
+  const isUserSuccessful = (user: UserProfile) =>
+    Boolean(user.isPaid || successfulUserIds.has(user.uid));
+
   const uniqueColleges = [
-    ...new Set(users.map(user => user.college))
-  ];
+    ...new Set(users.map(user => getGroupName(user.college)))
+  ].sort();
 
   const uniqueDomains = [
-    ...new Set(users.map(user => user.internshipDomain))
-  ];
+    ...new Set(users.map(user => getGroupName(user.internshipDomain)))
+  ].sort();
 
   const filteredUsers = users.filter(user => {
 
+
     const collegeMatch =
       !collegeFilter ||
-      user.college === collegeFilter;
+      getGroupName(user.college) === collegeFilter;
 
     const domainMatch =
       !domainFilter ||
-      user.internshipDomain === domainFilter;
+      getGroupName(user.internshipDomain) === domainFilter;
 
     return collegeMatch && domainMatch;
   });
-  const successUsers = filteredUsers.filter((user) => {
+  const successfulUsers = users.filter(isUserSuccessful);
 
-    const payment = payments.find(
-      (p) =>
-        p.userId === user.uid &&
-        p.status === 'success'
-    );
+  const collegeCount = filteredUsers.reduce<Record<string, number>>(
+    (acc, user) => {
+      const college = getGroupName(user.college);
 
-    return payment;
-  });
-
-  const collegeCount = successUsers.reduce(
-    (acc: any, user) => {
-
-      acc[user.college] =
-        (acc[user.college] || 0) + 1;
+      acc[college] =
+        (acc[college] || 0) + 1;
 
       return acc;
 
@@ -354,11 +361,12 @@ export default function AdminDashboard() {
     {}
   );
 
-  const domainCount = filteredUsers.reduce(
-    (acc: any, user) => {
+  const domainCount = filteredUsers.reduce<Record<string, number>>(
+    (acc, user) => {
+      const domain = getGroupName(user.internshipDomain);
 
-      acc[user.internshipDomain] =
-        (acc[user.internshipDomain] || 0) + 1;
+      acc[domain] =
+        (acc[domain] || 0) + 1;
 
       return acc;
 
@@ -366,16 +374,76 @@ export default function AdminDashboard() {
     {}
   );
   // Calculate payment statistics
-  const successfulPayments = payments.filter(p => p.status === 'success').length;
-  const pendingPayments = payments.filter(p => p.status === 'pending').length;
+  const successfulUsersCount = successfulUsers.length;
+  const pendingUsersCount = users.length - successfulUsersCount;
   const totalAmount = payments.filter(p => p.status === 'success').reduce((sum, p) => sum + (p.amount || 0), 0);
 
   // Get payment status for a user
   const getUserPaymentStatus = (userId: string) => {
+    const tableUser = users.find((profile) => profile.uid === userId);
+    if (tableUser?.isPaid || successfulUserIds.has(userId)) {
+      return { status: 'Success', class: 'bg-green-100 text-green-700' };
+    }
+
     const userPayment = payments.find(p => p.userId === userId);
     if (!userPayment) return { status: 'Pending', class: 'bg-yellow-100 text-yellow-700' };
-    if (userPayment.status === 'success') return { status: 'Success', class: 'bg-green-100 text-green-700' };
     return { status: 'Pending', class: 'bg-yellow-100 text-yellow-700' };
+  };
+
+  const exportCollegeStudentsPdf = () => {
+    if (!exportCollege) {
+      alert('Please select a college');
+      return;
+    }
+
+    const collegeStudents = users.filter(user =>
+      getGroupName(user.college) === exportCollege &&
+      isUserSuccessful(user)
+    );
+
+    if (collegeStudents.length === 0) {
+      alert('No successful payment students found for this college');
+      return;
+    }
+
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const generatedAt = new Date().toLocaleString('en-IN');
+
+    pdf.setFillColor(15, 23, 42);
+    pdf.rect(0, 0, 297, 24, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('Helvetica', 'bold');
+    pdf.setFontSize(16);
+    pdf.text('INTERNMITRA COLLEGE STUDENT REPORT', 148, 15, { align: 'center' });
+
+    pdf.setTextColor(15, 23, 42);
+    pdf.setFontSize(13);
+    pdf.text(exportCollege, 14, 38);
+    pdf.setFont('Helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text(`Successful Payment Students: ${collegeStudents.length}`, 14, 46);
+    pdf.text(`Generated: ${generatedAt}`, 14, 53);
+
+    autoTable(pdf, {
+      startY: 62,
+      head: [['Name', 'Email', 'Phone', 'Department', 'Domain', 'Payment', 'Registered']],
+      body: collegeStudents.map(student => [
+        student.fullName || '-',
+        student.email || '-',
+        student.contactNumber || '-',
+        student.department || '-',
+        student.internshipDomain || '-',
+        'Success',
+        student.registrationDate
+          ? new Date(student.registrationDate).toLocaleDateString('en-IN')
+          : '-'
+      ]),
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [37, 99, 235], textColor: 255 },
+      alternateRowStyles: { fillColor: [248, 250, 252] }
+    });
+
+    pdf.save(`InternMitra_${exportCollege.replace(/[^a-z0-9]/gi, '_')}_Students.pdf`);
   };
 
   if (loading) {
@@ -467,40 +535,44 @@ export default function AdminDashboard() {
               <UserPlus size={16} />
               Teachers
             </TabsTrigger>
+            {/* <TabsTrigger value="college-export" className="px-6 py-2 font-black">
+              <Download size={16} />
+              College Export
+            </TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="dashboard">
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-                <div className="flex items-center gap-3 mb-2">
-                  <Users className="text-blue-600" size={24} />
-                  <span className="text-slate-500 font-black uppercase text-xs">Total Users</span>
-                </div>
-                <p className="text-4xl font-black text-slate-900">{users.length}</p>
-              </div>
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-                <div className="flex items-center gap-3 mb-2">
-                  <CreditCard className="text-green-600" size={24} />
-                  <span className="text-slate-500 font-black uppercase text-xs">Total Amount</span>
-                </div>
-                <p className="text-4xl font-black text-slate-900">₹{totalAmount.toLocaleString()}</p>
-                <p className="text-sm text-slate-400 font-bold">{successfulPayments} successful payments</p>
-              </div>
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-                <div className="flex items-center gap-3 mb-2">
-                  <CheckCircle2 className="text-green-600" size={24} />
-                  <span className="text-slate-500 font-black uppercase text-xs">Success</span>
-                </div>
-                <p className="text-4xl font-black text-slate-900">{successfulPayments}</p>
-              </div>
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-                <div className="flex items-center gap-3 mb-2">
-                  <Clock className="text-yellow-600" size={24} />
-                  <span className="text-slate-500 font-black uppercase text-xs">Pending</span>
-                </div>
-                <p className="text-4xl font-black text-slate-900">{pendingPayments}</p>
-              </div>
+          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+            <div className="flex items-center gap-3 mb-2">
+              <Users className="text-blue-600" size={24} />
+              <span className="text-slate-500 font-black uppercase text-xs">Total Users</span>
+            </div>
+            <p className="text-4xl font-black text-slate-900">{users.length}</p>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+            <div className="flex items-center gap-3 mb-2">
+              <CreditCard className="text-green-600" size={24} />
+              <span className="text-slate-500 font-black uppercase text-xs">Total Amount</span>
+            </div>
+            <p className="text-4xl font-black text-slate-900">₹{totalAmount.toLocaleString()}</p>
+            <p className="text-sm text-slate-400 font-bold">{successfulUsersCount} successful users</p>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+            <div className="flex items-center gap-3 mb-2">
+              <CheckCircle2 className="text-green-600" size={24} />
+              <span className="text-slate-500 font-black uppercase text-xs">Success</span>
+            </div>
+            <p className="text-4xl font-black text-slate-900">{successfulUsersCount}</p>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+            <div className="flex items-center gap-3 mb-2">
+              <Clock className="text-yellow-600" size={24} />
+              <span className="text-slate-500 font-black uppercase text-xs">Pending</span>
+            </div>
+            <p className="text-4xl font-black text-slate-900">{pendingUsersCount}</p>
+          </div>
             </div>
             {/* FILTERS */}
             <div className="grid md:grid-cols-2 gap-6 mb-8">
@@ -744,6 +816,58 @@ export default function AdminDashboard() {
                   </table>
                 </div>
               )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="college-export">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center">
+                    <Download size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900">College Student Export</h2>
+                    <p className="text-slate-500 text-sm font-bold">Select one college and export successful payment students as PDF.</p>
+                  </div>
+                </div>
+                <span className="bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-black uppercase">
+                  {exportCollege
+                    ? users.filter(user =>
+                      getGroupName(user.college) === exportCollege &&
+                      isUserSuccessful(user)
+                    ).length
+                    : 0} Paid Students
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-end border border-slate-100 rounded-2xl p-6">
+                <div>
+                  <Label className="text-slate-500 text-xs font-black uppercase">College</Label>
+                  <select
+                    value={exportCollege}
+                    onChange={(event) => setExportCollege(event.target.value)}
+                    className="mt-2 w-full h-12 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="">Select college</option>
+                    {uniqueColleges.map((college) => (
+                      <option key={college} value={college}>
+                        {college}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={exportCollegeStudentsPdf}
+                  disabled={!exportCollege}
+                  className="h-12 bg-green-600 hover:bg-green-700 text-white font-black px-6"
+                >
+                  <Download size={18} />
+                  Export PDF
+                </Button>
+              </div>
             </div>
           </TabsContent>
 
