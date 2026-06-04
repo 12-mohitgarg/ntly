@@ -31,7 +31,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { INTERNSHIP_DOMAINS } from '../../lib/constants';
 import { useAuth } from '../../components/AuthContext';
-import { AttendanceEntry, generateCourseAttendanceReport } from '../dashboard/generateAttendanceReport';
+import { AttendanceEntry, AttendanceStudent, generateCourseAttendanceReport } from '../dashboard/generateAttendanceReport';
 
 interface DailyVideo {
   id: string;
@@ -50,6 +50,7 @@ export default function ManageDailyVideos() {
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [courseCompleted, setCourseCompleted] = useState(false);
   const [attendanceEntries, setAttendanceEntries] = useState<AttendanceEntry[]>([]);
+  const [courseStudents, setCourseStudents] = useState<AttendanceStudent[]>([]);
   const [formData, setFormData] = useState({
     day: 1,
     title: '',
@@ -71,6 +72,7 @@ export default function ManageDailyVideos() {
       fetchVideos();
       fetchCourseStatus();
       fetchAttendance();
+      fetchCourseStudents();
 
       setFormData(prev => ({
         ...prev,
@@ -143,6 +145,35 @@ export default function ManageDailyVideos() {
       setAttendanceEntries(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceEntry)));
     } catch (error) {
       console.error('Error fetching attendance:', error);
+    }
+  };
+
+  const fetchCourseStudents = async () => {
+    if (!selectedCourse) {
+      setCourseStudents([]);
+      return;
+    }
+
+    try {
+      const usersQuery = query(
+        collection(db, 'users'),
+        where('internshipDomain', '==', selectedCourse)
+      );
+      const snapshot = await getDocs(usersQuery);
+      setCourseStudents(snapshot.docs.map((studentDoc) => {
+        const data = studentDoc.data();
+
+        return {
+          id: studentDoc.id,
+          uid: studentDoc.id,
+          fullName: data.fullName || '',
+          email: data.email || '',
+          college: data.college || ''
+        };
+      }));
+    } catch (error) {
+      console.error('Error fetching course students:', error);
+      setCourseStudents([]);
     }
   };
   const extractVideoId = (url: string): string => {
@@ -326,7 +357,7 @@ export default function ManageDailyVideos() {
                     Course Completed
                   </button>
                   <button
-                    onClick={() => generateCourseAttendanceReport(selectedCourse, attendanceEntries)}
+                    onClick={() => generateCourseAttendanceReport(selectedCourse, attendanceEntries, courseStudents, videos)}
                     className="bg-slate-900 text-white px-5 py-2 rounded-lg"
                   >
                     Generate Attendance Report

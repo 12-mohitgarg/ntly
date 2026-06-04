@@ -122,6 +122,12 @@ service cloud.firestore {
         incoming().course is string &&
         incoming().day is number &&
         incoming().videoId is string;
+      allow update: if isSignedIn() &&
+        existing().userId == request.auth.uid &&
+        incoming().userId == existing().userId &&
+        incoming().course == existing().course &&
+        incoming().day == existing().day &&
+        incoming().videoId is string;
     }
 
     match /courseCompletion/{docId} {
