@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { db } from '../lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { jsPDF } from 'jspdf';
 import OfferLetter from './dashboard/OfferLetter';
 import LMS from './dashboard/LMS';
@@ -27,6 +27,7 @@ export default function Dashboard() {
   const { user, profile } = useAuth();
   const location = useLocation();
   const [paymentRecord, setPaymentRecord] = useState<any>(null);
+  const [learningProgress, setLearningProgress] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -37,6 +38,74 @@ export default function Dashboard() {
     };
     fetchPayment();
   }, [user]);
+
+  useEffect(() => {
+    if (!user || !profile?.internshipDomain) {
+      setLearningProgress(0);
+      return;
+    }
+
+    const fetchLearningProgress = async () => {
+      const course = profile.internshipDomain;
+      const videosQuery = query(
+        collection(db, 'dailyVideos'),
+        where('course', '==', course)
+      );
+      const videosSnapshot = await getDocs(videosQuery);
+      const uploadedDays = new Set(
+        videosSnapshot.docs
+          .map((videoDoc) => String(videoDoc.data().day || '').trim())
+          .filter(Boolean)
+      );
+
+      if (uploadedDays.size === 0) {
+        setLearningProgress(0);
+        return;
+      }
+
+      const completedDays = new Set<string>();
+      const progressRef = doc(db, 'userVideoProgress', `${user.uid}-${course}`);
+      const progressSnapshot = await getDoc(progressRef);
+
+      if (progressSnapshot.exists()) {
+        const completedVideos = progressSnapshot.data().completedVideos || {};
+        Object.entries(completedVideos).forEach(([day, completed]) => {
+          const normalizedDay = String(day).trim();
+          if (completed && uploadedDays.has(normalizedDay)) {
+            completedDays.add(normalizedDay);
+          }
+        });
+      }
+
+      const attendanceQuery = query(
+        collection(db, 'attendance'),
+        where('userId', '==', user.uid),
+        where('course', '==', course)
+      );
+      const attendanceSnapshot = await getDocs(attendanceQuery);
+      attendanceSnapshot.docs.forEach((attendanceDoc) => {
+        const normalizedDay = String(attendanceDoc.data().day || '').trim();
+        if (uploadedDays.has(normalizedDay)) {
+          completedDays.add(normalizedDay);
+        }
+      });
+
+      const progress = Math.round((completedDays.size / uploadedDays.size) * 100);
+      setLearningProgress(progress);
+
+      if (profile.progress !== progress) {
+        await updateDoc(doc(db, 'users', user.uid), {
+          progress,
+          totalHoursCompleted: completedDays.size
+        });
+      }
+    };
+
+    fetchLearningProgress().catch((error) => {
+      console.error('Error fetching learning progress:', error);
+      setLearningProgress(profile?.progress || 0);
+    });
+  }, [user, profile?.internshipDomain, profile?.progress]);
 
   const downloadPaymentSlip = () => {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -214,7 +283,7 @@ export default function Dashboard() {
               </div>
               <div className="rounded-2xl bg-white/[0.06] p-3">
                 <p className="text-slate-400">Progress</p>
-                <p className="mt-1 font-bold text-emerald-300">{profile?.progress || 0}%</p>
+                <p className="mt-1 font-bold text-emerald-300">{learningProgress}%</p>
               </div>
             </div>
           </div>
@@ -253,12 +322,12 @@ export default function Dashboard() {
             <div className="relative z-10">
               <div className="mb-4 flex items-center justify-between text-[11px] font-black uppercase tracking-[0.18em] text-blue-200">
                 <span>Learning Pace</span>
-                <span>{profile?.progress || 0}%</span>
+                <span>{learningProgress}%</span>
               </div>
               <div className="mb-5 h-2.5 w-full overflow-hidden rounded-full bg-slate-900 shadow-inner">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${profile?.progress || 0}%` }}
+                  animate={{ width: `${learningProgress}%` }}
                   className="h-full rounded-full bg-gradient-to-r from-blue-400 via-cyan-300 to-emerald-300 shadow-lg shadow-blue-600/30"
                 />
               </div>

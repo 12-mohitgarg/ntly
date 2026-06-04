@@ -54,10 +54,50 @@ export default function LMS() {
   useEffect(() => {
     // Re-check completion status after videos are loaded
     if (dailyVideos.length > 0) {
-      const completedCount = Object.values(videoProgress).filter(v => v).length;
+      const completedCount = getCompletedVideoDays(videoProgress, attendanceEntries).size;
       setIsCourseCompleted(completedCount === dailyVideos.length);
     }
-  }, [dailyVideos, videoProgress]);
+  }, [dailyVideos, videoProgress, attendanceEntries]);
+
+  const getUploadedVideoDays = () => new Set(
+    dailyVideos
+      .map((video) => String(video.day || '').trim())
+      .filter(Boolean)
+  );
+
+  const getCompletedVideoDays = (
+    progress: VideoProgress = videoProgress,
+    attendance: AttendanceEntry[] = attendanceEntries
+  ) => {
+    const uploadedDays = getUploadedVideoDays();
+    const completedDays = new Set<string>();
+
+    Object.entries(progress).forEach(([day, completed]) => {
+      const normalizedDay = String(day).trim();
+      if (completed && uploadedDays.has(normalizedDay)) {
+        completedDays.add(normalizedDay);
+      }
+    });
+
+    attendance.forEach((entry) => {
+      const normalizedDay = String(entry.day || '').trim();
+      if (uploadedDays.has(normalizedDay)) {
+        completedDays.add(normalizedDay);
+      }
+    });
+
+    return completedDays;
+  };
+
+  const getProgressPercentage = (
+    progress: VideoProgress = videoProgress,
+    attendance: AttendanceEntry[] = attendanceEntries
+  ) => {
+    const uploadedCount = getUploadedVideoDays().size;
+    if (uploadedCount === 0) return 0;
+
+    return Math.round((getCompletedVideoDays(progress, attendance).size / uploadedCount) * 100);
+  };
 
   const calculateCurrentDay = () => {
     console.log('Profile:', profile);
@@ -124,7 +164,7 @@ export default function LMS() {
         setVideoProgress(progressData.completedVideos || {});
 
         // Check if all uploaded videos are completed
-        const completedCount = Object.values(progressData.completedVideos || {}).filter(v => v).length;
+        const completedCount = getCompletedVideoDays(progressData.completedVideos || {}).size;
         setIsCourseCompleted(completedCount === dailyVideos.length && dailyVideos.length > 0);
       }
     } catch (error) {
@@ -209,13 +249,16 @@ export default function LMS() {
 
       // Update user profile with total hours
       const userRef = doc(db, 'users', user.uid);
+      const completedDays = getCompletedVideoDays(newProgress);
+      const progress = getProgressPercentage(newProgress);
       await updateDoc(userRef, {
-        totalHoursCompleted: Object.keys(newProgress).length,
+        totalHoursCompleted: completedDays.size,
+        progress,
         lastVideoCompletedAt: new Date().toISOString()
       });
 
       // Check if all uploaded videos are completed
-      const completedCount = Object.values(newProgress).filter(v => v).length;
+      const completedCount = completedDays.size;
       setIsCourseCompleted(completedCount === dailyVideos.length && dailyVideos.length > 0);
       await fetchAttendance();
       setAttendanceVideo(null);
@@ -350,7 +393,7 @@ export default function LMS() {
         <div className="flex items-center gap-4">
           <div className="text-right">
             <div className="text-sm font-black text-slate-400 uppercase tracking-widest">Day {currentDay} of 15</div>
-            <div className="text-xs font-bold text-slate-500">{Object.values(videoProgress).filter(v => v).length} videos completed • {Object.values(videoProgress).filter(v => v).length} hours</div>
+            <div className="text-xs font-bold text-slate-500">{getCompletedVideoDays().size} videos completed • {getCompletedVideoDays().size} hours</div>
           </div>
           <div className="flex flex-col gap-4">
 
