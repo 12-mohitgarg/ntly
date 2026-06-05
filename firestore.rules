@@ -138,5 +138,10 @@ service cloud.firestore {
     match /userVideoProgress/{docId} {
       allow read, write: if isSignedIn();
     }
+
+    match /notifications/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
   }
 }

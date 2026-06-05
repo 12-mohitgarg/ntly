@@ -120,7 +120,8 @@ export default function Dashboard() {
     const roll = profile?.universityRoll || 'N/A';
     const paymentId = paymentRecord?.razorpayPaymentId || 'N/A';
     const orderId = paymentRecord?.razorpayOrderId || 'N/A';
-    const amount = paymentRecord?.amount ? `Rs. ${paymentRecord.amount}.00` : 'Rs. 700.00';
+    const amountValue = Number(paymentRecord?.amount || 0);
+    const amount = amountValue > 0 ? `Rs. ${amountValue.toLocaleString('en-IN')}.00` : 'Rs. 700.00';
     const paidOn = paymentRecord?.timestamp
       ? new Date(paymentRecord.timestamp).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
       : 'N/A';
@@ -232,7 +233,7 @@ export default function Dashboard() {
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(22, 163, 74);
-    doc.text('PAYMENT CONFIRMED — Rs. 500.00 received successfully.', W / 2, y + 8, { align: 'center' });
+    doc.text(`PAYMENT CONFIRMED - ${amount} received successfully.`, W / 2, y + 8, { align: 'center' });
 
     y += 24;
     doc.setTextColor(148, 163, 184);

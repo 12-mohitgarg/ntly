@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus, Download } from 'lucide-react';
+import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus, Download, Bell, Send } from 'lucide-react';
 import { createUserWithEmailAndPassword, deleteUser, getAuth, signOut, User as FirebaseUser } from 'firebase/auth';
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { auth } from '../lib/firebase';
@@ -47,12 +47,21 @@ interface TeacherProfile {
   isActive: boolean;
 }
 
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  createdAt?: string;
+  isActive: boolean;
+}
+
 export default function AdminDashboard() {
   const { user, adminProfile } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [teachers, setTeachers] = useState<TeacherProfile[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [collegeFilter, setCollegeFilter] = useState('');
   const [domainFilter, setDomainFilter] = useState('');
@@ -63,7 +72,12 @@ export default function AdminDashboard() {
     password: '',
     course: ''
   });
+  const [notificationForm, setNotificationForm] = useState({
+    title: '',
+    message: ''
+  });
   const [savingTeacher, setSavingTeacher] = useState(false);
+  const [savingNotification, setSavingNotification] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -96,6 +110,12 @@ export default function AdminDashboard() {
         .map(doc => ({ uid: doc.id, ...doc.data() } as TeacherProfile))
         .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       setTeachers(teachersData);
+
+      // Fetch notifications
+      const notificationsQuery = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
+      const notificationsSnapshot = await getDocs(notificationsQuery);
+      const notificationsData = notificationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+      setNotifications(notificationsData);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -164,6 +184,39 @@ export default function AdminDashboard() {
       alert(error?.message || 'Error adding teacher');
     } finally {
       setSavingTeacher(false);
+    }
+  };
+
+  const handleAddNotification = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const title = notificationForm.title.trim();
+    const message = notificationForm.message.trim();
+
+    if (!title || !message) {
+      alert('Please fill in notification title and message');
+      return;
+    }
+
+    setSavingNotification(true);
+
+    try {
+      await addDoc(collection(db, 'notifications'), {
+        title,
+        message,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        createdBy: user?.uid || adminProfile?.email || 'admin'
+      });
+
+      setNotificationForm({ title: '', message: '' });
+      fetchData();
+      alert('Notification added successfully');
+    } catch (error: any) {
+      console.error('Error adding notification:', error);
+      alert(error?.message || 'Error adding notification');
+    } finally {
+      setSavingNotification(false);
     }
   };
   const updatePaymentStatus = async (
@@ -535,6 +588,10 @@ export default function AdminDashboard() {
               <UserPlus size={16} />
               Teachers
             </TabsTrigger>
+            <TabsTrigger value="notifications" className="px-6 py-2 font-black">
+              <Bell size={16} />
+              Notifications
+            </TabsTrigger>
             {/* <TabsTrigger value="college-export" className="px-6 py-2 font-black">
               <Download size={16} />
               College Export
@@ -868,6 +925,81 @@ export default function AdminDashboard() {
                   Export PDF
                 </Button>
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
+                    <Bell size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900">User Notifications</h2>
+                    <p className="text-slate-500 text-sm font-bold">Add announcements that appear on every user profile page.</p>
+                  </div>
+                </div>
+                <span className="bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-black uppercase">
+                  {notifications.length} Notifications
+                </span>
+              </div>
+
+              <form onSubmit={handleAddNotification} className="border border-slate-100 rounded-2xl p-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-[280px_1fr_auto] gap-4 items-end">
+                  <div>
+                    <Label className="text-slate-500 text-xs font-black uppercase">Title</Label>
+                    <Input
+                      value={notificationForm.title}
+                      onChange={(event) => setNotificationForm({ ...notificationForm, title: event.target.value })}
+                      placeholder="Notification title"
+                      className="mt-2 h-12"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-slate-500 text-xs font-black uppercase">Message</Label>
+                    <textarea
+                      value={notificationForm.message}
+                      onChange={(event) => setNotificationForm({ ...notificationForm, message: event.target.value })}
+                      placeholder="Write notification message"
+                      className="mt-2 min-h-12 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                  <Button type="submit" disabled={savingNotification} className="h-12 bg-blue-600 hover:bg-blue-700 text-white font-black">
+                    <Send size={18} />
+                    {savingNotification ? 'Adding...' : 'Add'}
+                  </Button>
+                </div>
+              </form>
+
+              {notifications.length === 0 ? (
+                <div className="border border-dashed border-slate-200 rounded-2xl p-12 text-center">
+                  <Bell size={48} className="text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-500 font-bold">No notifications added yet</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {notifications.map((notification) => (
+                    <div key={notification.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                        <div>
+                          <h3 className="font-black text-slate-900">{notification.title}</h3>
+                          <p className="mt-2 text-sm font-bold leading-6 text-slate-600 whitespace-pre-line">{notification.message}</p>
+                        </div>
+                        <div className="shrink-0 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                          {notification.createdAt
+                            ? new Date(notification.createdAt).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            })
+                            : '-'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </TabsContent>
 
