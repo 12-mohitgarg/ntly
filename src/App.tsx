@@ -24,28 +24,29 @@ import ManageCourses from './pages/admin/ManageCourses';
 import ManageUniversities from './pages/admin/ManageUniversities';
 import ManageSubjects from './pages/admin/ManageSubjects';
 import ManageDailyVideos from './pages/admin/ManageDailyVideos';
+import Notifications from "./pages/Dashboard/Notifications";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth();
-  
+
   if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
   if (!user) return <Navigate to="/login" />;
   if (profile && !profile.isPaid && window.location.pathname !== '/payment') return <Navigate to="/payment" />;
-  
+
   return <>{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, adminProfile, loading } = useAuth();
   const location = useLocation();
-  
+
   if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
   if (!user) return <Navigate to="/login" />;
   if (!isAdmin) return <Navigate to="/login" />;
   if (adminProfile?.role === 'teacher' && location.pathname !== '/admin/daily-videos') {
     return <Navigate to="/admin/daily-videos" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
@@ -73,6 +74,14 @@ export default function App() {
             <Route path="/admin/universities" element={<AdminRoute><ManageUniversities /></AdminRoute>} />
             <Route path="/admin/subjects" element={<AdminRoute><ManageSubjects /></AdminRoute>} />
             <Route path="/admin/daily-videos" element={<AdminRoute><ManageDailyVideos /></AdminRoute>} />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <Notifications />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </div>
       </AuthProvider>

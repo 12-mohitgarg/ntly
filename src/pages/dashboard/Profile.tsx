@@ -166,7 +166,7 @@ export default function Profile() {
         </div>
       </header>
 
-      {notifications.length > 0 && (
+      {/* {notifications.length > 0 && (
         <section className="bg-white p-8 rounded-[2rem] border border-blue-100 shadow-2xl shadow-blue-600/[0.04]">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-11 h-11 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
@@ -190,7 +190,7 @@ export default function Profile() {
             ))}
           </div>
         </section>
-      )}
+      )} */}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
         {/* Left Column: Avatar & Summary */}

@@ -22,6 +22,8 @@ import LMS from './dashboard/LMS';
 import Assignments from './dashboard/Assignments';
 import Profile from './dashboard/Profile';
 import Certifications from './dashboard/Certifications';
+import Notifications from './dashboard/Notifications';
+import { Bell } from 'lucide-react';
 
 export default function Dashboard() {
   const { user, profile } = useAuth();
@@ -258,6 +260,7 @@ export default function Dashboard() {
     { name: 'Assignments', path: '/dashboard/assignments', icon: FileCheck },
     { name: 'Certifications', path: '/dashboard/certs', icon: Award },
     { name: 'Profile', path: '/dashboard/profile', icon: UserCircle },
+    { name: 'Notifications', path: '/dashboard/notifications', icon: Bell },
   ];
 
   return (
@@ -302,8 +305,8 @@ export default function Dashboard() {
                     key={item.name}
                     to={item.path}
                     className={`group flex min-w-fit items-center justify-between gap-3 rounded-2xl px-4 py-3 transition lg:w-full ${isActive
-                        ? 'bg-white text-slate-950 shadow-xl shadow-white/10'
-                        : 'bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white'
+                      ? 'bg-white text-slate-950 shadow-xl shadow-white/10'
+                      : 'bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white'
                       }`}
                   >
                     <div className="flex items-center gap-3">
@@ -356,6 +359,7 @@ export default function Dashboard() {
             <Route path="assignments" element={<Assignments />} />
             <Route path="certs" element={<Certifications />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="notifications" element={<Notifications />} />
           </Routes>
         </div>
       </main>
