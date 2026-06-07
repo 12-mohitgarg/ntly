@@ -321,33 +321,37 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="hidden p-7 pt-0 lg:block">
-          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.06] p-5">
-            <div className="relative z-10">
-              <div className="mb-4 flex items-center justify-between text-[11px] font-black uppercase tracking-[0.18em] text-blue-200">
-                <span>Learning Pace</span>
-                <span>{learningProgress}%</span>
-              </div>
-              <div className="mb-5 h-2.5 w-full overflow-hidden rounded-full bg-slate-900 shadow-inner">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${learningProgress}%` }}
-                  className="h-full rounded-full bg-gradient-to-r from-blue-400 via-cyan-300 to-emerald-300 shadow-lg shadow-blue-600/30"
-                />
-              </div>
-              <button
-                onClick={downloadPaymentSlip}
-                className="mb-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 text-[11px] font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-500"
-              >
-                <Receipt size={14} /> Payment Slip
-              </button>
-              <button className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 text-[11px] font-black uppercase tracking-[0.16em] text-white transition hover:bg-white/10">
-                <Sparkles size={14} />
-                Resume Track
-              </button>
-            </div>
-          </div>
-        </div>
+       <div className="w-full p-4 sm:p-5 md:p-6 lg:p-7 pt-0">
+  <div className="relative overflow-hidden rounded-2xl lg:rounded-3xl border border-white/10 bg-white/[0.06] p-4 sm:p-5">
+    <div className="relative z-10">
+      <div className="mb-4 flex items-center justify-between text-[10px] sm:text-[11px] font-black uppercase tracking-[0.18em] text-blue-200">
+        <span>Learning Pace</span>
+        <span>{learningProgress}%</span>
+      </div>
+
+      <div className="mb-5 h-2.5 w-full overflow-hidden rounded-full bg-slate-900 shadow-inner">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${learningProgress}%` }}
+          className="h-full rounded-full bg-gradient-to-r from-blue-400 via-cyan-300 to-emerald-300 shadow-lg shadow-blue-600/30"
+        />
+      </div>
+
+      <button
+        onClick={downloadPaymentSlip}
+        className="mb-3 flex h-11 sm:h-12 w-full items-center justify-center gap-2 rounded-xl sm:rounded-2xl bg-blue-600 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-500"
+      >
+        <Receipt size={14} />
+        Payment Slip
+      </button>
+
+      <button className="flex h-11 sm:h-12 w-full items-center justify-center gap-2 rounded-xl sm:rounded-2xl border border-white/10 bg-white/5 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.16em] text-white transition hover:bg-white/10">
+        <Sparkles size={14} />
+        Resume Track
+      </button>
+    </div>
+  </div>
+</div>
       </aside>
 
       {/* Content Area */}
