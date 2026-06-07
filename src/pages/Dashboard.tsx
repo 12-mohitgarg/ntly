@@ -4,6 +4,7 @@ import { useAuth } from '../components/AuthContext';
 import {
   BookOpen,
   FileCheck,
+  FileText,
   UserCircle,
   Download,
   Video,
@@ -23,6 +24,7 @@ import Assignments from './dashboard/Assignments';
 import Profile from './dashboard/Profile';
 import Certifications from './dashboard/Certifications';
 import Notifications from './dashboard/Notifications';
+import Reports from './dashboard/Reports';
 import { Bell } from 'lucide-react';
 
 export default function Dashboard() {
@@ -259,6 +261,7 @@ export default function Dashboard() {
     { name: 'Learning', path: '/dashboard/lms', icon: Video },
     { name: 'Assignments', path: '/dashboard/assignments', icon: FileCheck },
     { name: 'Certifications', path: '/dashboard/certs', icon: Award },
+    { name: 'Reports', path: '/dashboard/reports', icon: FileText },
     { name: 'Profile', path: '/dashboard/profile', icon: UserCircle },
     { name: 'Notifications', path: '/dashboard/notifications', icon: Bell },
   ];
@@ -362,6 +365,7 @@ export default function Dashboard() {
             <Route path="lms" element={<LMS />} />
             <Route path="assignments" element={<Assignments />} />
             <Route path="certs" element={<Certifications />} />
+            <Route path="reports" element={<Reports />} />
             <Route path="profile" element={<Profile />} />
             <Route path="notifications" element={<Notifications />} />
           </Routes>

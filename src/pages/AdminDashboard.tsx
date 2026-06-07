@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../components/AuthContext';
-import { db } from '../lib/firebase';
+import { db, storage } from '../lib/firebase';
 import { collection, getDocs, query, orderBy, where, doc, updateDoc, addDoc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus, Download, Bell, Send } from 'lucide-react';
+import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus, Download, Bell, Send, Upload, FileText, Trash2 } from 'lucide-react';
 import { createUserWithEmailAndPassword, deleteUser, getAuth, signOut, User as FirebaseUser } from 'firebase/auth';
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { auth } from '../lib/firebase';
@@ -55,6 +56,16 @@ interface Notification {
   isActive: boolean;
 }
 
+interface CourseReport {
+  id: string;
+  title: string;
+  course: string;
+  fileName: string;
+  fileUrl: string;
+  storagePath: string;
+  uploadedAt?: string;
+}
+
 export default function AdminDashboard() {
   const { user, adminProfile } = useAuth();
   const navigate = useNavigate();
@@ -62,6 +73,7 @@ export default function AdminDashboard() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [teachers, setTeachers] = useState<TeacherProfile[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [courseReports, setCourseReports] = useState<CourseReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [collegeFilter, setCollegeFilter] = useState('');
   const [domainFilter, setDomainFilter] = useState('');
@@ -76,8 +88,19 @@ export default function AdminDashboard() {
     title: '',
     message: ''
   });
+  const [reportForm, setReportForm] = useState<{
+    title: string;
+    course: string;
+    file: File | null;
+  }>({
+    title: '',
+    course: '',
+    file: null
+  });
+  const [reportFileInputKey, setReportFileInputKey] = useState(0);
   const [savingTeacher, setSavingTeacher] = useState(false);
   const [savingNotification, setSavingNotification] = useState(false);
+  const [savingReport, setSavingReport] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -116,6 +139,12 @@ export default function AdminDashboard() {
       const notificationsSnapshot = await getDocs(notificationsQuery);
       const notificationsData = notificationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
       setNotifications(notificationsData);
+
+      // Fetch course reports
+      const reportsQuery = query(collection(db, 'courseReports'), orderBy('uploadedAt', 'desc'));
+      const reportsSnapshot = await getDocs(reportsQuery);
+      const reportsData = reportsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CourseReport));
+      setCourseReports(reportsData);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -217,6 +246,70 @@ export default function AdminDashboard() {
       alert(error?.message || 'Error adding notification');
     } finally {
       setSavingNotification(false);
+    }
+  };
+
+  const handleUploadReport = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const title = reportForm.title.trim();
+    const course = reportForm.course;
+    const file = reportForm.file;
+
+    if (!title || !course || !file) {
+      alert('Please select course, report title, and file');
+      return;
+    }
+
+    setSavingReport(true);
+
+    try {
+      const safeCourse = course.replace(/[^a-z0-9]+/gi, '_');
+      const safeFileName = file.name.replace(/[^a-z0-9._-]+/gi, '_');
+      const storagePath = `courseReports/${safeCourse}/${Date.now()}_${safeFileName}`;
+      const fileRef = ref(storage, storagePath);
+
+      await uploadBytes(fileRef, file);
+      const fileUrl = await getDownloadURL(fileRef);
+
+      await addDoc(collection(db, 'courseReports'), {
+        title,
+        course,
+        fileName: file.name,
+        fileUrl,
+        storagePath,
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: user?.uid || adminProfile?.email || 'admin'
+      });
+
+      setReportForm({ title: '', course: '', file: null });
+      setReportFileInputKey((key) => key + 1);
+      fetchData();
+      alert('Course report uploaded successfully');
+    } catch (error: any) {
+      console.error('Error uploading report:', error);
+      alert(error?.message || 'Error uploading report');
+    } finally {
+      setSavingReport(false);
+    }
+  };
+
+  const handleDeleteReport = async (report: CourseReport) => {
+    if (!confirm(`Delete report "${report.title}"?`)) return;
+
+    try {
+      if (report.storagePath) {
+        await deleteObject(ref(storage, report.storagePath)).catch((error) => {
+          console.error('Error deleting report file:', error);
+        });
+      }
+
+      await deleteDoc(doc(db, 'courseReports', report.id));
+      fetchData();
+      alert('Report deleted successfully');
+    } catch (error: any) {
+      console.error('Error deleting report:', error);
+      alert(error?.message || 'Error deleting report');
     }
   };
   const updatePaymentStatus = async (
@@ -591,6 +684,10 @@ export default function AdminDashboard() {
             <TabsTrigger value="notifications" className="px-6 py-2 font-black">
               <Bell size={16} />
               Notifications
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="px-6 py-2 font-black">
+              <FileText size={16} />
+              Reports
             </TabsTrigger>
             {/* <TabsTrigger value="college-export" className="px-6 py-2 font-black">
               <Download size={16} />
@@ -998,6 +1095,130 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
+                    <FileText size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900">Course Reports</h2>
+                    <p className="text-slate-500 text-sm font-bold">Upload reports course-wise. Students will see only their selected course reports.</p>
+                  </div>
+                </div>
+                <span className="bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-black uppercase">
+                  {courseReports.length} Reports
+                </span>
+              </div>
+
+              <form onSubmit={handleUploadReport} className="border border-slate-100 rounded-2xl p-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_260px_1fr_auto] gap-4 items-end">
+                  <div>
+                    <Label className="text-slate-500 text-xs font-black uppercase">Report Title</Label>
+                    <Input
+                      value={reportForm.title}
+                      onChange={(event) => setReportForm({ ...reportForm, title: event.target.value })}
+                      placeholder="Monthly performance report"
+                      className="mt-2 h-12"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-slate-500 text-xs font-black uppercase">Course</Label>
+                    <select
+                      value={reportForm.course}
+                      onChange={(event) => setReportForm({ ...reportForm, course: event.target.value })}
+                      className="mt-2 w-full h-12 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select course</option>
+                      {INTERNSHIP_DOMAINS.map((course) => (
+                        <option key={course} value={course}>
+                          {course}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-slate-500 text-xs font-black uppercase">Report File</Label>
+                    <Input
+                      key={reportFileInputKey}
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
+                      onChange={(event) => setReportForm({ ...reportForm, file: event.target.files?.[0] || null })}
+                      className="mt-2 h-12"
+                    />
+                  </div>
+                  <Button type="submit" disabled={savingReport} className="h-12 bg-blue-600 hover:bg-blue-700 text-white font-black">
+                    <Upload size={18} />
+                    {savingReport ? 'Uploading...' : 'Upload'}
+                  </Button>
+                </div>
+              </form>
+
+              {courseReports.length === 0 ? (
+                <div className="border border-dashed border-slate-200 rounded-2xl p-12 text-center">
+                  <FileText size={48} className="text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-500 font-bold">No course reports uploaded yet</p>
+                </div>
+              ) : (
+                <div className="border border-slate-100 rounded-2xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Report</th>
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Course</th>
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">File</th>
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Uploaded</th>
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {courseReports.map((report) => (
+                          <tr key={report.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                            <td className="p-4">
+                              <div className="font-black text-slate-900">{report.title}</div>
+                              <div className="text-xs text-slate-400">{report.id}</div>
+                            </td>
+                            <td className="p-4 text-slate-600 font-bold">{report.course}</td>
+                            <td className="p-4 text-slate-600">{report.fileName}</td>
+                            <td className="p-4 text-slate-600 text-sm">
+                              {report.uploadedAt
+                                ? new Date(report.uploadedAt).toLocaleDateString('en-IN', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric'
+                                })
+                                : '-'}
+                            </td>
+                            <td className="p-4">
+                              <div className="flex gap-2">
+                                <a href={report.fileUrl} target="_blank" rel="noreferrer" download>
+                                  <Button type="button" className="bg-green-600 hover:bg-green-700 text-white font-black">
+                                    <Download size={16} />
+                                    Download
+                                  </Button>
+                                </a>
+                                <Button
+                                  type="button"
+                                  onClick={() => handleDeleteReport(report)}
+                                  className="bg-red-600 hover:bg-red-700 text-white font-black"
+                                >
+                                  <Trash2 size={16} />
+                                  Delete
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
