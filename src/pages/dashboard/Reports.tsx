@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
-import { BookOpen, Clock, Download, FileText, Upload } from 'lucide-react';
+import { Download, FileText, Upload } from 'lucide-react';
 import { useAuth } from '../../components/AuthContext';
 import { db } from '../../lib/firebase';
 
@@ -18,7 +18,8 @@ interface StudentReport {
   userId: string;
   studentName: string;
   email: string;
-  course: string;
+  assignmentId?: string;
+  assignmentTitle?: string;
   description?: string;
   fileName: string;
   fileUrl: string;
@@ -26,17 +27,26 @@ interface StudentReport {
   uploadedAt?: string;
 }
 
+interface Assignment {
+  id: string;
+  title: string;
+  description?: string;
+  fileName?: string;
+  fileUrl?: string;
+  createdAt?: string;
+  isActive?: boolean;
+}
+
 export default function Reports() {
   const { user, profile } = useAuth();
-  const [reports, setReports] = useState<CourseReport[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [studentReports, setStudentReports] = useState<StudentReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState('');
   const [description, setDescription] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
-
-  const normalizeCourseName = (value?: string) => value?.trim().toLowerCase() || '';
 
   const fetchStudentReports = async () => {
     if (!user?.uid) {
@@ -58,29 +68,28 @@ export default function Reports() {
 
   useEffect(() => {
     const fetchReports = async () => {
-      if (!profile?.internshipDomain) {
-        setReports([]);
-        setLoading(false);
-        return;
-      }
-
       try {
-        const reportsQuery = query(collection(db, 'courseReports'));
-        const reportsSnapshot = await getDocs(reportsQuery);
-        const studentCourse = normalizeCourseName(profile.internshipDomain);
-        const courseReports = reportsSnapshot.docs
-          .map((reportDoc) => ({ id: reportDoc.id, ...reportDoc.data() } as CourseReport))
-          .filter((report) => normalizeCourseName(report.course) === studentCourse)
-          .sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || ''));
+        const assignmentsSnapshot = await getDocs(collection(db, 'assignments'));
+        const courseAssignments = assignmentsSnapshot.docs
+          .map((assignmentDoc) => ({ id: assignmentDoc.id, ...assignmentDoc.data() } as Assignment))
+          .filter((assignment) => assignment.isActive !== false)
+          .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 
-        setReports(courseReports);
+        setAssignments(courseAssignments);
+        setSelectedAssignmentId((currentAssignmentId) => {
+          if (currentAssignmentId && courseAssignments.some((assignment) => assignment.id === currentAssignmentId)) {
+            return currentAssignmentId;
+          }
+
+          return courseAssignments[0]?.id || '';
+        });
         await fetchStudentReports().catch((studentReportError) => {
           console.error('Error fetching student uploaded reports:', studentReportError);
           setStudentReports([]);
         });
       } catch (error) {
-        console.error('Error fetching course reports:', error);
-        setReports([]);
+        console.error('Error fetching assignments:', error);
+        setAssignments([]);
         setStudentReports([]);
       } finally {
         setLoading(false);
@@ -88,13 +97,20 @@ export default function Reports() {
     };
 
     fetchReports();
-  }, [profile?.internshipDomain, user?.uid]);
+  }, [user?.uid]);
 
   const handleUploadStudentReport = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!user?.uid || !profile?.internshipDomain) {
-      alert('Please login and select a course before uploading.');
+    if (!user?.uid) {
+      alert('Please login before uploading.');
+      return;
+    }
+
+    const selectedAssignment = assignments.find((assignment) => assignment.id === selectedAssignmentId);
+
+    if (!selectedAssignment) {
+      alert('Please select an assignment before uploading.');
       return;
     }
 
@@ -122,7 +138,7 @@ export default function Reports() {
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('upload_preset', uploadPreset);
-      formData.append('folder', `internmitra/student-reports/${profile.internshipDomain.replace(/[^a-z0-9]+/gi, '_')}`);
+      formData.append('folder', 'internmitra/student-reports/global');
 
       const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`, {
         method: 'POST',
@@ -140,7 +156,8 @@ export default function Reports() {
         userId: user.uid,
         studentName: profile?.fullName || user.displayName || 'Student',
         email: profile?.email || user.email || '',
-        course: profile.internshipDomain,
+        assignmentId: selectedAssignment.id,
+        assignmentTitle: selectedAssignment.title,
         description: description.trim(),
         fileName: selectedFile.name,
         fileUrl: uploadResult.secure_url,
@@ -178,6 +195,11 @@ export default function Reports() {
     }
   };
 
+  const getAssignmentTitle = (submission: StudentReport) =>
+    submission.assignmentTitle ||
+    assignments.find((assignment) => assignment.id === submission.assignmentId)?.title ||
+    'Legacy upload';
+
   return (
     <div className="space-y-6">
       <div className="rounded-3xl border border-white/70 bg-white/90 p-6 shadow-xl shadow-slate-200/70 backdrop-blur">
@@ -191,11 +213,53 @@ export default function Reports() {
               <h1 className="text-2xl font-black tracking-tight text-slate-950">Reports</h1>
             </div>
           </div>
-          <div className="rounded-2xl bg-slate-100 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-slate-600">
-            {profile?.internshipDomain || 'No course selected'}
-          </div>
         </div>
       </div>
+
+      {loading ? (
+        <div className="rounded-3xl border border-white/70 bg-white/90 p-10 text-center shadow-xl shadow-slate-200/70">
+          <p className="text-sm font-black uppercase tracking-[0.16em] text-slate-400">Loading assignments...</p>
+        </div>
+      ) : assignments.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-slate-200 bg-white/80 p-12 text-center shadow-xl shadow-slate-200/60">
+          <FileText size={46} className="mx-auto mb-4 text-slate-300" />
+          <h2 className="text-lg font-black text-slate-900">No assignment added yet</h2>
+          <p className="mt-2 text-sm font-bold text-slate-500">
+            Assignments will appear here once admin adds them.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {assignments.map((assignment) => (
+            <div key={assignment.id} className="rounded-3xl border border-white/70 bg-white/90 p-5 shadow-xl shadow-slate-200/70 backdrop-blur">
+              <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                <div className="min-w-0">
+                  <h2 className="text-lg font-black text-slate-950">{assignment.title}</h2>
+                  {assignment.description && (
+                    <p className="mt-2 text-sm font-bold leading-6 text-slate-600">{assignment.description}</p>
+                  )}
+                  {assignment.fileName && (
+                    <p className="mt-2 truncate text-sm font-bold text-slate-500">{assignment.fileName}</p>
+                  )}
+                </div>
+
+                {assignment.fileUrl && (
+                  <a
+                    href={assignment.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    download
+                    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 text-[11px] font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-500"
+                  >
+                    <Download size={16} />
+                    Download
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="rounded-3xl border border-white/70 bg-white/90 p-6 shadow-xl shadow-slate-200/70 backdrop-blur">
         <div className="mb-5 flex items-center gap-4">
@@ -209,6 +273,22 @@ export default function Reports() {
         </div>
 
         <form onSubmit={handleUploadStudentReport} className="grid gap-4">
+          <div>
+            <label className="student-label">Assignment</label>
+            <select
+              value={selectedAssignmentId}
+              onChange={(event) => setSelectedAssignmentId(event.target.value)}
+              disabled={assignments.length === 0 || uploading}
+              className="student-input mt-2"
+            >
+              <option value="">Select assignment</option>
+              {assignments.map((assignment) => (
+                <option key={assignment.id} value={assignment.id}>
+                  {assignment.title}
+                </option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="student-label">PDF File</label>
             <input
@@ -230,7 +310,7 @@ export default function Reports() {
           </div>
           <button
             type="submit"
-            disabled={uploading}
+            disabled={uploading || assignments.length === 0}
             className="student-button-primary inline-flex h-12 items-center justify-center gap-2 px-5 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Upload size={16} />
@@ -241,13 +321,14 @@ export default function Reports() {
 
       {studentReports.length > 0 && (
         <div className="rounded-3xl border border-white/70 bg-white/90 p-6 shadow-xl shadow-slate-200/70 backdrop-blur">
-          <h2 className="mb-4 text-lg font-black text-slate-950">Your Uploaded Reports</h2>
+          <h2 className="mb-4 text-lg font-black text-slate-950">Your Uploaded Answers</h2>
           <div className="grid gap-3">
             {studentReports.map((submission) => (
               <div key={submission.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-slate-900">{submission.fileName}</p>
+                    <p className="text-sm font-black text-slate-900">{getAssignmentTitle(submission)}</p>
+                    <p className="mt-1 truncate text-sm font-bold text-slate-600">{submission.fileName}</p>
                     <p className="mt-1 text-xs font-bold text-slate-500">
                       {submission.uploadedAt
                         ? new Date(submission.uploadedAt).toLocaleDateString('en-IN', {
@@ -278,59 +359,7 @@ export default function Reports() {
         </div>
       )}
 
-      {loading ? (
-        <div className="rounded-3xl border border-white/70 bg-white/90 p-10 text-center shadow-xl shadow-slate-200/70">
-          <p className="text-sm font-black uppercase tracking-[0.16em] text-slate-400">Loading reports...</p>
-        </div>
-      ) : reports.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-slate-200 bg-white/80 p-12 text-center shadow-xl shadow-slate-200/60">
-          <FileText size={46} className="mx-auto mb-4 text-slate-300" />
-          <h2 className="text-lg font-black text-slate-900">No report uploaded yet</h2>
-          <p className="mt-2 text-sm font-bold text-slate-500">
-            Your {profile?.internshipDomain || 'selected course'} report will appear here once admin uploads it.
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          {reports.map((report) => (
-            <div key={report.id} className="rounded-3xl border border-white/70 bg-white/90 p-5 shadow-xl shadow-slate-200/70 backdrop-blur">
-              <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-                <div className="min-w-0">
-                  <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-blue-700">
-                      <BookOpen size={13} />
-                      {report.course}
-                    </span>
-                    <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
-                      <Clock size={13} />
-                      {report.uploadedAt
-                        ? new Date(report.uploadedAt).toLocaleDateString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric'
-                        })
-                        : 'Recent'}
-                    </span>
-                  </div>
-                  <h2 className="truncate text-lg font-black text-slate-950">{report.title}</h2>
-                  <p className="mt-1 truncate text-sm font-bold text-slate-500">{report.fileName}</p>
-                </div>
-
-                <a
-                  href={report.fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  download
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 text-[11px] font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-500"
-                >
-                  <Download size={16} />
-                  Download
-                </a>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+    
     </div>
   );
 }

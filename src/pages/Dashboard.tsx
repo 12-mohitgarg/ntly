@@ -259,9 +259,9 @@ export default function Dashboard() {
   const menuItems = [
     { name: 'Offer Letter', path: '/dashboard', icon: Download },
     { name: 'Learning', path: '/dashboard/lms', icon: Video },
-    { name: 'Assignments', path: '/dashboard/assignments', icon: FileCheck },
+    { name: 'Intership Report', path: '/dashboard/assignments', icon: FileCheck },
     { name: 'Certifications', path: '/dashboard/certs', icon: Award },
-    { name: 'Reports', path: '/dashboard/reports', icon: FileText },
+    { name: 'Assignment Reports', path: '/dashboard/reports', icon: FileText },
     { name: 'Profile', path: '/dashboard/profile', icon: UserCircle },
     { name: 'Notifications', path: '/dashboard/notifications', icon: Bell },
   ];

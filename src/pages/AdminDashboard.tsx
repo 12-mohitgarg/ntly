@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus, Download, Bell, Send, Upload, FileText, Trash2 } from 'lucide-react';
+import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus, Download, Bell, Send, Upload, FileText, Trash2, ClipboardList } from 'lucide-react';
 import { createUserWithEmailAndPassword, deleteUser, getAuth, signOut, User as FirebaseUser } from 'firebase/auth';
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { auth } from '../lib/firebase';
@@ -66,12 +66,25 @@ interface CourseReport {
   uploadedAt?: string;
 }
 
+interface Assignment {
+  id: string;
+  title: string;
+  description?: string;
+  fileName?: string;
+  fileUrl?: string;
+  cloudinaryPublicId?: string;
+  createdAt?: string;
+  isActive?: boolean;
+}
+
 interface StudentReport {
   id: string;
   userId: string;
   studentName: string;
   email: string;
   course: string;
+  assignmentId?: string;
+  assignmentTitle?: string;
   description?: string;
   fileName: string;
   fileUrl: string;
@@ -87,6 +100,7 @@ export default function AdminDashboard() {
   const [teachers, setTeachers] = useState<TeacherProfile[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [courseReports, setCourseReports] = useState<CourseReport[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [studentReports, setStudentReports] = useState<StudentReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [collegeFilter, setCollegeFilter] = useState('');
@@ -111,10 +125,21 @@ export default function AdminDashboard() {
     course: '',
     file: null
   });
+  const [assignmentForm, setAssignmentForm] = useState<{
+    title: string;
+    description: string;
+    file: File | null;
+  }>({
+    title: '',
+    description: '',
+    file: null
+  });
   const [reportFileInputKey, setReportFileInputKey] = useState(0);
+  const [assignmentFileInputKey, setAssignmentFileInputKey] = useState(0);
   const [savingTeacher, setSavingTeacher] = useState(false);
   const [savingNotification, setSavingNotification] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
+  const [savingAssignment, setSavingAssignment] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -159,6 +184,12 @@ export default function AdminDashboard() {
       const reportsSnapshot = await getDocs(reportsQuery);
       const reportsData = reportsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CourseReport));
       setCourseReports(reportsData);
+
+      // Fetch assignments created by admin/teachers.
+      const assignmentsQuery = query(collection(db, 'assignments'), orderBy('createdAt', 'desc'));
+      const assignmentsSnapshot = await getDocs(assignmentsQuery);
+      const assignmentsData = assignmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Assignment));
+      setAssignments(assignmentsData);
 
       // Fetch student uploaded assignments/reports from both the new and legacy submission collections.
       const studentReportsData: StudentReport[] = [];
@@ -360,6 +391,83 @@ const uploadPreset = 'hm8borsg';
       alert(error?.message || 'Error deleting report');
     }
   };
+
+  const handleCreateAssignment = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const title = assignmentForm.title.trim();
+    const description = assignmentForm.description.trim();
+    const file = assignmentForm.file;
+
+    if (!title) {
+      alert('Please add assignment title');
+      return;
+    }
+
+    setSavingAssignment(true);
+
+    try {
+      const assignmentPayload: Omit<Assignment, 'id'> = {
+        title,
+        description,
+        isActive: true,
+        createdAt: new Date().toISOString()
+      };
+
+      if (file) {
+        const cloudName = 'de6uqmt1m';
+        const uploadPreset = 'hm8borsg';
+
+        const uploadData = new FormData();
+        uploadData.append('file', file);
+        uploadData.append('upload_preset', uploadPreset);
+        uploadData.append('folder', 'internmitra/assignments/global');
+
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`, {
+          method: 'POST',
+          body: uploadData
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Cloudinary upload failed');
+        }
+
+        const uploadResult = await response.json();
+        assignmentPayload.fileName = file.name;
+        assignmentPayload.fileUrl = uploadResult.secure_url;
+        assignmentPayload.cloudinaryPublicId = uploadResult.public_id;
+      }
+
+      await addDoc(collection(db, 'assignments'), {
+        ...assignmentPayload,
+        createdBy: user?.uid || adminProfile?.email || 'admin'
+      });
+
+      setAssignmentForm({ title: '', description: '', file: null });
+      setAssignmentFileInputKey((key) => key + 1);
+      fetchData();
+      alert('Assignment added successfully');
+    } catch (error: any) {
+      console.error('Error adding assignment:', error);
+      alert(error?.message || 'Error adding assignment');
+    } finally {
+      setSavingAssignment(false);
+    }
+  };
+
+  const handleDeleteAssignment = async (assignment: Assignment) => {
+    if (!confirm(`Delete assignment "${assignment.title}"?`)) return;
+
+    try {
+      await deleteDoc(doc(db, 'assignments', assignment.id));
+      fetchData();
+      alert('Assignment deleted successfully');
+    } catch (error: any) {
+      console.error('Error deleting assignment:', error);
+      alert(error?.message || 'Error deleting assignment');
+    }
+  };
   const updatePaymentStatus = async (
     userId: string
   ) => {
@@ -528,6 +636,10 @@ const uploadPreset = 'hm8borsg';
   ].sort();
 
   const getStudentProfile = (userId: string) => users.find((student) => student.uid === userId);
+  const getAssignmentTitle = (report: StudentReport) =>
+    report.assignmentTitle ||
+    assignments.find((assignment) => assignment.id === report.assignmentId)?.title ||
+    'Legacy upload';
 
   const visibleStudentReports = studentReports.filter((report) => {
     const student = getStudentProfile(report.userId);
@@ -750,7 +862,7 @@ const uploadPreset = 'hm8borsg';
             </TabsTrigger>
             <TabsTrigger value="reports" className="px-6 py-2 font-black">
               <FileText size={16} />
-              Reports
+              Internship Reports
             </TabsTrigger>
             <TabsTrigger value="student-reports" className="px-6 py-2 font-black">
               <Upload size={16} />
@@ -1041,6 +1153,95 @@ const uploadPreset = 'hm8borsg';
           </TabsContent>
 
           <TabsContent value="student-reports">
+            <div className="space-y-6">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center">
+                    <ClipboardList size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900">Create Assignment</h2>
+                    <p className="text-slate-500 text-sm font-bold">Add assignment questions course-wise. Students can upload answers only after an assignment is available.</p>
+                  </div>
+                </div>
+                <span className="bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-black uppercase">
+                  {assignments.length} Assignments
+                </span>
+              </div>
+
+              <form onSubmit={handleCreateAssignment} className="border border-slate-100 rounded-2xl p-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+                  <div>
+                    <Label className="text-slate-500 text-xs font-black uppercase">Assignment Title</Label>
+                    <Input
+                      value={assignmentForm.title}
+                      onChange={(event) => setAssignmentForm({ ...assignmentForm, title: event.target.value })}
+                      placeholder="Module 1 practical task"
+                      className="mt-2 h-12"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-slate-500 text-xs font-black uppercase">Question File</Label>
+                    <Input
+                      key={assignmentFileInputKey}
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg"
+                      onChange={(event) => setAssignmentForm({ ...assignmentForm, file: event.target.files?.[0] || null })}
+                      className="mt-2 h-12"
+                    />
+                  </div>
+                  <Button type="submit" disabled={savingAssignment} className="h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-black">
+                    <ClipboardList size={18} />
+                    {savingAssignment ? 'Adding...' : 'Add'}
+                  </Button>
+                </div>
+                <div className="mt-4">
+                  <Label className="text-slate-500 text-xs font-black uppercase">Instructions</Label>
+                  <textarea
+                    value={assignmentForm.description}
+                    onChange={(event) => setAssignmentForm({ ...assignmentForm, description: event.target.value })}
+                    placeholder="Write the assignment instructions students should follow"
+                    className="mt-2 min-h-24 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+              </form>
+
+              {assignments.length === 0 ? (
+                <div className="border border-dashed border-slate-200 rounded-2xl p-10 text-center">
+                  <ClipboardList size={44} className="text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-500 font-bold">No assignments added yet</p>
+                </div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {assignments.map((assignment) => (
+                    <div key={assignment.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <h3 className="truncate font-black text-slate-900">{assignment.title}</h3>
+                          {assignment.description && (
+                            <p className="mt-2 line-clamp-2 text-sm font-bold leading-6 text-slate-600">{assignment.description}</p>
+                          )}
+                          {assignment.fileUrl && (
+                            <a href={assignment.fileUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex text-xs font-black uppercase tracking-wider text-blue-600">
+                              Download question file
+                            </a>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          onClick={() => handleDeleteAssignment(assignment)}
+                          className="bg-red-600 hover:bg-red-700 text-white font-black"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
@@ -1102,6 +1303,7 @@ const uploadPreset = 'hm8borsg';
                       <thead className="bg-slate-50">
                         <tr>
                           <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Student</th>
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Assignment</th>
                           <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Course</th>
                           <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">File</th>
                           <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Description</th>
@@ -1120,6 +1322,7 @@ const uploadPreset = 'hm8borsg';
                                 <div className="text-xs text-slate-400">{student?.email || report.email || report.userId}</div>
                                 <div className="mt-1 text-xs font-bold text-slate-500">{student?.college || '-'}</div>
                               </td>
+                              <td className="p-4 text-slate-700 font-black">{getAssignmentTitle(report)}</td>
                               <td className="p-4 text-slate-600 font-bold">{report.course || student?.internshipDomain || '-'}</td>
                               <td className="p-4 text-slate-600">{report.fileName}</td>
                               <td className="p-4 text-sm font-bold leading-6 text-slate-600">
@@ -1150,6 +1353,7 @@ const uploadPreset = 'hm8borsg';
                   </div>
                 </div>
               )}
+            </div>
             </div>
           </TabsContent>
 
@@ -1288,8 +1492,8 @@ const uploadPreset = 'hm8borsg';
                     <FileText size={24} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-slate-900">Course Reports</h2>
-                    <p className="text-slate-500 text-sm font-bold">Upload reports course-wise. Students will see only their selected course reports.</p>
+                    <h2 className="text-xl font-black text-slate-900">Internship Reports</h2>
+                    <p className="text-slate-500 text-sm font-bold">Upload Internship reports course-wise. Students will see only their selected course reports.</p>
                   </div>
                 </div>
                 <span className="bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-black uppercase">

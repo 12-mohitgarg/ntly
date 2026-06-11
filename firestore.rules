@@ -149,14 +149,18 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /assignments/{assignmentId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /studentReports/{reportId} {
       allow get, list: if isAdmin() ||
         (isSignedIn() && resource.data.userId == request.auth.uid) ||
         (isTeacher() && resource.data.course == teacherCourse());
       allow create: if isSignedIn() &&
-        incoming().keys().hasOnly(['userId', 'studentName', 'email', 'course', 'description', 'fileName', 'fileUrl', 'cloudinaryPublicId', 'uploadedAt']) &&
+        incoming().keys().hasOnly(['userId', 'studentName', 'email', 'description', 'fileName', 'fileUrl', 'cloudinaryPublicId', 'uploadedAt', 'assignmentId', 'assignmentTitle']) &&
         incoming().userId == request.auth.uid &&
-        incoming().course is string &&
         incoming().fileName is string &&
         incoming().fileUrl is string &&
         incoming().uploadedAt is string;
