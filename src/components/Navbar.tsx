@@ -90,7 +90,11 @@ export default function Navbar() {
 
           {/* Mobile menu button */}
           {/* Mobile Buttons */}
-          <div className="md:hidden flex items-center gap-3">
+
+          {
+            user ? (
+              <></>
+            ): <div className="md:hidden flex items-center gap-3">
 
             {/* LOGIN */}
             <Link to="/login">
@@ -150,6 +154,8 @@ export default function Navbar() {
             </Link>
 
           </div>
+          }
+         
         </div>
       </div>
 
