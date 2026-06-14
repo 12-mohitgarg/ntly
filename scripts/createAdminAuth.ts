@@ -11,7 +11,7 @@ const auth = getAuth(app);
 async function createAdminAuth() {
   try {
     const email = 'admin@internmitra.com';
-    const password = 'Admin@123';
+    const password = 'Mohit@123';
 
     console.log('Creating Firebase Auth user for admin...');
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);

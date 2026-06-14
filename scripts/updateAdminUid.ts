@@ -23,7 +23,7 @@ async function updateAdminUid() {
       // Create admin document
       await setDoc(doc(db, 'admins', firebaseAuthUid), {
         email: 'admin@internmitra.com',
-        password: 'Admin@123',
+        password: 'Mohit@123',
         role: 'super_admin',
         fullName: 'System Administrator',
         createdAt: new Date().toISOString(),
@@ -34,7 +34,7 @@ async function updateAdminUid() {
     }
 
     console.log('Firebase Auth UID:', firebaseAuthUid);
-    console.log('You can now login with: admin@internmitra.com / Admin@123');
+    console.log('You can now login with: admin@internmitra.com / Mohit@123');
     
   } catch (error) {
     console.error('❌ Error updating admin document:', error);

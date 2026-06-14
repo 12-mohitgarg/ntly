@@ -9,7 +9,7 @@ async function addAdmin() {
     const adminId = 'admin_001'; // This will be the document ID
     const adminData = {
       email: 'admin@internmitra.com',
-      password: 'Admin@123', // Note: In production, use Firebase Auth and hash passwords
+      password: 'Mohit@123', // Note: In production, use Firebase Auth and hash passwords
       role: 'super_admin',
       fullName: 'System Administrator',
       createdAt: new Date().toISOString(),

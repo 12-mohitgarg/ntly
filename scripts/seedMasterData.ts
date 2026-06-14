@@ -11,7 +11,7 @@ async function seedMasterData() {
     // Authenticate as admin first
     console.log('🔐 Authenticating as admin...');
     const email = 'admin@internmitra.com';
-    const password = 'Admin@123';
+    const password = 'Mohit@123';
     await signInWithEmailAndPassword(auth, email, password);
     console.log('✅ Admin authenticated successfully');
 
