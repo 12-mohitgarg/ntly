@@ -884,7 +884,7 @@ export default function AdminDashboard() {
               <LayoutDashboard size={16} />
               Dashboard
             </TabsTrigger>
-            <Button
+            {/* <Button
               type="button"
               onClick={handleBackupFirestore}
               disabled={backupLoading}
@@ -892,7 +892,7 @@ export default function AdminDashboard() {
             >
               <Download size={16} />
               {backupLoading ? 'Backing up...' : 'Backup'}
-            </Button>
+            </Button> */}
             <TabsTrigger value="teachers" className="px-6 py-2 font-black">
               <UserPlus size={16} />
               Teachers
@@ -909,10 +909,10 @@ export default function AdminDashboard() {
               <Upload size={16} />
               Assignments
             </TabsTrigger>
-            <TabsTrigger value="college-export" className="px-6 py-2 font-black">
+            {/* <TabsTrigger value="college-export" className="px-6 py-2 font-black">
               <Download size={16} />
               College Export
-            </TabsTrigger>
+            </TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="dashboard">
