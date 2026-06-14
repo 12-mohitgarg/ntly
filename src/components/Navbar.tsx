@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 
 export default function Navbar() {
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -53,12 +53,24 @@ export default function Navbar() {
             ))}
             {user ? (
               <div className="flex items-center gap-6">
-                <Link to="/dashboard">
-                  <Button variant="outline" className="flex items-center gap-3 border-slate-200 rounded-2xl hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all px-6 h-12 font-black uppercase text-[10px] tracking-widest italic shadow-sm shadow-slate-900/5">
+                {isAdmin ? (
+                  <Button
+                    variant="outline"
+                    disabled
+                    title="Operations are disabled for admin sessions"
+                    className="flex items-center gap-3 border-slate-200 rounded-2xl px-6 h-12 font-black uppercase text-[10px] tracking-widest italic shadow-sm shadow-slate-900/5 opacity-50 cursor-not-allowed"
+                  >
                     <User size={18} />
                     <span>Operations</span>
                   </Button>
-                </Link>
+                ) : (
+                  <Link to="/dashboard">
+                    <Button variant="outline" className="flex items-center gap-3 border-slate-200 rounded-2xl hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all px-6 h-12 font-black uppercase text-[10px] tracking-widest italic shadow-sm shadow-slate-900/5">
+                      <User size={18} />
+                      <span>Operations</span>
+                    </Button>
+                  </Link>
+                )}
                 <Button onClick={handleLogout} variant="ghost" size="icon" className="text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors">
                   <LogOut size={20} />
                 </Button>
@@ -78,7 +90,11 @@ export default function Navbar() {
 
           {/* Mobile menu button */}
           {/* Mobile Buttons */}
-          <div className="md:hidden flex items-center gap-3">
+
+          {
+            user ? (
+              <></>
+            ): <div className="md:hidden flex items-center gap-3">
 
             {/* LOGIN */}
             <Link to="/login">
@@ -138,6 +154,8 @@ export default function Navbar() {
             </Link>
 
           </div>
+          }
+         
         </div>
       </div>
 
@@ -161,10 +179,17 @@ export default function Navbar() {
           <hr className="border-gray-100" />
           {user ? (
             <div className="flex flex-col gap-4">
-              <Link to="/dashboard" onClick={() => setIsOpen(false)} className="flex items-center gap-2 text-lg font-medium text-gray-600">
-                <User size={20} />
-                Dashboard
-              </Link>
+              {isAdmin ? (
+                <button disabled className="flex items-center gap-2 text-lg font-medium text-gray-400 cursor-not-allowed">
+                  <User size={20} />
+                  Dashboard
+                </button>
+              ) : (
+                <Link to="/dashboard" onClick={() => setIsOpen(false)} className="flex items-center gap-2 text-lg font-medium text-gray-600">
+                  <User size={20} />
+                  Dashboard
+                </Link>
+              )}
               <button onClick={handleLogout} className="flex items-center gap-2 text-lg font-medium text-red-500 text-left">
                 <LogOut size={20} />
                 Logout

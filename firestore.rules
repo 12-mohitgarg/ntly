@@ -65,8 +65,8 @@ service cloud.firestore {
     }
 
     match /submissions/{submissionId} {
-      allow get: if isAdmin() || (isSignedIn() && (resource.data.userId == request.auth.uid));
-      allow list: if isAdmin() || (isSignedIn() && (resource.data.userId == request.auth.uid));
+      allow get: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow create: if isSignedIn() && isValidId(submissionId) && incoming().userId == request.auth.uid;
       allow update: if isAdmin() || (isSignedIn() && existing().userId == request.auth.uid && incoming().userId == request.auth.uid);
       allow delete: if isAdmin();
@@ -146,13 +146,26 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    match /courseReports/{docId} {
+    match /courseReports/{reportId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
-    match /settings/{docId} {
-      allow read, write: if isAdmin();
+    match /assignments/{assignmentId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /studentReports/{reportId} {
+      allow get, list: if isAdmin() ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        (isTeacher() && resource.data.course == teacherCourse());
+      allow create: if isSignedIn() &&
+        incoming().keys().hasOnly(['userId', 'studentName', 'email', 'description', 'fileName', 'fileUrl', 'cloudinaryPublicId', 'uploadedAt', 'assignmentId', 'assignmentTitle']) &&
+        incoming().userId == request.auth.uid &&
+        incoming().fileName is string &&
+        incoming().fileUrl is string &&
+        incoming().uploadedAt is string;
     }
   }
 }
