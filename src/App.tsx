@@ -13,8 +13,10 @@ import Features from './pages/Features';
 import Contact from './pages/Contact';
 import Register from './pages/Register';
 import Login from './pages/Login';
+
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Payment from './pages/Payment';
