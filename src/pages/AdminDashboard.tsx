@@ -15,6 +15,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { INTERNSHIP_DOMAINS } from '../lib/constants';
 import { jsPDF } from 'jspdf';
+import { backupFirestore } from "./backupFirestore";
 import autoTable from 'jspdf-autotable';
 
 interface UserProfile {
@@ -101,6 +102,7 @@ export default function AdminDashboard() {
   const [savingTeacher, setSavingTeacher] = useState(false);
   const [savingNotification, setSavingNotification] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
+  const [backupLoading, setBackupLoading] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -312,6 +314,28 @@ export default function AdminDashboard() {
       alert(error?.message || 'Error deleting report');
     }
   };
+
+  const handleBackupFirestore = async () => {
+    setBackupLoading(true);
+
+    try {
+      const result = await backupFirestore();
+      const skippedCount = result.skippedCollections.length;
+      const exportedCount = result.exportedCollections.length;
+
+      if (skippedCount > 0) {
+        alert(`Backup downloaded with ${exportedCount} collections. ${skippedCount} collections were skipped due to permissions or missing access. Check JSON metadata for details.`);
+      } else {
+        alert(`Backup downloaded successfully with ${exportedCount} collections.`);
+      }
+    } catch (error: any) {
+      console.error('Error downloading Firestore backup:', error);
+      alert(error?.message || 'Error downloading Firestore backup');
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
   const updatePaymentStatus = async (
     userId: string
   ) => {
@@ -677,56 +701,65 @@ export default function AdminDashboard() {
               <LayoutDashboard size={16} />
               Dashboard
             </TabsTrigger>
-            <TabsTrigger value="teachers" className="px-6 py-2 font-black">
+            <Button
+              type="button"
+              onClick={handleBackupFirestore}
+              disabled={backupLoading}
+              className="h-10 px-4 font-black flex items-center gap-2"
+            >
+              <Download size={16} />
+              {backupLoading ? 'Backing up...' : 'Backup'}
+            </Button>
+            {/* <TabsTrigger value="teachers" className="px-6 py-2 font-black">
               <UserPlus size={16} />
               Teachers
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="px-6 py-2 font-black">
+            </TabsTrigger> */}
+            {/* <TabsTrigger value="notifications" className="px-6 py-2 font-black">
               <Bell size={16} />
               Notifications
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="px-6 py-2 font-black">
+            </TabsTrigger> */}
+            {/* <TabsTrigger value="reports" className="px-6 py-2 font-black">
               <FileText size={16} />
               Reports
-            </TabsTrigger>
-            {/* <TabsTrigger value="college-export" className="px-6 py-2 font-black">
+            </TabsTrigger> */}
+            <TabsTrigger value="college-export" className="px-6 py-2 font-black">
               <Download size={16} />
               College Export
-            </TabsTrigger> */}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard">
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-            <div className="flex items-center gap-3 mb-2">
-              <Users className="text-blue-600" size={24} />
-              <span className="text-slate-500 font-black uppercase text-xs">Total Users</span>
-            </div>
-            <p className="text-4xl font-black text-slate-900">{users.length}</p>
-          </div>
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-            <div className="flex items-center gap-3 mb-2">
-              <CreditCard className="text-green-600" size={24} />
-              <span className="text-slate-500 font-black uppercase text-xs">Total Amount</span>
-            </div>
-            <p className="text-4xl font-black text-slate-900">₹{totalAmount.toLocaleString()}</p>
-            <p className="text-sm text-slate-400 font-bold">{successfulUsersCount} successful users</p>
-          </div>
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-            <div className="flex items-center gap-3 mb-2">
-              <CheckCircle2 className="text-green-600" size={24} />
-              <span className="text-slate-500 font-black uppercase text-xs">Success</span>
-            </div>
-            <p className="text-4xl font-black text-slate-900">{successfulUsersCount}</p>
-          </div>
-          <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-            <div className="flex items-center gap-3 mb-2">
-              <Clock className="text-yellow-600" size={24} />
-              <span className="text-slate-500 font-black uppercase text-xs">Pending</span>
-            </div>
-            <p className="text-4xl font-black text-slate-900">{pendingUsersCount}</p>
-          </div>
+              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+                <div className="flex items-center gap-3 mb-2">
+                  <Users className="text-blue-600" size={24} />
+                  <span className="text-slate-500 font-black uppercase text-xs">Total Users</span>
+                </div>
+                <p className="text-4xl font-black text-slate-900">{users.length}</p>
+              </div>
+              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+                <div className="flex items-center gap-3 mb-2">
+                  <CreditCard className="text-green-600" size={24} />
+                  <span className="text-slate-500 font-black uppercase text-xs">Total Amount</span>
+                </div>
+                <p className="text-4xl font-black text-slate-900">₹{totalAmount.toLocaleString()}</p>
+                <p className="text-sm text-slate-400 font-bold">{successfulUsersCount} successful users</p>
+              </div>
+              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+                <div className="flex items-center gap-3 mb-2">
+                  <CheckCircle2 className="text-green-600" size={24} />
+                  <span className="text-slate-500 font-black uppercase text-xs">Success</span>
+                </div>
+                <p className="text-4xl font-black text-slate-900">{successfulUsersCount}</p>
+              </div>
+              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+                <div className="flex items-center gap-3 mb-2">
+                  <Clock className="text-yellow-600" size={24} />
+                  <span className="text-slate-500 font-black uppercase text-xs">Pending</span>
+                </div>
+                <p className="text-4xl font-black text-slate-900">{pendingUsersCount}</p>
+              </div>
             </div>
             {/* FILTERS */}
             <div className="grid md:grid-cols-2 gap-6 mb-8">

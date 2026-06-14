@@ -24,7 +24,7 @@ import ManageCourses from './pages/admin/ManageCourses';
 import ManageUniversities from './pages/admin/ManageUniversities';
 import ManageSubjects from './pages/admin/ManageSubjects';
 import ManageDailyVideos from './pages/admin/ManageDailyVideos';
-import Notifications from "./pages/Dashboard/Notifications";
+import Notifications from "./pages/dashboard/Notifications";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth();
