@@ -140,11 +140,8 @@ export default function AdminDashboard() {
   const [savingTeacher, setSavingTeacher] = useState(false);
   const [savingNotification, setSavingNotification] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
-<<<<<<< HEAD
-  const [backupLoading, setBackupLoading] = useState(false);
-=======
   const [savingAssignment, setSavingAssignment] = useState(false);
->>>>>>> 2d52f09a455415e976773589f5cd1c5129c50fec
+  const [backupLoading, setBackupLoading] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -228,6 +225,26 @@ export default function AdminDashboard() {
   const handleLogout = async () => {
     await signOut(auth);
     navigate('/login');
+  };
+
+  const handleBackupFirestore = async () => {
+    if (backupLoading) return;
+
+    setBackupLoading(true);
+    try {
+      const result = await backupFirestore();
+      const skippedCount = result.skippedCollections.length;
+      alert(
+        skippedCount > 0
+          ? `Backup downloaded. ${skippedCount} collection(s) could not be exported.`
+          : 'Firestore backup downloaded successfully.'
+      );
+    } catch (error) {
+      console.error('Error backing up Firestore:', error);
+      alert(error instanceof Error ? error.message : 'Failed to backup Firestore.');
+    } finally {
+      setBackupLoading(false);
+    }
   };
 
   const handleAddTeacher = async (event: React.FormEvent) => {
@@ -397,29 +414,6 @@ export default function AdminDashboard() {
     }
   };
 
-<<<<<<< HEAD
-  const handleBackupFirestore = async () => {
-    setBackupLoading(true);
-
-    try {
-      const result = await backupFirestore();
-      const skippedCount = result.skippedCollections.length;
-      const exportedCount = result.exportedCollections.length;
-
-      if (skippedCount > 0) {
-        alert(`Backup downloaded with ${exportedCount} collections. ${skippedCount} collections were skipped due to permissions or missing access. Check JSON metadata for details.`);
-      } else {
-        alert(`Backup downloaded successfully with ${exportedCount} collections.`);
-      }
-    } catch (error: any) {
-      console.error('Error downloading Firestore backup:', error);
-      alert(error?.message || 'Error downloading Firestore backup');
-    } finally {
-      setBackupLoading(false);
-    }
-  };
-
-=======
   const handleCreateAssignment = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -496,7 +490,6 @@ export default function AdminDashboard() {
       alert(error?.message || 'Error deleting assignment');
     }
   };
->>>>>>> 2d52f09a455415e976773589f5cd1c5129c50fec
   const updatePaymentStatus = async (
     userId: string
   ) => {

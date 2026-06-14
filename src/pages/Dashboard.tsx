@@ -261,13 +261,9 @@ export default function Dashboard() {
     { name: 'Learning', path: '/dashboard/lms', icon: Video },
     { name: 'Intership Report', path: '/dashboard/assignments', icon: FileCheck },
     { name: 'Certifications', path: '/dashboard/certs', icon: Award },
-<<<<<<< HEAD
-    // { name: 'Reports', path: '/dashboard/reports', icon: FileText },
-=======
     { name: 'Assignment Reports', path: '/dashboard/reports', icon: FileText },
->>>>>>> 2d52f09a455415e976773589f5cd1c5129c50fec
     { name: 'Profile', path: '/dashboard/profile', icon: UserCircle },
-    // { name: 'Notifications', path: '/dashboard/notifications', icon: Bell },
+    { name: 'Notifications', path: '/dashboard/notifications', icon: Bell },
   ];
 
   return (

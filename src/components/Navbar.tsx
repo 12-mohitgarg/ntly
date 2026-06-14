@@ -26,7 +26,7 @@ export default function Navbar() {
   return (
     <nav className="relative z-50 bg-white border-b border-slate-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-24 items-center">
+        <div className="flex justify-between h-20 md:h-24 items-center gap-3">
           <Link to="/" className="flex items-center gap-3 group">
             <motion.div
               whileHover={{ scale: 1.05 }}
@@ -35,7 +35,7 @@ export default function Navbar() {
               <img
                 src="/logo.jpeg"
                 alt="InternMitra Logo"
-                className="h-24 w-40"
+                className="h-16 w-28 object-contain md:h-24 md:w-40"
               />
             </motion.div>
           </Link>
@@ -88,73 +88,39 @@ export default function Navbar() {
           </div>
 
 
-          {/* Mobile menu button */}
-          {/* Mobile Buttons */}
-
-          {
-            user ? (
-              <></>
-            ): <div className="md:hidden flex items-center gap-3">
-
-            {/* LOGIN */}
-            <Link to="/login">
+          <div className="md:hidden flex items-center justify-end gap-2 shrink-0">
+            {user ? (
               <button
-                className="
-        h-11
-        px-6
-        rounded-[18px]
-        bg-gradient-to-r
-        from-blue-600
-        via-indigo-600
-        to-purple-600
-        text-white
-        font-bold
-        text-sm
-        flex
-        items-center
-        gap-2
-        shadow-lg
-        shadow-blue-500/30
-        border
-        border-blue-400/20
-        active:scale-95
-        transition-all
-      "
+                type="button"
+                onClick={() => setIsOpen((open) => !open)}
+                aria-label={isOpen ? 'Close menu' : 'Open menu'}
+                className="h-11 w-11 rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm flex items-center justify-center active:scale-95 transition-all"
               >
-
-                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                  <LogIn className="w-3.5 h-3.5 text-white" />
-                </div>
-
-                LOGIN
-
+                {isOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
-            </Link>
+            ) : (
+              <>
+                <Link to="/login" onClick={() => setIsOpen(false)}>
+                  <button
+                    type="button"
+                    className="h-10 px-3 rounded-2xl bg-blue-600 text-white font-black text-[11px] flex items-center gap-1.5 shadow-lg shadow-blue-500/25 border border-blue-400/20 active:scale-95 transition-all"
+                  >
+                    <LogIn className="w-3.5 h-3.5 text-white" />
+                    Login
+                  </button>
+                </Link>
 
-            {/* REGISTER */}
-            <Link to="/register">
-              <button
-                className="
-        h-11
-        px-6
-        rounded-[18px]
-        border-2
-        border-blue-500
-        bg-white
-        text-blue-600
-        font-bold
-        text-sm
-        shadow-sm
-        active:scale-95
-        transition-all
-      "
-              >
-                REGISTER
-              </button>
-            </Link>
-
+                <Link to="/register" onClick={() => setIsOpen(false)}>
+                  <button
+                    type="button"
+                    className="h-10 px-3 rounded-2xl border-2 border-blue-500 bg-white text-blue-600 font-black text-[11px] shadow-sm active:scale-95 transition-all"
+                  >
+                    Register
+                  </button>
+                </Link>
+              </>
+            )}
           </div>
-          }
          
         </div>
       </div>
@@ -229,7 +195,7 @@ export default function Navbar() {
 
                       <span className="relative z-10 flex items-center justify-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                          ✨
+                          Join
                         </div>
 
                         Register
@@ -245,7 +211,7 @@ export default function Navbar() {
 
                 {/* Bottom Text */}
                 <p className="text-center text-[11px] text-slate-500 mt-4 font-medium tracking-wide">
-                  🚀 Start your internship journey with Internmitra
+                  Start your internship journey with Internmitra
                 </p>
 
               </div>
