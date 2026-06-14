@@ -70,6 +70,7 @@ interface CourseReport {
 interface Assignment {
   id: string;
   title: string;
+  course: string;
   description?: string;
   fileName?: string;
   fileUrl?: string;
@@ -128,10 +129,12 @@ export default function AdminDashboard() {
   });
   const [assignmentForm, setAssignmentForm] = useState<{
     title: string;
+    course: string;
     description: string;
     file: File | null;
   }>({
     title: '',
+    course: '',
     description: '',
     file: null
   });
@@ -418,6 +421,7 @@ export default function AdminDashboard() {
     event.preventDefault();
 
     const title = assignmentForm.title.trim();
+    const course = assignmentForm.course.trim();
     const description = assignmentForm.description.trim();
     const file = assignmentForm.file;
 
@@ -426,11 +430,17 @@ export default function AdminDashboard() {
       return;
     }
 
+    if (!course) {
+      alert('Please select assignment course');
+      return;
+    }
+
     setSavingAssignment(true);
 
     try {
       const assignmentPayload: Omit<Assignment, 'id'> = {
         title,
+        course,
         description,
         isActive: true,
         createdAt: new Date().toISOString()
@@ -443,7 +453,7 @@ export default function AdminDashboard() {
         const uploadData = new FormData();
         uploadData.append('file', file);
         uploadData.append('upload_preset', uploadPreset);
-        uploadData.append('folder', 'internmitra/assignments/global');
+        uploadData.append('folder', `internmitra/assignments/${course.replace(/[^a-z0-9-]+/gi, '-').toLowerCase()}`);
 
         const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`, {
           method: 'POST',
@@ -466,7 +476,7 @@ export default function AdminDashboard() {
         createdBy: user?.uid || adminProfile?.email || 'admin'
       });
 
-      setAssignmentForm({ title: '', description: '', file: null });
+      setAssignmentForm({ title: '', course: '', description: '', file: null });
       setAssignmentFileInputKey((key) => key + 1);
       fetchData();
       alert('Assignment added successfully');
@@ -1202,7 +1212,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <form onSubmit={handleCreateAssignment} className="border border-slate-100 rounded-2xl p-6 mb-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-end">
                     <div>
                       <Label className="text-slate-500 text-xs font-black uppercase">Assignment Title</Label>
                       <Input
@@ -1211,6 +1221,22 @@ export default function AdminDashboard() {
                         placeholder="Module 1 practical task"
                         className="mt-2 h-12"
                       />
+                    </div>
+                    <div>
+                      <Label className="text-slate-500 text-xs font-black uppercase">Course</Label>
+                      <select
+                        value={assignmentForm.course}
+                        onChange={(event) => setAssignmentForm({ ...assignmentForm, course: event.target.value })}
+                        className="mt-2 w-full h-12 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        required
+                      >
+                        <option value="">Select Course</option>
+                        {INTERNSHIP_DOMAINS.map((domain) => (
+                          <option key={domain} value={domain}>
+                            {domain}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <Label className="text-slate-500 text-xs font-black uppercase">Question File</Label>
@@ -1250,6 +1276,7 @@ export default function AdminDashboard() {
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0">
                             <h3 className="truncate font-black text-slate-900">{assignment.title}</h3>
+                            <p className="mt-1 text-xs font-black uppercase tracking-wider text-indigo-600">{assignment.course || 'Course not set'}</p>
                             {assignment.description && (
                               <p className="mt-2 line-clamp-2 text-sm font-bold leading-6 text-slate-600">{assignment.description}</p>
                             )}

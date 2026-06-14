@@ -18,6 +18,7 @@ interface StudentReport {
   userId: string;
   studentName: string;
   email: string;
+  course?: string;
   assignmentId?: string;
   assignmentTitle?: string;
   description?: string;
@@ -30,6 +31,7 @@ interface StudentReport {
 interface Assignment {
   id: string;
   title: string;
+  course: string;
   description?: string;
   fileName?: string;
   fileUrl?: string;
@@ -48,12 +50,16 @@ export default function Reports() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
 
-  const fetchStudentReports = async () => {
+  const normalizeCourseName = (value?: string) => value?.trim().toLowerCase() || '';
+
+  const fetchStudentReports = async (courseAssignments: Assignment[]) => {
     if (!user?.uid) {
       setStudentReports([]);
       return;
     }
 
+    const studentCourse = normalizeCourseName(profile?.internshipDomain);
+    const courseAssignmentIds = new Set(courseAssignments.map((assignment) => assignment.id));
     const submissionsQuery = query(
       collection(db, 'studentReports'),
       where('userId', '==', user.uid)
@@ -61,6 +67,10 @@ export default function Reports() {
     const submissionsSnapshot = await getDocs(submissionsQuery);
     const submissions = submissionsSnapshot.docs
       .map((submissionDoc) => ({ id: submissionDoc.id, ...submissionDoc.data() } as StudentReport))
+      .filter((submission) =>
+        normalizeCourseName(submission.course) === studentCourse ||
+        Boolean(submission.assignmentId && courseAssignmentIds.has(submission.assignmentId))
+      )
       .sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || ''));
 
     setStudentReports(submissions);
@@ -68,11 +78,24 @@ export default function Reports() {
 
   useEffect(() => {
     const fetchReports = async () => {
+      const studentCourse = normalizeCourseName(profile?.internshipDomain);
+
+      if (!studentCourse) {
+        setAssignments([]);
+        setStudentReports([]);
+        setSelectedAssignmentId('');
+        setLoading(false);
+        return;
+      }
+
       try {
         const assignmentsSnapshot = await getDocs(collection(db, 'assignments'));
         const courseAssignments = assignmentsSnapshot.docs
           .map((assignmentDoc) => ({ id: assignmentDoc.id, ...assignmentDoc.data() } as Assignment))
-          .filter((assignment) => assignment.isActive !== false)
+          .filter((assignment) =>
+            assignment.isActive !== false &&
+            normalizeCourseName(assignment.course) === studentCourse
+          )
           .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 
         setAssignments(courseAssignments);
@@ -83,7 +106,7 @@ export default function Reports() {
 
           return courseAssignments[0]?.id || '';
         });
-        await fetchStudentReports().catch((studentReportError) => {
+        await fetchStudentReports(courseAssignments).catch((studentReportError) => {
           console.error('Error fetching student uploaded reports:', studentReportError);
           setStudentReports([]);
         });
@@ -97,7 +120,7 @@ export default function Reports() {
     };
 
     fetchReports();
-  }, [user?.uid]);
+  }, [profile?.internshipDomain, user?.uid]);
 
   const handleUploadStudentReport = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -138,7 +161,7 @@ export default function Reports() {
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('upload_preset', uploadPreset);
-      formData.append('folder', 'internmitra/student-reports/global');
+      formData.append('folder', `internmitra/student-reports/${selectedAssignment.course.replace(/[^a-z0-9-]+/gi, '-').toLowerCase()}`);
 
       const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`, {
         method: 'POST',
@@ -156,6 +179,7 @@ export default function Reports() {
         userId: user.uid,
         studentName: profile?.fullName || user.displayName || 'Student',
         email: profile?.email || user.email || '',
+        course: selectedAssignment.course,
         assignmentId: selectedAssignment.id,
         assignmentTitle: selectedAssignment.title,
         description: description.trim(),
