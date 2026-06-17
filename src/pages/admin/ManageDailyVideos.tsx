@@ -30,7 +30,7 @@ import {
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { INTERNSHIP_DOMAINS } from '../../lib/constants';
+import { COURSE_VIDEO_DAY_LIMIT, INTERNSHIP_DOMAINS } from '../../lib/constants';
 import { useAuth } from '../../components/AuthContext';
 import { AttendanceEntry, AttendanceStudent, generateCourseAttendanceReport } from '../dashboard/generateAttendanceReport';
 
@@ -194,7 +194,7 @@ export default function ManageDailyVideos() {
       // Calculate next available day
       if (videosData.length > 0) {
         const maxDay = Math.max(...videosData.map(v => v.day));
-        const nextDay = maxDay < 15 ? maxDay + 1 : 15;
+        const nextDay = maxDay < COURSE_VIDEO_DAY_LIMIT ? maxDay + 1 : COURSE_VIDEO_DAY_LIMIT;
         setFormData(prev => ({ ...prev, day: nextDay }));
       } else {
         setFormData(prev => ({ ...prev, day: 1 }));
@@ -372,7 +372,7 @@ export default function ManageDailyVideos() {
   const resetForm = () => {
     setEditingVideo(null);
     setFormData({
-      day: videos.length + 1 > 15 ? 1 : videos.length + 1,
+      day: videos.length + 1 > COURSE_VIDEO_DAY_LIMIT ? COURSE_VIDEO_DAY_LIMIT : videos.length + 1,
       title: '',
       youtubeUrl: '',
       description: '',
@@ -393,7 +393,7 @@ export default function ManageDailyVideos() {
             </div>
             <p className="text-white/80 font-bold italic flex items-center gap-2">
               <Sparkles size={16} />
-              Manage 15-day learning video schedule for students
+              Manage {COURSE_VIDEO_DAY_LIMIT}-day learning video schedule for students
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -485,7 +485,7 @@ export default function ManageDailyVideos() {
                   <Input
                     type="number"
                     min="1"
-                    max="15"
+                    max={COURSE_VIDEO_DAY_LIMIT}
                     value={formData.day}
                     disabled
                     className="mt-0 bg-gradient-to-r from-slate-100 to-slate-50 border-slate-200 font-black text-slate-900"
@@ -564,7 +564,7 @@ export default function ManageDailyVideos() {
             <h2 className="text-2xl font-black text-slate-900 uppercase italic">Current Schedule</h2>
             <div className="flex items-center gap-2 bg-slate-100 rounded-full px-4 py-2">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm font-bold text-slate-600">{videos.length} / 15 videos</span>
+              <span className="text-sm font-bold text-slate-600">{videos.length} / {COURSE_VIDEO_DAY_LIMIT} videos</span>
             </div>
           </div>
 
