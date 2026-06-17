@@ -23,11 +23,8 @@ import {
 } from 'lucide-react';
 import { generateCertificate } from './generateCertificate';
 import { AttendanceEntry, generateAttendanceReport } from './generateAttendanceReport';
-<<<<<<< HEAD
 import { generateTestReport } from './generateTestReport';
-=======
 import { COURSE_VIDEO_DAY_LIMIT } from '../../lib/constants';
->>>>>>> e1ae1a22dc4c3a353ed6039eab464cc8f0180ff1
 
 interface VideoProgress {
   [day: number]: boolean;
@@ -538,17 +535,15 @@ export default function LMS() {
                 <button
                   key={optIndex}
                   onClick={() => handleSelectOption(q.id, optIndex)}
-                  className={`w-full p-5 rounded-2xl border-2 text-left font-bold transition flex items-center gap-4 group ${
-                    isSelected
-                      ? 'border-blue-600 bg-blue-50/50 text-blue-900'
-                      : 'border-slate-100 hover:border-blue-200 hover:bg-slate-50 text-slate-700'
-                  }`}
+                  className={`w-full p-5 rounded-2xl border-2 text-left font-bold transition flex items-center gap-4 group ${isSelected
+                    ? 'border-blue-600 bg-blue-50/50 text-blue-900'
+                    : 'border-slate-100 hover:border-blue-200 hover:bg-slate-50 text-slate-700'
+                    }`}
                 >
-                  <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs transition-colors ${
-                    isSelected
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                      : 'bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-700'
-                  }`}>
+                  <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs transition-colors ${isSelected
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                    : 'bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-700'
+                    }`}>
                     {String.fromCharCode(65 + optIndex)}
                   </span>
                   <span>{opt}</span>
@@ -607,31 +602,31 @@ export default function LMS() {
             {adminApproved && (
               <>
 
-              <button
-                onClick={() => {
+                <button
+                  onClick={() => {
 
-                  if (!user?.uid) {
-                    alert("User not found");
-                    return;
-                  }
+                    if (!user?.uid) {
+                      alert("User not found");
+                      return;
+                    }
 
-                  generateCertificate(
-                    profile,
-                    user.uid
-                  );
-                }}
-                className="bg-green-600 text-white p-5 px-10 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-green-600/20 hover:bg-green-700 transition uppercase tracking-widest text-xs"
-              >
-                <Download size={20} />
-                Download Certificate
-              </button>
-              <button
-                onClick={() => generateAttendanceReport(profile, attendanceEntries, dailyVideos)}
-                className="bg-slate-900 text-white p-5 px-10 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition uppercase tracking-widest text-xs"
-              >
-                <FileText size={20} />
-                Attendance Report
-              </button>
+                    generateCertificate(
+                      profile,
+                      user.uid
+                    );
+                  }}
+                  className="bg-green-600 text-white p-5 px-10 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-green-600/20 hover:bg-green-700 transition uppercase tracking-widest text-xs"
+                >
+                  <Download size={20} />
+                  Download Certificate
+                </button>
+                <button
+                  onClick={() => generateAttendanceReport(profile, attendanceEntries, dailyVideos)}
+                  className="bg-slate-900 text-white p-5 px-10 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition uppercase tracking-widest text-xs"
+                >
+                  <FileText size={20} />
+                  Attendance Report
+                </button>
               </>
             )}
 
@@ -686,7 +681,7 @@ export default function LMS() {
                   <span className="text-purple-300">Assessment Test</span>
                 </h2>
                 <p className="text-purple-200/80 font-bold italic mb-10 text-lg leading-relaxed">
-                  You have successfully completed all daily training videos for {profile?.internshipDomain}! 
+                  You have successfully completed all daily training videos for {profile?.internshipDomain}!
                   Take the final exam now to test your learning and view your grade.
                 </p>
                 <button
@@ -711,7 +706,7 @@ export default function LMS() {
                     Your Performance <span className="text-emerald-300">Report</span>
                   </h2>
                   <p className="text-emerald-200/80 font-bold italic text-lg max-w-lg leading-relaxed">
-                    Congratulations! You completed the final assessment for {profile?.internshipDomain}. 
+                    Congratulations! You completed the final assessment for {profile?.internshipDomain}.
                     Your grade has been successfully calculated and stored.
                   </p>
                 </div>
