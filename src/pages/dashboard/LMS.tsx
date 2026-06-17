@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { generateCertificate } from './generateCertificate';
 import { AttendanceEntry, generateAttendanceReport } from './generateAttendanceReport';
+import { COURSE_VIDEO_DAY_LIMIT } from '../../lib/constants';
 
 interface VideoProgress {
   [day: number]: boolean;
@@ -127,7 +128,7 @@ export default function LMS() {
     const today = new Date();
     const diffTime = Math.abs(today.getTime() - registrationDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const calculatedDay = Math.min(diffDays, 15);
+    const calculatedDay = Math.min(diffDays, COURSE_VIDEO_DAY_LIMIT);
     console.log('Today:', today);
     console.log('Days difference:', diffDays);
     console.log('Calculated current day:', calculatedDay);
@@ -392,7 +393,7 @@ export default function LMS() {
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <div className="text-sm font-black text-slate-400 uppercase tracking-widest">Day {currentDay} of 15</div>
+            <div className="text-sm font-black text-slate-400 uppercase tracking-widest">Day {currentDay} of {COURSE_VIDEO_DAY_LIMIT}</div>
             <div className="text-xs font-bold text-slate-500">{getCompletedVideoDays().size} videos completed • {getCompletedVideoDays().size} hours</div>
           </div>
           <div className="flex flex-col gap-4">

@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { COURSE_VIDEO_DAY_LIMIT } from '../../lib/constants';
 
 export interface AttendanceEntry {
   id?: string;
@@ -26,7 +27,7 @@ export interface AttendanceStudent {
   college?: string;
 }
 
-const DEFAULT_ATTENDANCE_DAYS = 15;
+const DEFAULT_ATTENDANCE_DAYS = COURSE_VIDEO_DAY_LIMIT;
 
 const getReportDays = (videos: AttendanceVideo[] = []) => {
   const videoDays = videos

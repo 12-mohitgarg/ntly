@@ -14,6 +14,8 @@ export const INTERNSHIP_DOMAINS = [
   "Disaster Management"
 ];
 
+export const COURSE_VIDEO_DAY_LIMIT = 20;
+
 export const DEPARTMENTS: Record<string, string[]> = {
   "B.Sc.": ["Botany", "Chemistry", "Mathematics", "Physics", "Zoology", "Computer Science"],
   "B.A.": ["History", "Political Science", "Economics", "Sociology", "Psychology", "English", "Hindi"],
