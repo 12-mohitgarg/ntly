@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
-import { Download, FileText, Upload } from 'lucide-react';
+import { addDoc, collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import { Download, FileText, Upload, ClipboardList, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../components/AuthContext';
 import { db } from '../../lib/firebase';
+import { generateTestReport } from './generateTestReport';
 
 interface CourseReport {
   id: string;
@@ -49,6 +50,8 @@ export default function Reports() {
   const [description, setDescription] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [courseTest, setCourseTest] = useState<any>(null);
+  const [testSubmission, setTestSubmission] = useState<any>(null);
 
   const normalizeCourseName = (value?: string) => value?.trim().toLowerCase() || '';
 
@@ -110,6 +113,23 @@ export default function Reports() {
           console.error('Error fetching student uploaded reports:', studentReportError);
           setStudentReports([]);
         });
+
+        // Fetch test and submission if course exists
+        if (profile?.internshipDomain) {
+          const testRef = doc(db, 'courseTests', profile.internshipDomain);
+          const testSnap = await getDoc(testRef);
+          if (testSnap.exists()) {
+            setCourseTest(testSnap.data());
+          }
+
+          if (user?.uid) {
+            const subRef = doc(db, 'testSubmissions', `${user.uid}-${profile.internshipDomain}`);
+            const subSnap = await getDoc(subRef);
+            if (subSnap.exists()) {
+              setTestSubmission(subSnap.data());
+            }
+          }
+        }
       } catch (error) {
         console.error('Error fetching assignments:', error);
         setAssignments([]);
@@ -239,6 +259,51 @@ export default function Reports() {
           </div>
         </div>
       </div>
+
+      {testSubmission && (
+        <div className="rounded-3xl border border-white/70 bg-white/90 p-6 shadow-xl shadow-slate-200/70 backdrop-blur">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-purple-100 text-purple-700 flex-shrink-0">
+                <ClipboardList size={24} />
+              </div>
+              <div className="min-w-0">
+                <p className="student-kicker text-purple-600">Course Assessment</p>
+                <h2 className="text-lg font-black text-slate-950 truncate">Final Assessment Report</h2>
+                <p className="mt-1 text-xs font-bold text-slate-500">
+                  Attempted on {new Date(testSubmission.submittedAt).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Score</p>
+                <p className="text-2xl font-black text-purple-600">{testSubmission.scorePercentage}%</p>
+                <p className="text-xs font-bold text-slate-500">
+                  {testSubmission.correctCount} / {testSubmission.totalQuestions} Correct
+                </p>
+              </div>
+
+              {courseTest && courseTest.questions && (
+                <button
+                  onClick={() => generateTestReport(profile, testSubmission, courseTest.questions)}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-purple-600 px-5 text-[11px] font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-purple-600/20 transition hover:bg-purple-500"
+                >
+                  <Download size={16} />
+                  Download PDF
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="rounded-3xl border border-white/70 bg-white/90 p-10 text-center shadow-xl shadow-slate-200/70">

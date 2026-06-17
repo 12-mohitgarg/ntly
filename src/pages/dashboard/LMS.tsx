@@ -12,16 +12,18 @@ import {
   Download,
   BookOpenCheck,
   ChevronRight,
+  ChevronLeft,
   MonitorPlay,
   Calendar,
   CheckCircle2,
   Lock,
   SearchCheck,
-  X
-
+  X,
+  ClipboardList
 } from 'lucide-react';
 import { generateCertificate } from './generateCertificate';
 import { AttendanceEntry, generateAttendanceReport } from './generateAttendanceReport';
+import { generateTestReport } from './generateTestReport';
 
 interface VideoProgress {
   [day: number]: boolean;
@@ -43,13 +45,112 @@ export default function LMS() {
   const [attendanceVideo, setAttendanceVideo] = useState<any | null>(null);
   const [attendanceSaving, setAttendanceSaving] = useState(false);
 
+  // Assessment (Test) States
+  const [courseTest, setCourseTest] = useState<any>(null);
+  const [testSubmission, setTestSubmission] = useState<any>(null);
+  const [takingTest, setTakingTest] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
+  const [submittingTest, setSubmittingTest] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  const fetchTestAndSubmission = async () => {
+    if (!profile?.internshipDomain || !user?.uid) return;
+    try {
+      const testRef = doc(db, 'courseTests', profile.internshipDomain);
+      const testSnap = await getDoc(testRef);
+      if (testSnap.exists()) {
+        setCourseTest(testSnap.data());
+      } else {
+        setCourseTest(null);
+      }
+
+      const submissionRef = doc(db, 'testSubmissions', `${user.uid}-${profile.internshipDomain}`);
+      const submissionSnap = await getDoc(submissionRef);
+      if (submissionSnap.exists()) {
+        setTestSubmission(submissionSnap.data());
+      } else {
+        setTestSubmission(null);
+      }
+    } catch (error) {
+      console.error('Error fetching test/submission:', error);
+    }
+  };
+
+  const handleStartTest = () => {
+    if (!courseTest || !courseTest.questions || courseTest.questions.length === 0) {
+      alert('No test available for this course yet.');
+      return;
+    }
+    setSelectedAnswers({});
+    setCurrentQuestionIndex(0);
+    setTakingTest(true);
+  };
+
+  const handleSelectOption = (questionId: string, optionIndex: number) => {
+    setSelectedAnswers(prev => ({
+      ...prev,
+      [questionId]: optionIndex
+    }));
+  };
+
+  const handleSubmitTest = async () => {
+    if (!user || !profile || !courseTest) return;
+
+    const unansweredCount = courseTest.questions.length - Object.keys(selectedAnswers).length;
+    if (unansweredCount > 0) {
+      if (!confirm(`You have ${unansweredCount} unanswered questions. Are you sure you want to submit?`)) {
+        return;
+      }
+    }
+
+    setSubmittingTest(true);
+    try {
+      let correctCount = 0;
+      courseTest.questions.forEach((q: any) => {
+        const selected = selectedAnswers[q.id];
+        if (selected !== undefined && selected === q.correctOptionIndex) {
+          correctCount++;
+        }
+      });
+
+      const totalQuestions = courseTest.questions.length;
+      const wrongCount = totalQuestions - correctCount;
+      const scorePercentage = Math.round((correctCount / totalQuestions) * 100);
+
+      const submissionData = {
+        userId: user.uid,
+        studentName: profile.fullName || 'Student',
+        email: profile.email || user.email || '',
+        course: profile.internshipDomain,
+        answers: selectedAnswers,
+        correctCount,
+        wrongCount,
+        totalQuestions,
+        scorePercentage,
+        submittedAt: new Date().toISOString()
+      };
+
+      await setDoc(doc(db, 'testSubmissions', `${user.uid}-${profile.internshipDomain}`), submissionData);
+      setTestSubmission(submissionData);
+      setTakingTest(false);
+      setShowReportModal(true);
+    } catch (error) {
+      console.error('Error submitting test:', error);
+      alert('Error submitting test');
+    } finally {
+      setSubmittingTest(false);
+    }
+  };
+
   useEffect(() => {
     fetchDailyVideos();
     fetchVideoProgress();
     fetchAdminApproval();
     fetchAttendance();
     calculateCurrentDay();
-  }, [profile]);
+    fetchTestAndSubmission();
+  }, [profile, user]);
 
   useEffect(() => {
     // Re-check completion status after videos are loaded
@@ -383,6 +484,108 @@ export default function LMS() {
   //   doc.save(`${profile?.fullName || 'Certificate'}_${courseName.replace(/\s+/g, '_')}_Certificate.pdf`);
   // };
 
+  if (takingTest && courseTest) {
+    const q = courseTest.questions[currentQuestionIndex];
+    const progressPercent = Math.round(((currentQuestionIndex + 1) / courseTest.questions.length) * 100);
+
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl bg-white rounded-[3rem] border border-slate-100 shadow-2xl p-10 flex flex-col space-y-8 relative overflow-hidden">
+          {/* Top Progress bar */}
+          <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden absolute top-0 left-0 right-0">
+            <div
+              className="bg-gradient-to-r from-blue-600 to-purple-600 h-full rounded-full transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-black text-slate-400 uppercase tracking-widest">
+              Question {currentQuestionIndex + 1} of {courseTest.questions.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="bg-purple-100 text-purple-700 text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-wider">
+                {profile?.internshipDomain}
+              </span>
+              <button
+                onClick={() => {
+                  if (confirm("Are you sure you want to exit the test? Your current answers will not be saved.")) {
+                    setTakingTest(false);
+                  }
+                }}
+                className="w-8 h-8 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 transition"
+                title="Exit Test"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h2 className="text-2xl font-black text-slate-900 leading-snug">
+              {q.questionText}
+            </h2>
+          </div>
+
+          <div className="grid gap-4">
+            {q.options.map((opt: string, optIndex: number) => {
+              const isSelected = selectedAnswers[q.id] === optIndex;
+              return (
+                <button
+                  key={optIndex}
+                  onClick={() => handleSelectOption(q.id, optIndex)}
+                  className={`w-full p-5 rounded-2xl border-2 text-left font-bold transition flex items-center gap-4 group ${
+                    isSelected
+                      ? 'border-blue-600 bg-blue-50/50 text-blue-900'
+                      : 'border-slate-100 hover:border-blue-200 hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs transition-colors ${
+                    isSelected
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                      : 'bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-700'
+                  }`}>
+                    {String.fromCharCode(65 + optIndex)}
+                  </span>
+                  <span>{opt}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex justify-between pt-6 border-t border-slate-50">
+            <button
+              onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+              disabled={currentQuestionIndex === 0}
+              className="px-6 py-4 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition disabled:opacity-50"
+            >
+              <ChevronLeft size={16} />
+              Back
+            </button>
+
+            {currentQuestionIndex < courseTest.questions.length - 1 ? (
+              <button
+                onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
+                className="px-6 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition"
+              >
+                Next
+                <ChevronRight size={16} />
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmitTest}
+                disabled={submittingTest}
+                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition shadow-xl shadow-blue-600/20 disabled:opacity-50"
+              >
+                {submittingTest ? 'Submitting...' : 'Submit Test'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-12">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-8">
@@ -463,6 +666,79 @@ export default function LMS() {
           </div>
         </div>
       </header>
+
+      {/* Test Assessment Section */}
+      {isCourseCompleted && courseTest && courseTest.questions && courseTest.questions.length > 0 && (
+        <div className="mb-10">
+          {!testSubmission ? (
+            <div className="bg-gradient-to-r from-purple-900 to-indigo-900 rounded-[3rem] p-10 lg:p-14 text-white shadow-2xl relative overflow-hidden group">
+              <div className="relative z-10 max-w-2xl">
+                <div className="inline-flex items-center gap-2 px-5 py-2 bg-purple-500/20 text-purple-200 rounded-full text-[10px] font-black uppercase tracking-widest mb-8 border border-purple-500/30">
+                  <ClipboardList size={14} />
+                  Final Course Assessment
+                </div>
+                <h2 className="text-4xl lg:text-5xl font-black mb-6 tracking-tighter uppercase italic leading-tight">
+                  Take Your Final <br />
+                  <span className="text-purple-300">Assessment Test</span>
+                </h2>
+                <p className="text-purple-200/80 font-bold italic mb-10 text-lg leading-relaxed">
+                  You have successfully completed all daily training videos for {profile?.internshipDomain}! 
+                  Take the final exam now to test your learning and view your grade.
+                </p>
+                <button
+                  onClick={handleStartTest}
+                  className="px-10 py-5 bg-white text-indigo-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-purple-100 transition shadow-2xl flex items-center gap-2 animate-bounce"
+                >
+                  <ClipboardList size={16} />
+                  Start Exam Now
+                </button>
+              </div>
+              <ClipboardList size={300} className="absolute -right-20 -bottom-20 text-purple-700/10 opacity-30 rotate-[15deg] group-hover:rotate-[25deg] transition-transform duration-1000" />
+            </div>
+          ) : (
+            <div className="bg-gradient-to-r from-emerald-900 to-teal-900 rounded-[3rem] p-10 lg:p-14 text-white shadow-2xl relative overflow-hidden group">
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-5 py-2 bg-emerald-500/20 text-emerald-200 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-emerald-500/30">
+                    <CheckCircle2 size={14} />
+                    Assessment Completed
+                  </div>
+                  <h2 className="text-4xl font-black tracking-tighter uppercase italic leading-tight mb-4">
+                    Your Performance <span className="text-emerald-300">Report</span>
+                  </h2>
+                  <p className="text-emerald-200/80 font-bold italic text-lg max-w-lg leading-relaxed">
+                    Congratulations! You completed the final assessment for {profile?.internshipDomain}. 
+                    Your grade has been successfully calculated and stored.
+                  </p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-3xl text-center min-w-[220px] shadow-2xl flex flex-col items-center justify-center">
+                  <span className="text-xs font-black text-emerald-300 uppercase tracking-widest mb-1">Your Score</span>
+                  <span className="text-5xl font-black mb-4">{testSubmission.scorePercentage}%</span>
+                  <div className="text-xs font-bold text-emerald-100 mb-6">
+                    {testSubmission.correctCount} Correct • {testSubmission.wrongCount} Wrong
+                  </div>
+                  <div className="flex flex-col w-full gap-3">
+                    <button
+                      onClick={() => setShowReportModal(true)}
+                      className="w-full py-3 bg-white text-emerald-900 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-50 transition"
+                    >
+                      Review Answers
+                    </button>
+                    <button
+                      onClick={() => generateTestReport(profile, testSubmission, courseTest.questions)}
+                      className="w-full py-3 bg-emerald-600 border border-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition flex items-center justify-center gap-1.5"
+                    >
+                      <Download size={12} />
+                      Download PDF
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <CheckCircle2 size={300} className="absolute -left-20 -bottom-20 text-emerald-700/10 opacity-30 rotate-[15deg]" />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Search & Filters */}
       <div className="flex flex-col md:flex-row gap-6">
@@ -664,7 +940,128 @@ export default function LMS() {
           </div>
         </div>
       )}
-    </div>
+      {showReportModal && testSubmission && courseTest && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl bg-white rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-600 mb-1 block">
+                  Evaluation Report
+                </span>
+                <h2 className="text-2xl font-black text-slate-900 uppercase italic">
+                  Performance Review
+                </h2>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => generateTestReport(profile, testSubmission, courseTest.questions)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-1.5 transition"
+                >
+                  <Download size={14} /> PDF
+                </button>
+                <button
+                  onClick={() => setShowReportModal(false)}
+                  className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
 
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              {/* Score Stats Banner */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <div className="text-center">
+                  <div className="text-2xl font-black text-slate-900">{testSubmission.scorePercentage}%</div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Score</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-black text-green-600">{testSubmission.correctCount}</div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Correct</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-black text-red-600">{testSubmission.wrongCount}</div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Incorrect</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-black text-slate-955">{testSubmission.totalQuestions}</div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Questions</div>
+                </div>
+              </div>
+
+              {/* Question list */}
+              <div className="space-y-6">
+                {courseTest.questions.map((q: any, index: number) => {
+                  const selectedIdx = testSubmission.answers[q.id];
+                  const isCorrect = selectedIdx === q.correctOptionIndex;
+
+                  return (
+                    <div key={q.id || index} className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="bg-slate-200 text-slate-700 text-[10px] font-black px-3 py-1 rounded-full uppercase">
+                          Question {index + 1}
+                        </span>
+                        {isCorrect ? (
+                          <span className="text-green-600 text-xs font-black uppercase tracking-wider flex items-center gap-1">
+                            <CheckCircle2 size={14} /> Correct
+                          </span>
+                        ) : (
+                          <span className="text-red-600 text-xs font-black uppercase tracking-wider flex items-center gap-1">
+                            <X size={14} /> Incorrect
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="text-lg font-bold text-slate-900 leading-snug">
+                        {q.questionText}
+                      </h3>
+
+                      <div className="grid gap-3">
+                        {q.options.map((opt: string, optIndex: number) => {
+                          const isSelected = selectedIdx === optIndex;
+                          const isCorrectOpt = q.correctOptionIndex === optIndex;
+
+                          let optStyle = 'border-slate-100 bg-white text-slate-700';
+                          let badgeStyle = 'bg-slate-100 text-slate-500';
+
+                          if (isCorrectOpt) {
+                            optStyle = 'border-green-300 bg-green-50/50 text-green-900';
+                            badgeStyle = 'bg-green-600 text-white';
+                          } else if (isSelected && !isCorrectOpt) {
+                            optStyle = 'border-red-300 bg-red-50/50 text-red-900';
+                            badgeStyle = 'bg-red-600 text-white';
+                          }
+
+                          return (
+                            <div
+                              key={optIndex}
+                              className={`p-4 rounded-xl border-2 font-semibold text-sm flex items-center gap-3 ${optStyle}`}
+                            >
+                              <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs ${badgeStyle}`}>
+                                {String.fromCharCode(65 + optIndex)}
+                              </span>
+                              <span className="flex-1">{opt}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-100 flex gap-4 bg-slate-50">
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="bg-slate-900 hover:bg-slate-800 text-white font-black w-full h-12 rounded-xl text-xs uppercase tracking-widest transition"
+              >
+                Close Review
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

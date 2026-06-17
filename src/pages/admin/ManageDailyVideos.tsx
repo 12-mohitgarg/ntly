@@ -24,7 +24,8 @@ import {
   Video,
   Clock,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  ClipboardList
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -49,6 +50,98 @@ export default function ManageDailyVideos() {
   const [editingVideo, setEditingVideo] = useState<DailyVideo | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [courseCompleted, setCourseCompleted] = useState(false);
+  const [showTestModal, setShowTestModal] = useState(false);
+  const [testQuestions, setTestQuestions] = useState<any[]>([]);
+  const [loadingTest, setLoadingTest] = useState(false);
+  const [savingTest, setSavingTest] = useState(false);
+
+  const fetchCourseTest = async () => {
+    if (!selectedCourse) return;
+    setLoadingTest(true);
+    try {
+      const docRef = doc(db, 'courseTests', selectedCourse);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setTestQuestions(docSnap.data().questions || []);
+      } else {
+        setTestQuestions([]);
+      }
+    } catch (error) {
+      console.error('Error fetching course test:', error);
+      alert('Error fetching course test');
+    } finally {
+      setLoadingTest(false);
+    }
+  };
+
+  const handleOpenTestManager = () => {
+    fetchCourseTest();
+    setShowTestModal(true);
+  };
+
+  const handleSaveTest = async () => {
+    if (!selectedCourse) return;
+
+    // Validation
+    for (let i = 0; i < testQuestions.length; i++) {
+      const q = testQuestions[i];
+      if (!q.questionText.trim()) {
+        alert(`Question ${i + 1} is empty.`);
+        return;
+      }
+      for (let j = 0; j < q.options.length; j++) {
+        if (!q.options[j].trim()) {
+          alert(`Option ${String.fromCharCode(65 + j)} for Question ${i + 1} is empty.`);
+          return;
+        }
+      }
+      if (q.correctOptionIndex === undefined || q.correctOptionIndex === null || q.correctOptionIndex < 0 || q.correctOptionIndex > 3) {
+        alert(`Please select the correct option for Question ${i + 1}.`);
+        return;
+      }
+    }
+
+    setSavingTest(true);
+    try {
+      await setDoc(doc(db, 'courseTests', selectedCourse), {
+        course: selectedCourse,
+        questions: testQuestions,
+        updatedAt: new Date().toISOString()
+      });
+      alert('Test saved successfully');
+      setShowTestModal(false);
+    } catch (error) {
+      console.error('Error saving course test:', error);
+      alert('Error saving course test');
+    } finally {
+      setSavingTest(false);
+    }
+  };
+
+  const addEmptyQuestion = () => {
+    setTestQuestions(prev => [
+      ...prev,
+      {
+        id: `q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        questionText: '',
+        options: ['', '', '', ''],
+        correctOptionIndex: 0
+      }
+    ]);
+  };
+
+  const updateQuestionField = (index: number, field: string, value: any) => {
+    setTestQuestions(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const removeQuestion = (index: number) => {
+    setTestQuestions(prev => prev.filter((_, i) => i !== index));
+  };
+
   const [attendanceEntries, setAttendanceEntries] = useState<AttendanceEntry[]>([]);
   const [courseStudents, setCourseStudents] = useState<AttendanceStudent[]>([]);
   const [formData, setFormData] = useState({
@@ -357,6 +450,13 @@ export default function ManageDailyVideos() {
                     Course Completed
                   </button>
                   <button
+                    onClick={handleOpenTestManager}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg font-bold flex items-center gap-2"
+                  >
+                    <ClipboardList size={16} />
+                    Manage Course Test
+                  </button>
+                  <button
                     onClick={() => generateCourseAttendanceReport(selectedCourse, attendanceEntries, courseStudents, videos)}
                     className="bg-slate-900 text-white px-5 py-2 rounded-lg"
                   >
@@ -593,6 +693,136 @@ export default function ManageDailyVideos() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {showTestModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl bg-white rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-600 mb-1 block">
+                  Course Assessment
+                </span>
+                <h2 className="text-2xl font-black text-slate-900 uppercase italic">
+                  Manage Test: {selectedCourse}
+                </h2>
+              </div>
+              <button
+                onClick={() => setShowTestModal(false)}
+                className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              {loadingTest ? (
+                <div className="text-center py-12 text-slate-500 font-bold italic">
+                  Loading test questions...
+                </div>
+              ) : (
+                <>
+                  {testQuestions.length === 0 ? (
+                    <div className="text-center py-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                      <ClipboardList size={48} className="mx-auto mb-4 text-slate-300" />
+                      <p className="text-slate-600 font-black italic">No questions added yet</p>
+                      <p className="text-slate-400 text-sm mt-1">Click the button below to add your first question.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {testQuestions.map((q, index) => (
+                        <div key={q.id || index} className="bg-slate-50 p-6 rounded-2xl border border-slate-200 relative space-y-4">
+                          <button
+                            type="button"
+                            onClick={() => removeQuestion(index)}
+                            className="text-red-500 hover:text-red-700 transition absolute top-4 right-4"
+                            title="Delete Question"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+
+                          <div className="flex items-center gap-2">
+                            <span className="bg-purple-100 text-purple-700 text-xs font-black px-3 py-1 rounded-full uppercase">
+                              Q {index + 1}
+                            </span>
+                          </div>
+
+                          <div>
+                            <Label className="text-slate-700 font-bold mb-2 block text-xs uppercase tracking-wider">Question Text</Label>
+                            <Input
+                              value={q.questionText}
+                              onChange={(e) => updateQuestionField(index, 'questionText', e.target.value)}
+                              placeholder="Enter the question here"
+                              className="bg-white border-slate-200"
+                            />
+                          </div>
+
+                          <div>
+                            <Label className="text-slate-700 font-bold mb-2 block text-xs uppercase tracking-wider">Options & Correct Answer</Label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {q.options.map((opt: string, optIndex: number) => (
+                                <div key={optIndex} className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-100 shadow-sm focus-within:border-purple-300">
+                                  <input
+                                    type="radio"
+                                    name={`correct-${q.id || index}`}
+                                    checked={q.correctOptionIndex === optIndex}
+                                    onChange={() => updateQuestionField(index, 'correctOptionIndex', optIndex)}
+                                    className="w-4 h-4 text-purple-600 focus:ring-purple-500 cursor-pointer accent-purple-600"
+                                  />
+                                  <span className="text-xs font-black text-slate-400">
+                                    {String.fromCharCode(65 + optIndex)}
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={opt}
+                                    onChange={(e) => {
+                                      const newOpts = [...q.options];
+                                      newOpts[optIndex] = e.target.value;
+                                      updateQuestionField(index, 'options', newOpts);
+                                    }}
+                                    placeholder={`Enter option ${String.fromCharCode(65 + optIndex)}`}
+                                    className="flex-1 text-sm font-semibold text-slate-800 focus:outline-none bg-transparent"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={addEmptyQuestion}
+                    className="w-full py-4 border-2 border-dashed border-slate-200 hover:border-purple-300 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest text-slate-500 hover:text-purple-600 hover:bg-purple-50 transition"
+                  >
+                    <Plus size={16} />
+                    Add Question
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-slate-100 flex gap-4 bg-slate-50">
+              <Button
+                onClick={handleSaveTest}
+                disabled={savingTest || loadingTest}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-black flex-1 h-12 rounded-xl"
+              >
+                {savingTest ? 'Saving...' : 'Save Test'}
+              </Button>
+              <Button
+                onClick={() => setShowTestModal(false)}
+                disabled={savingTest}
+                variant="outline"
+                className="border-slate-200 hover:bg-slate-100 font-bold h-12 rounded-xl"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

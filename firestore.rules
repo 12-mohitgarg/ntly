@@ -142,6 +142,17 @@ service cloud.firestore {
   match /userVideoProgress/{docId} {
       allow read, write: if isSignedIn();
     }
+
+    match /courseTests/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isTeacher();
+    }
+
+    match /testSubmissions/{docId} {
+      allow read: if isAdmin() || isTeacher() || (isSignedIn() && (resource == null || resource.data.userId == request.auth.uid));
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin();
+    }
     // Internal connection test path
     match /_connection_test/{docId} {
       allow get: if true;

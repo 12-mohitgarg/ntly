@@ -1,600 +1,375 @@
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { db } from '../../lib/firebase';
+import { doc, getDoc, updateDoc, runTransaction } from 'firebase/firestore';
+import autoTable from 'jspdf-autotable';
 
-import {
-    doc,
-    getDoc,
-    updateDoc,
-    runTransaction
-} from 'firebase/firestore';
+const loadImage = (src: string) => {
+  return new Promise<string>((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      }
+    };
+    img.src = src;
+  });
+};
+
+const parseRobustDate = (isoStr: string | undefined): Date | null => {
+  if (!isoStr) return null;
+  let cleaned = isoStr.trim();
+  
+  // Fix single digit days/months:
+  // e.g., 2026-5-1T... -> 2026-05-01T...
+  cleaned = cleaned.replace(/-(\d)(T|$)/g, '-0$1$2');
+  cleaned = cleaned.replace(/-(\d)-/g, '-0$1-');
+
+  const d = new Date(cleaned);
+  if (isNaN(d.getTime())) {
+    const d2 = new Date(isoStr);
+    if (isNaN(d2.getTime())) {
+      return null;
+    }
+    return d2;
+  }
+  return d;
+};
+
+const formatDate = (iso: string | undefined) => {
+  const d = parseRobustDate(iso);
+  if (!d) return '01/06/2026';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+};
+
+const getEndDate = (isoStr?: string) => {
+  const d = parseRobustDate(isoStr);
+  if (!d) return '20/06/2026';
+  d.setDate(d.getDate() + 20); // 20 days duration
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+};
+
+const parseParagraph = (text: string): Array<{ text: string; bold: boolean }> => {
+  const tokens: Array<{ text: string; bold: boolean }> = [];
+  const regex = /<b>(.*?)<\/b>|([^<]+)/g;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match[1] !== undefined) {
+      tokens.push({ text: match[1], bold: true });
+    } else if (match[2] !== undefined) {
+      tokens.push({ text: match[2], bold: false });
+    }
+  }
+  return tokens;
+};
+
+const drawStyledParagraph = (
+  doc: jsPDF,
+  phrases: Array<{ text: string; bold: boolean }>,
+  startX: number,
+  startY: number,
+  lineHeight: number,
+  maxWidth: number
+) => {
+  let curX = startX;
+  let curY = startY;
+  
+  const tokens: Array<{ text: string; bold: boolean }> = [];
+  phrases.forEach((phrase) => {
+    const parts = phrase.text.split(/(\s+)/);
+    parts.forEach((p) => {
+      if (p !== '') {
+        tokens.push({ text: p, bold: phrase.bold });
+      }
+    });
+  });
+
+  tokens.forEach((tok) => {
+    doc.setFont('Helvetica', tok.bold ? 'bold' : 'normal');
+    const tokenWidth = doc.getTextWidth(tok.text);
+    
+    if (tok.text.trim() === '') {
+      if (curX === startX) return;
+      if (curX + tokenWidth <= startX + maxWidth) {
+        curX += tokenWidth;
+      }
+    } else {
+      if (curX + tokenWidth > startX + maxWidth) {
+        curX = startX;
+        curY += lineHeight;
+      }
+      doc.text(tok.text, curX, curY);
+      curX += tokenWidth;
+    }
+  });
+  return curY;
+};
 
 export const generateCertificate = async (
-    profile: any,
-    userId: string
+  profile: any,
+  userId: string
 ) => {
+  if (!userId) {
+    throw new Error('User ID missing');
+  }
 
-    // =========================
-    // CERTIFICATE NUMBER
-    // =========================
+  // Fetch certificate number
+  const getCertificateNumber = async (): Promise<string> => {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    const userData = userDoc.data();
+    if (userData?.certificateNumber) {
+      return userData.certificateNumber;
+    }
 
-    const getCertificateNumber = async (): Promise<string> => {
+    const counterRef = doc(db, 'counters', 'certificate');
+    const nextNumber = await runTransaction(db, async (transaction) => {
+      const counterDoc = await transaction.get(counterRef);
+      if (!counterDoc.exists()) {
+        transaction.set(counterRef, {
+          count: 10001,
+          lastUpdated: new Date().toISOString()
+        });
+        return 10001;
+      }
 
-        if (!userId) {
-            throw new Error('User ID missing');
-        }
-
-        const userDoc = await getDoc(
-            doc(db, 'users', userId)
-        );
-
-        const userData = userDoc.data();
-
-        // already exists
-        if (userData?.certificateNumber) {
-            return userData.certificateNumber;
-        }
-
-        // sequential counter
-        const counterRef = doc(
-            db,
-            'counters',
-            'certificate'
-        );
-
-        const nextNumber = await runTransaction(
-            db,
-            async (transaction) => {
-
-                const counterDoc =
-                    await transaction.get(counterRef);
-
-                // first time
-                if (!counterDoc.exists()) {
-
-                    transaction.set(counterRef, {
-                        count: 10001,
-                        lastUpdated:
-                            new Date().toISOString()
-                    });
-
-                    return 10001;
-                }
-
-                const currentCount =
-                    counterDoc.data().count;
-
-                const newCount =
-                    currentCount + 1;
-
-                transaction.update(counterRef, {
-                    count: newCount,
-                    lastUpdated:
-                        new Date().toISOString()
-                });
-
-                return newCount;
-            }
-        );
-
-        // save in user profile
-        await updateDoc(
-            doc(db, 'users', userId),
-            {
-                certificateNumber:
-                    nextNumber.toString()
-            }
-        );
-
-        return nextNumber.toString();
-    };
-
-    // =========================
-    // GET CERTIFICATE NUMBER
-    // =========================
-
-    const certificateNumber =
-        await getCertificateNumber();
-
-    // =========================
-    // PDF INIT
-    // =========================
-
-    const docPDF = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
+      const currentCount = counterDoc.data().count;
+      const newCount = currentCount + 1;
+      transaction.update(counterRef, {
+        count: newCount,
+        lastUpdated: new Date().toISOString()
+      });
+      return newCount;
     });
 
-    const W = 210;
-    const H = 297;
-    const ML = 14;
-
-    // =========================
-    // LOAD IMAGES
-    // =========================
-
-    const loadImage = (src: string) => {
-        return new Promise<string>((resolve) => {
-
-            const img = new Image();
-
-            img.crossOrigin = 'Anonymous';
-
-            img.onload = () => {
-
-                const canvas =
-                    document.createElement('canvas');
-
-                canvas.width =
-                    img.naturalWidth;
-
-                canvas.height =
-                    img.naturalHeight;
-
-                const ctx =
-                    canvas.getContext('2d');
-
-                if (ctx) {
-
-                    ctx.drawImage(
-                        img,
-                        0,
-                        0
-                    );
-
-                    resolve(
-                        canvas.toDataURL(
-                            'image/png'
-                        )
-                    );
-                }
-            };
-
-            img.src = src;
-        });
-    };
-
-    const headerImg =
-        await loadImage('/ii.png');
-
-    const footerImg =
-        await loadImage('/ff.png');
-
-    const watermarkImg =
-        await loadImage('/dded.jpeg');
-
-    // =========================
-    // STUDENT DATA
-    // =========================
-
-    const studentName =
-        profile?.fullName ||
-        '[Student Full Name]';
-
-    const rollNumber =
-        profile?.universityRoll ||
-        '[Roll Number]';
-
-    const college =
-        profile?.college ||
-        '[College Name]';
-
-    const department =
-        profile?.department ||
-        '[Department]';
-
-    const semester =
-        profile?.semester ||
-        '[Semester]';
-
-    const domain =
-        profile?.internshipDomain ||
-        '[Domain]';
-
-    const totalHours =
-        profile?.totalHoursCompleted ||
-        '120';
-
-    // =========================
-    // DATE FORMAT
-    // =========================
-
-    const formatDate = (
-        iso: string | undefined
-    ) => {
-
-        if (!iso)
-            return '01/01/2026';
-
-        const d = new Date(iso);
-
-        const dd = String(
-            d.getDate()
-        ).padStart(2, '0');
-
-        const mm = String(
-            d.getMonth() + 1
-        ).padStart(2, '0');
-
-        const yyyy =
-            d.getFullYear();
-
-        return `${dd}/${mm}/${yyyy}`;
-    };
-
-    const letterDate =
-        formatDate(
-            profile?.registrationDate
-        );
-
-    // =========================
-    // IMAGE DIMENSIONS
-    // =========================
-
-    const headerH =
-        (252 / 998) * W;
-
-    const footerH =
-        (322 / 1002) * W;
-
-    // =========================
-    // HEADER
-    // =========================
-
-    docPDF.addImage(
-        headerImg,
-        'PNG',
-        0,
-        0,
-        W,
-        headerH
-    );
-
-    // =========================
-    // WATERMARK
-    // =========================
-
-    const wmSize = 90;
-
-    const wmX =
-        (W - wmSize) / 2;
-
-    const wmY =
-        (H - wmSize) / 2;
-
-    (docPDF as any)
-        .saveGraphicsState();
-
-    (docPDF as any)
-        .setGState(
-            (docPDF as any).GState({
-                opacity: 0.10
-            })
-        );
-
-    docPDF.addImage(
-        watermarkImg,
-        'JPEG',
-        wmX,
-        wmY,
-        wmSize,
-        wmSize
-    );
-
-    (docPDF as any)
-        .restoreGraphicsState();
-
-    // =========================
-    // BODY
-    // =========================
-
-    let y = headerH + 5;
-
-    docPDF.setFontSize(8.5);
-
-    // =========================
-    // REF NO
-    // =========================
-
-    docPDF.setFont(
-        'Helvetica',
-        'normal'
-    );
-
-    docPDF.text(
-        'Letter Ref. No.: ',
-        ML,
-        y
-    );
-
-    docPDF.setFont(
-        'Helvetica',
-        'bold'
-    );
-
-    docPDF.text(
-        `IM/2026/ICC/${certificateNumber}`,
-        ML +
-        docPDF.getTextWidth(
-            'Letter Ref. No.: '
-        ),
-        y
-    );
-
-    docPDF.setFont(
-        'Helvetica',
-        'normal'
-    );
-
-    docPDF.text(
-        `Date: ${letterDate}`,
-        W - ML,
-        y,
-        {
-            align: 'right'
-        }
-    );
-
-    y += 12;
-
-    // =========================
-    // TITLE
-    // =========================
-
-    docPDF.setFontSize(18);
-
-    docPDF.setFont(
-        'Helvetica',
-        'bold'
-    );
-
-    docPDF.text(
-        'INTERNSHIP COMPLETION CERTIFICATE',
-        W / 2,
-        y,
-        {
-            align: 'center'
-        }
-    );
-
-    y += 14;
-
-    // =========================
-    // BODY TEXT
-    // =========================
-
-    docPDF.setFontSize(11);
-
-    docPDF.setFont(
-        'Helvetica',
-        'normal'
-    );
-
-    const bodyText = `
-This is to certify that ${studentName},
-bearing University Roll Number ${rollNumber},
-from ${college},
-Department ${department},
-Semester ${semester},
-has successfully completed the internship programme in ${domain}
-at InternMitra Technologies Private Limited.
-`;
-
-    const splitBody =
-        docPDF.splitTextToSize(
-            bodyText,
-            W - 2 * ML
-        );
-
-    docPDF.text(
-        splitBody,
-        ML,
-        y
-    );
-
-    y +=
-        splitBody.length * 6 + 10;
-
-    // =========================
-    // DETAILS HEADING
-    // =========================
-
-    docPDF.setFont(
-        'Helvetica',
-        'bold'
-    );
-
-    docPDF.text(
-        'Internship Details',
-        ML,
-        y
-    );
-
-    y += 10;
-
-    // =========================
-    // DETAILS TABLE
-    // =========================
-
-    const rows = [
-        [
-            'Student Name',
-            studentName
-        ],
-        [
-            'University Roll Number',
-            rollNumber
-        ],
-        [
-            'College / Institution',
-            college
-        ],
-        [
-            'Department',
-            department
-        ],
-        [
-            'Semester',
-            semester
-        ],
-        [
-            'Internship Domain',
-            domain
-        ],
-        [
-            'Total Hours Completed',
-            `${totalHours} Hours`
-        ],
-        [
-            'Certificate Number',
-            `IM/2026/ICC/${certificateNumber}`
-        ]
-    ];
-
-    rows.forEach(
-        ([label, value]) => {
-
-            docPDF.setFont(
-                'Helvetica',
-                'normal'
-            );
-
-            docPDF.text(
-                String(label),
-                ML + 5,
-                y
-            );
-
-            docPDF.text(
-                ':',
-                78,
-                y
-            );
-
-            docPDF.setFont(
-                'Helvetica',
-                'bold'
-            );
-
-            docPDF.text(
-                String(value),
-                85,
-                y
-            );
-
-            y += 8;
-        }
-    );
-
-    y += 8;
-
-    // =========================
-    // PERFORMANCE TEXT
-    // =========================
-
-    docPDF.setFont(
-        'Helvetica',
-        'normal'
-    );
-
-    const closingText = `
-The student has successfully completed all assigned internship tasks,
-training sessions and practical learning modules under the supervision
-of InternMitra mentors and coordinators.
-
-We appreciate the dedication, discipline and participation shown during
-the internship programme and wish the student success in future endeavors.
-`;
-
-    const splitClosing =
-        docPDF.splitTextToSize(
-            closingText,
-            W - 2 * ML
-        );
-
-    docPDF.text(
-        splitClosing,
-        ML,
-        y
-    );
-
-    y +=
-        splitClosing.length * 5 + 10;
-
-    // =========================
-    // QR CODE
-    // =========================
-
-    const qrData = `
-Name: ${studentName}
-Roll Number: ${rollNumber}
-College: ${college}
-Domain: ${domain}
-Certificate No: IM/2026/ICC/${certificateNumber}
-`;
-
-    const qrImage =
-        await QRCode.toDataURL(
-            qrData
-        );
-
-    docPDF.addImage(
-        qrImage,
-        'PNG',
-        ML,
-        H - 80,
-        32,
-        32
-    );
-
-    // =========================
-    // SIGNATURE
-    // =========================
-
-    docPDF.setFont(
-        'Helvetica',
-        'bold'
-    );
-
-    docPDF.text(
-        'Mr. Amarjeet Kumar',
-        W - 65,
-        H - 40
-    );
-
-    docPDF.setFont(
-        'Helvetica',
-        'normal'
-    );
-
-    docPDF.text(
-        'Founder & CEO',
-        W - 55,
-        H - 34
-    );
-
-    // =========================
-    // FOOTER
-    // =========================
-
-    docPDF.addImage(
-        footerImg,
-        'PNG',
-        0,
-        H - footerH,
-        W,
-        footerH
-    );
-
-    // =========================
-    // SAVE PDF
-    // =========================
-
-    docPDF.save(
-        `InternMitra_Certificate_${studentName.replace(
-            /\s+/g,
-            '_'
-        )}.pdf`
-    );
+    await updateDoc(doc(db, 'users', userId), {
+      certificateNumber: nextNumber.toString()
+    });
+
+    return nextNumber.toString();
+  };
+
+  const certificateNumber = await getCertificateNumber();
+
+  // Load template images
+  const headerImg = await loadImage('/ii.png');
+  const footerImg = await loadImage('/ff.png');
+  const watermarkImg = await loadImage('/dded.jpeg');
+
+  // Fetch test score and grade
+  let testScore = 90;
+  let testGrade = 'A+';
+  try {
+    const subRef = doc(db, 'testSubmissions', `${userId}-${profile?.internshipDomain}`);
+    const subSnap = await getDoc(subRef);
+    if (subSnap.exists()) {
+      const subData = subSnap.data();
+      testScore = subData.scorePercentage ?? 90;
+      if (testScore >= 90) testGrade = 'A+';
+      else if (testScore >= 80) testGrade = 'A';
+      else if (testScore >= 70) testGrade = 'B+';
+      else if (testScore >= 60) testGrade = 'B';
+      else if (testScore >= 50) testGrade = 'C+';
+      else if (testScore >= 40) testGrade = 'C';
+      else if (testScore >= 33) testGrade = 'D';
+      else testGrade = 'F';
+    }
+  } catch (e) {
+    console.error('Error fetching test submission for certificate:', e);
+  }
+
+  // PDF init
+  const docPDF = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const W = 210;
+  const H = 297;
+  const ML = 14;
+
+  // Header image
+  const headerH = (252 / 998) * W;
+  docPDF.addImage(headerImg, 'PNG', 0, 0, W, headerH);
+
+  // Watermark logo
+  const wmSize = 90;
+  const wmX = (W - wmSize) / 2;
+  const wmY = (H - wmSize) / 2;
+  (docPDF as any).saveGraphicsState();
+  (docPDF as any).setGState((docPDF as any).GState({ opacity: 0.10 }));
+  docPDF.addImage(watermarkImg, 'JPEG', wmX, wmY, wmSize, wmSize);
+  (docPDF as any).restoreGraphicsState();
+
+  let y = headerH + 3;
+
+  // 1. Print CIN
+  docPDF.setFontSize(8.5);
+  docPDF.setFont('Helvetica', 'bold');
+  docPDF.setTextColor(15, 23, 42);
+  docPDF.text('CIN : U78300BR2025PTC081140', ML, y);
+  y += 5;
+
+  // 2. Dashed line 1
+  docPDF.setDrawColor(156, 163, 175);
+  docPDF.setLineWidth(0.3);
+  docPDF.setLineDashPattern([1.5, 1.5], 0);
+  docPDF.line(ML, y, W - ML, y);
+  y += 5;
+
+  // 3. Title
+  docPDF.setFontSize(13);
+  docPDF.setFont('Helvetica', 'bold');
+  docPDF.setTextColor(30, 64, 175); // Royal blue
+  docPDF.text('INTERNSHIP COMPLETION CERTIFICATE', W / 2, y, { align: 'center' });
+  y += 3;
+
+  // 4. Dashed line 2
+  docPDF.line(ML, y, W - ML, y);
+  y += 6;
+
+  // Reset line dash pattern to solid
+  docPDF.setLineDashPattern([], 0);
+
+  // 5. Ref and Date (below dashed line 2)
+  docPDF.setFontSize(8.5);
+  docPDF.setFont('Helvetica', 'bold');
+  docPDF.setTextColor(15, 23, 42);
+  docPDF.text('Letter Ref. No.: ', ML, y);
+  docPDF.text(`IM/2026/ICC/${certificateNumber}`, ML + docPDF.getTextWidth('Letter Ref. No.: '), y);
+
+  const startStr = formatDate(profile?.registrationDate);
+  const endStr = getEndDate(profile?.registrationDate);
+
+  docPDF.text(`Date: ${endStr}`, W - ML, y, { align: 'right' });
+  y += 8;
+
+  // Body content paragraph (exactly like the second image template)
+  const studentName = profile?.fullName || '[Student Full Name]';
+  const parentName = profile?.parentName || '[Father,s/ Guardian,s Name]';
+  const rollNumber = profile?.universityRoll || '[Registration No.]';
+  const college = profile?.college || '[Name of the Institution]';
+  const session = profile?.session || '2023-2027';
+  const subject = profile?.subject || profile?.department || '[Subject]';
+  const domain = profile?.internshipDomain || '[Domain Name]';
+  const gender = profile?.gender?.toLowerCase() || 'male';
+
+  docPDF.setFontSize(10);
+  docPDF.setTextColor(30, 41, 59);
+
+  const genderPrefix = gender === 'female' ? 'Ms.' : 'Mr.';
+  const pronoun = gender === 'female' ? 'her' : 'his';
+  const paragraphHTML = `This is certify that <b>${genderPrefix} ${studentName}.</b> S/o or D/o <b>${parentName}.</b> bearing University Registration / Enrolment No. <b>${rollNumber}</b> of <b>${college}.</b> Session <b>${session}</b> with Major in <b>${subject} ,</b> has successfully completed <b>${pronoun}</b> internship in <b>${domain}</b> with InternMitra.`;
+
+  const phrases = parseParagraph(paragraphHTML);
+  y = drawStyledParagraph(docPDF, phrases, ML, y, 5.5, W - 2 * ML);
+  y += 10;
+
+  // Internship duration & grade details block
+  docPDF.setFont('Helvetica', 'bold');
+  docPDF.setFontSize(9.5);
+  docPDF.setTextColor(30, 41, 59);
+
+  const leftColX = ML;
+  const rightColX = 130;
+
+  docPDF.text(`Internship Duration : From ${startStr} to ${endStr}`, leftColX, y);
+  docPDF.text(`Grade : [${testGrade}]`, rightColX, y);
+  
+  y += 5.5;
+
+  const hoursCompleted = profile?.totalHoursCompleted || 120;
+  docPDF.text(`Total Hours Completed : ${hoursCompleted} Hours`, leftColX, y);
+  docPDF.text(`Percentage : [${testScore}%]`, rightColX, y);
+
+  y += 5.5;
+
+  docPDF.text('Mode of Internship : Online', leftColX, y);
+
+  y += 10;
+
+  // Internship Performance Assessment Heading
+  docPDF.setFont('Helvetica', 'bold');
+  docPDF.setFontSize(10.5);
+  docPDF.setTextColor(15, 23, 42);
+  docPDF.text('Internship Performance Assessment', ML, y);
+  y += 5;
+
+  docPDF.setFont('Helvetica', 'normal');
+  docPDF.setFontSize(8.5);
+  docPDF.setTextColor(71, 85, 105);
+  const closingText = 'During the internship, the student worked on Assigned projects and Tasks. Based on our observation and mentorship, we assess the student’s performance as follows';
+  const splitClosing = docPDF.splitTextToSize(closingText, W - 2 * ML);
+  docPDF.text(splitClosing, ML, y);
+  y += splitClosing.length * 4.5 + 4;
+
+  // Dynamic Performance Rating Calculation
+  const getRating = (baseScore: number, multiplier: number) => {
+    const ratingVal = baseScore * multiplier;
+    if (ratingVal >= 85) return '[Outstanding]';
+    if (ratingVal >= 65) return '[Good]';
+    if (ratingVal >= 45) return '[Satisfactory]';
+    return '[Needs Improvement]';
+  };
+
+  const technicalRating = getRating(testScore, 1.0);
+  const qualityRating = getRating(testScore, 1.05);
+  const initiativeRating = getRating(testScore, 0.95);
+  const communicationRating = getRating(testScore, 0.9);
+  const punctualityRating = getRating(testScore, 1.08);
+
+  // Performance Table
+  autoTable(docPDF, {
+    startY: y,
+    head: [['S. No.', 'Assessment Criteria', 'Rating(Outstanding/ Good/\nsatisfactory/ Needs Improvement)']],
+    body: [
+      ['1.', 'Technical Knowledge & Application', technicalRating],
+      ['2.', 'Quality of Work & Task Completion', qualityRating],
+      ['3.', 'Initiative & Problem-Solving Ability', initiativeRating],
+      ['4.', 'Communication & Interpersonal Skills', communicationRating],
+      ['5.', 'Punctuality, Discipline & Professional Conduct', punctualityRating]
+    ],
+    theme: 'grid',
+    styles: { fontSize: 8.5, fontStyle: 'normal', font: 'Helvetica', cellPadding: 3.8, textColor: [30, 41, 59] },
+    headStyles: { fillColor: [224, 231, 255], textColor: [15, 23, 42], fontStyle: 'bold' },
+    columnStyles: {
+      0: { cellWidth: 15, halign: 'center' },
+      1: { cellWidth: 95 },
+      2: { cellWidth: 70, halign: 'center' }
+    },
+    tableLineColor: [209, 213, 219],
+    tableLineWidth: 0.2
+  });
+
+  // Footer image at the bottom
+  const footerH = (322 / 1002) * W;
+  docPDF.addImage(footerImg, 'PNG', 0, H - footerH, W, footerH);
+
+  // QR Code
+  const qrData = `Name: ${studentName}\nRoll Number: ${rollNumber}\nCollege: ${college}\nDomain: ${domain}\nCertificate No: IM/2026/ICC/${certificateNumber}`;
+  const qrImage = await QRCode.toDataURL(qrData);
+
+  docPDF.addImage(
+    qrImage,
+    'PNG',
+    ML + 6,
+    H - footerH + 5,
+    26,
+    26
+  );
+
+  // Save PDF
+  docPDF.save(`InternMitra_Certificate_${studentName.replace(/\s+/g, '_')}.pdf`);
 };
