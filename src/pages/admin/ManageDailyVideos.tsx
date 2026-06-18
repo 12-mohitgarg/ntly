@@ -441,36 +441,38 @@ export default function ManageDailyVideos() {
               {editingVideo ? 'Edit Video' : 'Add New Video'}
             </h2>
             <div className="mb-4">
-              {courseCompleted ? (
-                <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-3">
+                {courseCompleted ? (
                   <button
                     className="bg-green-600 text-white px-5 py-2 rounded-lg"
                     disabled
                   >
                     Course Completed
                   </button>
+                ) : (
                   <button
-                    onClick={handleOpenTestManager}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg font-bold flex items-center gap-2"
+                    onClick={markCourseCompleted}
+                    className="bg-blue-600 text-white px-5 py-2 rounded-lg"
                   >
-                    <ClipboardList size={16} />
-                    Manage Course Test
+                    Mark Course As Done
                   </button>
+                )}
+                <button
+                  onClick={handleOpenTestManager}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg font-bold flex items-center gap-2"
+                >
+                  <ClipboardList size={16} />
+                  Manage Course Test
+                </button>
+                {courseCompleted && (
                   <button
                     onClick={() => generateCourseAttendanceReport(selectedCourse, attendanceEntries, courseStudents, videos)}
                     className="bg-slate-900 text-white px-5 py-2 rounded-lg"
                   >
                     Generate Attendance Report
                   </button>
-                </div>
-              ) : (
-                <button
-                  onClick={markCourseCompleted}
-                  className="bg-blue-600 text-white px-5 py-2 rounded-lg"
-                >
-                  Mark Course As Done
-                </button>
-              )}
+                )}
+              </div>
             </div>
             <span className="bg-blue-100 text-blue-600 text-xs font-black px-4 py-2 rounded-full uppercase ml-auto">
               {selectedCourse}
