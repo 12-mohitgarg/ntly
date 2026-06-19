@@ -13,21 +13,52 @@ function getFirebaseAdminCredential() {
     return admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
   }
 
-  if (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
+  const projectId = cleanEnvValue(process.env.FIREBASE_PROJECT_ID) || 'intermitra-backup';
+  const clientEmail = cleanEnvValue(process.env.FIREBASE_CLIENT_EMAIL);
+  const privateKey = getFirebasePrivateKey();
+
+  if (clientEmail && privateKey) {
     return admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID || 'intermitra-backup',
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      projectId,
+      clientEmail,
+      privateKey,
     });
   }
 
   return admin.credential.applicationDefault();
 }
 
+function getFirebasePrivateKey() {
+  if (process.env.FIREBASE_PRIVATE_KEY_BASE64) {
+    return Buffer.from(process.env.FIREBASE_PRIVATE_KEY_BASE64, 'base64').toString('utf8');
+  }
+
+  return process.env.FIREBASE_PRIVATE_KEY
+    ?.trim()
+    .replace(/,$/, '')
+    .replace(/^['"]|['"]$/g, '')
+    .replace(/,$/, '')
+    .replace(/\\\\n/g, '\n')
+    .replace(/\\n/g, '\n');
+}
+
+function getFirebaseProjectId() {
+  return cleanEnvValue(process.env.FIREBASE_PROJECT_ID) || 'intermitra-backup';
+}
+
+function cleanEnvValue(value) {
+  return value
+    ?.trim()
+    .replace(/,$/, '')
+    .replace(/^['"]|['"]$/g, '')
+    .replace(/,$/, '')
+    .trim();
+}
+
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: getFirebaseAdminCredential(),
-    projectId: process.env.FIREBASE_PROJECT_ID || 'intermitra-backup',
+    projectId: getFirebaseProjectId(),
   });
 }
 
