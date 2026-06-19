@@ -6,7 +6,8 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus, Download, Bell, Send, Upload, FileText, Trash2, ClipboardList } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus, Download, Bell, Send, Upload, FileText, Trash2, ClipboardList, KeyRound } from 'lucide-react';
 import { createUserWithEmailAndPassword, deleteUser, getAuth, signOut, User as FirebaseUser } from 'firebase/auth';
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { auth } from '../lib/firebase';
@@ -108,6 +109,9 @@ export default function AdminDashboard() {
   const [collegeFilter, setCollegeFilter] = useState('');
   const [domainFilter, setDomainFilter] = useState('');
   const [exportCollege, setExportCollege] = useState('');
+  const [passwordUser, setPasswordUser] = useState<UserProfile | null>(null);
+  const [passwordForm, setPasswordForm] = useState({ password: '', confirmPassword: '' });
+  const [savingPassword, setSavingPassword] = useState(false);
   const [teacherForm, setTeacherForm] = useState({
     fullName: '',
     email: '',
@@ -648,6 +652,56 @@ export default function AdminDashboard() {
       alert('Error rejecting payment');
     }
   };
+
+  const openPasswordModal = (student: UserProfile) => {
+    setPasswordUser(student);
+    setPasswordForm({ password: '', confirmPassword: '' });
+  };
+
+  const handleUpdateUserPassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!passwordUser || !user) return;
+
+    if (passwordForm.password.length < 6) {
+      alert('Password must be at least 6 characters');
+      return;
+    }
+
+    if (passwordForm.password !== passwordForm.confirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+
+    setSavingPassword(true);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/admin/users/${passwordUser.uid}/password`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ password: passwordForm.password }),
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(result?.details || result?.error || 'Error updating password');
+      }
+
+      setPasswordUser(null);
+      setPasswordForm({ password: '', confirmPassword: '' });
+      alert('Password updated successfully');
+    } catch (error: any) {
+      console.error('Error updating password:', error);
+      alert(error?.message || 'Error updating password');
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
   const getGroupName = (value?: string) => value?.trim() || 'Not specified';
 
   const successfulUserIds = new Set(
@@ -809,6 +863,70 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <Dialog  
+        open={Boolean(passwordUser)}
+        onOpenChange={(open) => {
+          if (!open && !savingPassword) {
+            setPasswordUser(null);
+            setPasswordForm({ password: '', confirmPassword: '' });
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md bg-white">
+          <form onSubmit={handleUpdateUserPassword} className="space-y-5">
+            <DialogHeader>
+              <DialogTitle className="font-black text-slate-900">Change Password</DialogTitle>
+              <DialogDescription>
+                Update password for {passwordUser?.fullName || passwordUser?.email || 'selected user'}.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-slate-500 text-xs font-black uppercase">New Password</Label>
+                <Input
+                  type="password"
+                  value={passwordForm.password}
+                  onChange={(event) => setPasswordForm({ ...passwordForm, password: event.target.value })}
+                  className="h-12 rounded-xl font-bold"
+                  minLength={6}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-slate-500 text-xs font-black uppercase">Confirm Password</Label>
+                <Input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(event) => setPasswordForm({ ...passwordForm, confirmPassword: event.target.value })}
+                  className="h-12 rounded-xl font-bold"
+                  minLength={6}
+                  required
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={savingPassword}
+                onClick={() => {
+                  setPasswordUser(null);
+                  setPasswordForm({ password: '', confirmPassword: '' });
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={savingPassword} className="bg-slate-900 hover:bg-blue-700 text-white font-black">
+                {savingPassword ? 'Updating...' : 'Update Password'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <header className="bg-slate-900 text-white p-6 shadow-lg">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -1164,7 +1282,7 @@ export default function AdminDashboard() {
                             })}
                           </td>
                           <td className="p-4">
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
 
                               <button
                                 onClick={() =>
@@ -1180,6 +1298,15 @@ export default function AdminDashboard() {
                                 className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700"
                               >
                                 Reject
+                              </button>
+
+                              <button
+                                onClick={() => openPasswordModal(user)}
+                                className="inline-flex items-center gap-1 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                                title="Update password"
+                              >
+                                <KeyRound size={14} />
+                                Change Password
                               </button>
 
                             </div>
