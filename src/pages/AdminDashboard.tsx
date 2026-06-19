@@ -682,7 +682,7 @@ export default function AdminDashboard() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ password: passwordForm.password }),
+        body: JSON.stringify({ uid: passwordUser.uid, password: passwordForm.password }),
       });
 
       const result = await response.json().catch(() => null);

@@ -73,8 +73,9 @@ exports.handler = async (event) => {
       return authResult.response;
     }
 
-    const uid = event.queryStringParameters?.uid;
-    const { password } = JSON.parse(event.body || '{}');
+    const parsedBody = JSON.parse(event.body || '{}');
+    const uid = event.queryStringParameters?.uid || parsedBody.uid;
+    const { password } = parsedBody;
 
     if (!uid) {
       return json(400, { error: 'User id is required' });
