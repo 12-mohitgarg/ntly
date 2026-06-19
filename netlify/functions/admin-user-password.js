@@ -1,0 +1,96 @@
+const admin = require('firebase-admin');
+
+function json(statusCode, body) {
+  return {
+    statusCode,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  };
+}
+
+function getFirebaseAdminCredential() {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    return admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
+  }
+
+  if (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
+    return admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID || 'intermitra-backup',
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    });
+  }
+
+  return admin.credential.applicationDefault();
+}
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: getFirebaseAdminCredential(),
+    projectId: process.env.FIREBASE_PROJECT_ID || 'intermitra-backup',
+  });
+}
+
+async function requireAdmin(event) {
+  const authHeader = event.headers.authorization || event.headers.Authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
+  if (!token) {
+    return { allowed: false, response: json(401, { error: 'Missing admin authorization token' }) };
+  }
+
+  const decodedToken = await admin.auth().verifyIdToken(token);
+
+  if (decodedToken.email === 'admin@internmitra.com') {
+    return { allowed: true };
+  }
+
+  const adminDoc = await admin.firestore().collection('admins').doc(decodedToken.uid).get();
+  const adminData = adminDoc.exists ? adminDoc.data() : null;
+  const isAllowedAdmin =
+    adminData?.isActive === true &&
+    ['admin', 'super_admin'].includes(String(adminData?.role || ''));
+
+  if (!isAllowedAdmin) {
+    return { allowed: false, response: json(403, { error: 'Only admins can update user passwords' }) };
+  }
+
+  return { allowed: true };
+}
+
+exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, body: '' };
+  }
+
+  if (event.httpMethod !== 'PATCH') {
+    return json(405, { error: 'Method Not Allowed' });
+  }
+
+  try {
+    const authResult = await requireAdmin(event);
+    if (!authResult.allowed) {
+      return authResult.response;
+    }
+
+    const uid = event.queryStringParameters?.uid;
+    const { password } = JSON.parse(event.body || '{}');
+
+    if (!uid) {
+      return json(400, { error: 'User id is required' });
+    }
+
+    if (typeof password !== 'string' || password.length < 6) {
+      return json(400, { error: 'Password must be at least 6 characters' });
+    }
+
+    await admin.auth().updateUser(uid, { password });
+    return json(200, { status: 'success' });
+  } catch (error) {
+    console.error('Password update error:', error);
+    return json(500, {
+      error: 'Error updating user password',
+      details: error?.message || 'Unknown error',
+    });
+  }
+};
