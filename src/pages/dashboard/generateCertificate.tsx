@@ -216,7 +216,7 @@ export const generateCertificate = async (
   let y = headerH + 8;
 
   // 5. Ref and Date (below dashed line 2)
-  docPDF.setFontSize(8.5);
+  docPDF.setFontSize(9.5);
   docPDF.setFont('Helvetica', 'bold');
   docPDF.setTextColor(15, 23, 42);
   docPDF.text('Letter Ref. No.: ', ML, y);
@@ -226,7 +226,7 @@ export const generateCertificate = async (
   const endStr = '20/06/2026';
 
   docPDF.text(`Date: ${endStr}`, W - ML, y, { align: 'right' });
-  y += 6;
+  y += 7;
 
   // Body content paragraph (exactly like the second image template)
   const studentName = profile?.fullName || '[Student Full Name]';
@@ -238,7 +238,7 @@ export const generateCertificate = async (
   const domain = profile?.internshipDomain || '[Domain Name]';
   const gender = profile?.gender?.toLowerCase() || 'male';
 
-  docPDF.setFontSize(10);
+  docPDF.setFontSize(9.5);
   docPDF.setTextColor(30, 41, 59);
 
   const genderPrefix = gender === 'female' ? 'Ms.' : 'Mr.';
@@ -246,8 +246,8 @@ export const generateCertificate = async (
   const paragraphHTML = `This is certify that <b>${genderPrefix} ${studentName}.</b> S/o or D/o <b>${parentName}.</b> bearing University Registration / Enrolment No. <b>${rollNumber}</b> of <b>${college}.</b> Session <b>${session}</b> with Major in <b>${subject} ,</b> has successfully completed <b>${pronoun}</b> internship in <b>${domain}</b> with InternMitra.`;
 
   const phrases = parseParagraph(paragraphHTML);
-  y = drawStyledParagraph(docPDF, phrases, ML, y, 5.5, W - 2 * ML);
-  y += 6;
+  y = drawStyledParagraph(docPDF, phrases, ML, y, 5.3, W - 2 * ML);
+  y += 7;
 
   // Internship duration & grade details block
   docPDF.setFont('Helvetica', 'bold');
@@ -260,69 +260,68 @@ export const generateCertificate = async (
   docPDF.text(`Internship Duration : From ${startStr} to ${endStr}`, leftColX, y);
   docPDF.text(`Grade : [${testGrade}]`, rightColX, y);
 
-  y += 4.5;
+  y += 5;
 
   const hoursCompleted = 120;
   docPDF.text(`Total Hours Completed : ${hoursCompleted} Hours`, leftColX, y);
   docPDF.text(`Percentage : [${testScore}%]`, rightColX, y);
 
-  y += 4.5;
+  y += 5;
 
   docPDF.text('Mode of Internship : Online', leftColX, y);
 
-  y += 6;
+  y += 7;
 
   // Internship Performance Assessment Heading
   docPDF.setFont('Helvetica', 'bold');
-  docPDF.setFontSize(10.5);
+  docPDF.setFontSize(11);
   docPDF.setTextColor(15, 23, 42);
   docPDF.text('Internship Performance Assessment', ML, y);
-  y += 4;
+  y += 4.5;
 
   docPDF.setFont('Helvetica', 'normal');
-  docPDF.setFontSize(8.5);
+  docPDF.setFontSize(9.2);
   docPDF.setTextColor(71, 85, 105);
   const closingText = 'During the internship, the student worked on Assigned projects and Tasks. Based on our observation and mentorship, we assess the student’s performance as follows';
   const splitClosing = docPDF.splitTextToSize(closingText, W - 2 * ML);
   docPDF.text(splitClosing, ML, y);
-  y += splitClosing.length * 3.8 + 2;
-
-  // Dynamic Performance Rating Calculation
-  const getRating = (baseScore: number, multiplier: number) => {
-    const ratingVal = baseScore * multiplier;
-    if (ratingVal >= 85) return '[Outstanding]';
-    if (ratingVal >= 65) return '[Good]';
-    if (ratingVal >= 45) return '[Satisfactory]';
-    return 'Needs Improvement';
-  };
-
-  const technicalRating = getRating(testScore, 1.0);
-  const qualityRating = getRating(testScore, 1.05);
-  const initiativeRating = getRating(testScore, 0.95);
-  const communicationRating = getRating(testScore, 0.9);
-  const punctualityRating = getRating(testScore, 1.08);
+  y += splitClosing.length * 4.2 + 3;
 
   // Performance Table
   autoTable(docPDF, {
     startY: y,
     head: [['S. No.', 'Assessment Criteria', 'Rating(Outstanding/ Good/\nsatisfactory/ Needs Improvement)']],
     body: [
-      ['1.', 'Technical Knowledge & Application', technicalRating],
-      ['2.', 'Quality of Work & Task Completion', qualityRating],
-      ['3.', 'Initiative & Problem-Solving Ability', initiativeRating],
-      ['4.', 'Communication & Interpersonal Skills', communicationRating],
-      ['5.', 'Punctuality, Discipline & Professional Conduct', punctualityRating]
+      ['1.', 'Technical Knowledge & Application', 'Good'],
+      ['2.', 'Quality of Work & Task Completion', 'Outstanding'],
+      ['3.', 'Initiative & Problem-Solving Ability', 'Good'],
+      ['4.', 'Communication & Interpersonal Skills', 'Good'],
+      ['5.', 'Punctuality, Discipline & Professional Conduct', 'Outstanding']
     ],
     theme: 'grid',
-    styles: { fontSize: 8.5, fontStyle: 'normal', font: 'Helvetica', cellPadding: 3.8, textColor: [30, 41, 59], fillColor: false as any },
-    headStyles: { fillColor: false as any, textColor: [15, 23, 42], fontStyle: 'bold' },
+    styles: {
+      fontSize: 9.5,
+      fontStyle: 'bold',
+      font: 'Helvetica',
+      cellPadding: { top: 6, right: 3.5, bottom: 6, left: 3.5 },
+      textColor: [15, 23, 42],
+      fillColor: false as any,
+      valign: 'middle'
+    },
+    headStyles: {
+      fillColor: false as any,
+      textColor: [15, 23, 42],
+      fontSize: 9.6,
+      fontStyle: 'bold',
+      valign: 'middle'
+    },
     columnStyles: {
       0: { cellWidth: 15, halign: 'center' },
-      1: { cellWidth: 95 },
-      2: { cellWidth: 70, halign: 'center' }
+      1: { cellWidth: 95, halign: 'center' },
+      2: { cellWidth: 70, halign: 'left' }
     },
-    tableLineColor: [209, 213, 219],
-    tableLineWidth: 0.2
+    tableLineColor: [15, 23, 42],
+    tableLineWidth: 0.45
   });
 
   // Footer image at the bottom

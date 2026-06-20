@@ -95,19 +95,19 @@ export const generateTestReport = async (
   docPDF.rect(0, H - footerH, 115, footerH - 12, 'F');
 
   // Draw signature line, name and CEO text dynamically on the left side
-  docPDF.setDrawColor(15, 23, 42);
-  docPDF.setLineWidth(0.35);
-  docPDF.line(ML + 6, H - footerH + 14, ML + 76, H - footerH + 14);
+  // docPDF.setDrawColor(15, 23, 42);
+  // docPDF.setLineWidth(0.35);
+  // docPDF.line(ML + 6, H - footerH + 14, ML + 76, H - footerH + 14);
 
-  docPDF.setFont('Helvetica', 'bold');
-  docPDF.setFontSize(10.5);
-  docPDF.setTextColor(15, 23, 42);
-  docPDF.text('Mr. Amarjeet kumar', ML + 41, H - footerH + 19, { align: 'center' });
+  // docPDF.setFont('Helvetica', 'bold');
+  // docPDF.setFontSize(10.5);
+  // docPDF.setTextColor(15, 23, 42);
+  // docPDF.text('Mr. Amarjeet kumar', ML + 41, H - footerH + 19, { align: 'center' });
 
-  docPDF.setFont('Helvetica', 'normal');
-  docPDF.setFontSize(9.5);
-  docPDF.setTextColor(30, 41, 59);
-  docPDF.text('Founder & CEO', ML + 41, H - footerH + 24, { align: 'center' });
+  // docPDF.setFont('Helvetica', 'normal');
+  // docPDF.setFontSize(9.5);
+  // docPDF.setTextColor(30, 41, 59);
+  // docPDF.text('Founder & CEO', ML + 41, H - footerH + 24, { align: 'center' });
 
   let y = headerH + 8;
 
