@@ -163,7 +163,7 @@ export const generateCertificate = async (
   const certificateNumber = await getCertificateNumber();
 
   // Load template images
-  const headerImg = await loadImage('/ii.png');
+  const headerImg = await loadImage('/icomp.png');
   const footerImg = await loadImage('/ff.png');
   const watermarkImg = await loadImage('/dded.jpeg');
 
@@ -201,7 +201,7 @@ export const generateCertificate = async (
   const ML = 14;
 
   // Header image
-  const headerH = (252 / 998) * W;
+  const headerH = (520 / 2060) * W;
   docPDF.addImage(headerImg, 'PNG', 0, 0, W, headerH);
 
   // Watermark logo
@@ -213,35 +213,7 @@ export const generateCertificate = async (
   docPDF.addImage(watermarkImg, 'JPEG', wmX, wmY, wmSize, wmSize);
   (docPDF as any).restoreGraphicsState();
 
-  let y = headerH + 2;
-
-  // 1. Print CIN
-  docPDF.setFontSize(8.5);
-  docPDF.setFont('Helvetica', 'bold');
-  docPDF.setTextColor(15, 23, 42);
-  docPDF.text('CIN : U78300BR2025PTC081140', ML, y);
-  y += 4;
-
-  // 2. Dashed line 1
-  docPDF.setDrawColor(156, 163, 175);
-  docPDF.setLineWidth(0.3);
-  docPDF.setLineDashPattern([1.5, 1.5], 0);
-  docPDF.line(ML, y, W - ML, y);
-  y += 4;
-
-  // 3. Title
-  docPDF.setFontSize(13);
-  docPDF.setFont('Helvetica', 'bold');
-  docPDF.setTextColor(30, 64, 175); // Royal blue
-  docPDF.text('INTERNSHIP COMPLETION CERTIFICATE', W / 2, y, { align: 'center' });
-  y += 2.5;
-
-  // 4. Dashed line 2
-  docPDF.line(ML, y, W - ML, y);
-  y += 5;
-
-  // Reset line dash pattern to solid
-  docPDF.setLineDashPattern([], 0);
+  let y = headerH + 8;
 
   // 5. Ref and Date (below dashed line 2)
   docPDF.setFontSize(8.5);

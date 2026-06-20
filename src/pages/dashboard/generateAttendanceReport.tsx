@@ -91,12 +91,12 @@ export const generateAttendanceReport = async (
   const ML = 14;
 
   // Load template images
-  const headerImg = await loadImage('/dd.png');
+  const headerImg = await loadImage('/attenh.png');
   const footerImg = await loadImage('/hh.png');
   const watermarkImg = await loadImage('/dded.jpeg');
 
-  // Header image (hh.png)
-  const headerH = (300 / 1658) * W;
+  // Header image
+  const headerH = (492 / 2056) * W;
   doc.addImage(headerImg, 'PNG', 0, 0, W, headerH);
 
   // Watermark logo

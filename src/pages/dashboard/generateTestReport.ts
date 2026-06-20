@@ -52,7 +52,7 @@ export const generateTestReport = async (
   const ML = 14;
 
   // Load template images
-  const headerImg = await loadImage('/ii.png');
+  const headerImg = await loadImage('/assis.png');
   const footerImg = await loadImage('/ff.png');
   const watermarkImg = await loadImage('/dded.jpeg');
 
@@ -74,7 +74,7 @@ export const generateTestReport = async (
   }
 
   // Header image
-  const headerH = (252 / 998) * W;
+  const headerH = (584 / 2054) * W;
   docPDF.addImage(headerImg, 'PNG', 0, 0, W, headerH);
 
   // Watermark
@@ -109,36 +109,7 @@ export const generateTestReport = async (
   docPDF.setTextColor(30, 41, 59);
   docPDF.text('Founder & CEO', ML + 41, H - footerH + 24, { align: 'center' });
 
-  let y = headerH + 5;
-
-  // Letter Ref + Date
-  docPDF.setFontSize(8.5);
-  docPDF.setTextColor(15, 23, 42);
-
-  docPDF.setFont('Helvetica', 'bold');
-  docPDF.text('CIN : U78300BR2025PTC081140', ML, y);
-  y += 5;
-
-  // Dashed line top
-  docPDF.setDrawColor(156, 163, 175);
-  docPDF.setLineWidth(0.3);
-  docPDF.setLineDashPattern([1.5, 1.5], 0);
-  docPDF.line(ML, y, W - ML, y);
-  y += 5;
-
-  // Assessment title
-  docPDF.setFontSize(13);
-  docPDF.setFont('Helvetica', 'bold');
-  docPDF.setTextColor(30, 64, 175); // Royal blue
-  docPDF.text('INTERNSHIP ASSESSMENT MARKSHEET', W / 2, y, { align: 'center' });
-  y += 3;
-
-  // Dashed line bottom
-  docPDF.line(ML, y, W - ML, y);
-  y += 6;
-
-  // Reset line dash pattern to solid
-  docPDF.setLineDashPattern([], 0);
+  let y = headerH + 8;
 
   // Student details table
   const semesterStr = student?.semester
