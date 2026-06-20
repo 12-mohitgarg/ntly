@@ -814,7 +814,7 @@ export default function LMS() {
           <div className="col-span-full text-center py-12 text-slate-500 font-bold italic">No daily videos available yet.</div>
         ) : (
           dailyVideos.map((video, i) => {
-            const isLocked = video.day > currentDay;
+            const isLocked = false; // Always unlocked for students
             const isCompleted = hasAttendanceForDay(video.day);
 
             return (
