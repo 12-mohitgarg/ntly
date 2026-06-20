@@ -86,29 +86,28 @@ export const generateTestReport = async (
   docPDF.addImage(watermarkImg, 'JPEG', wmX, wmY, wmSize, wmSize);
   (docPDF as any).restoreGraphicsState();
 
-  // Footer image and mask (drawn as background first so text is never covered)
-  // Footer image at natural proportions shifted up to align signature next to grade distribution
+  // Footer image at the bottom
   const footerH = (322 / 1002) * W;
-  docPDF.addImage(footerImg, 'PNG', 0, H - 92, W, footerH);
+  docPDF.addImage(footerImg, 'PNG', 0, H - footerH, W, footerH);
 
-  // Mask everything below the stamp and signature (logos, blue shapes, printed name & banner) to keep background white
+  // Mask the left portion of the footer image to make background white for CEO signature
   docPDF.setFillColor(255, 255, 255);
-  docPDF.rect(0, H - 92 + 23, W, 70, 'F');
+  docPDF.rect(0, H - footerH, 115, footerH - 12, 'F');
 
-  // Draw signature line, name and CEO text dynamically on top of the mask for perfect rendering without cutoff
+  // Draw signature line, name and CEO text dynamically on the left side
   docPDF.setDrawColor(15, 23, 42);
   docPDF.setLineWidth(0.35);
-  docPDF.line(120, H - 92 + 22, 195, H - 92 + 22);
+  docPDF.line(ML + 6, H - footerH + 14, ML + 76, H - footerH + 14);
 
   docPDF.setFont('Helvetica', 'bold');
   docPDF.setFontSize(10.5);
   docPDF.setTextColor(15, 23, 42);
-  docPDF.text('Mr. Amarjeet kumar', 157.5, H - 92 + 27, { align: 'center' });
+  docPDF.text('Mr. Amarjeet kumar', ML + 41, H - footerH + 19, { align: 'center' });
 
   docPDF.setFont('Helvetica', 'normal');
   docPDF.setFontSize(9.5);
   docPDF.setTextColor(30, 41, 59);
-  docPDF.text('Founder & CEO', 157.5, H - 92 + 32, { align: 'center' });
+  docPDF.text('Founder & CEO', ML + 41, H - footerH + 24, { align: 'center' });
 
   let y = headerH + 5;
 

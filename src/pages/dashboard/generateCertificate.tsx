@@ -25,7 +25,7 @@ const loadImage = (src: string) => {
 const parseRobustDate = (isoStr: string | undefined): Date | null => {
   if (!isoStr) return null;
   let cleaned = isoStr.trim();
-  
+
   // Fix single digit days/months:
   // e.g., 2026-5-1T... -> 2026-05-01T...
   cleaned = cleaned.replace(/-(\d)(T|$)/g, '-0$1$2');
@@ -85,7 +85,7 @@ const drawStyledParagraph = (
 ) => {
   let curX = startX;
   let curY = startY;
-  
+
   const tokens: Array<{ text: string; bold: boolean }> = [];
   phrases.forEach((phrase) => {
     const parts = phrase.text.split(/(\s+)/);
@@ -99,7 +99,7 @@ const drawStyledParagraph = (
   tokens.forEach((tok) => {
     doc.setFont('Helvetica', tok.bold ? 'bold' : 'normal');
     const tokenWidth = doc.getTextWidth(tok.text);
-    
+
     if (tok.text.trim() === '') {
       if (curX === startX) return;
       if (curX + tokenWidth <= startX + maxWidth) {
@@ -213,32 +213,32 @@ export const generateCertificate = async (
   docPDF.addImage(watermarkImg, 'JPEG', wmX, wmY, wmSize, wmSize);
   (docPDF as any).restoreGraphicsState();
 
-  let y = headerH + 3;
+  let y = headerH + 2;
 
   // 1. Print CIN
   docPDF.setFontSize(8.5);
   docPDF.setFont('Helvetica', 'bold');
   docPDF.setTextColor(15, 23, 42);
   docPDF.text('CIN : U78300BR2025PTC081140', ML, y);
-  y += 5;
+  y += 4;
 
   // 2. Dashed line 1
   docPDF.setDrawColor(156, 163, 175);
   docPDF.setLineWidth(0.3);
   docPDF.setLineDashPattern([1.5, 1.5], 0);
   docPDF.line(ML, y, W - ML, y);
-  y += 5;
+  y += 4;
 
   // 3. Title
   docPDF.setFontSize(13);
   docPDF.setFont('Helvetica', 'bold');
   docPDF.setTextColor(30, 64, 175); // Royal blue
   docPDF.text('INTERNSHIP COMPLETION CERTIFICATE', W / 2, y, { align: 'center' });
-  y += 3;
+  y += 2.5;
 
   // 4. Dashed line 2
   docPDF.line(ML, y, W - ML, y);
-  y += 6;
+  y += 5;
 
   // Reset line dash pattern to solid
   docPDF.setLineDashPattern([], 0);
@@ -250,11 +250,11 @@ export const generateCertificate = async (
   docPDF.text('Letter Ref. No.: ', ML, y);
   docPDF.text(`IM/2026/ICC/${certificateNumber}`, ML + docPDF.getTextWidth('Letter Ref. No.: '), y);
 
-  const startStr = formatDate(profile?.registrationDate);
-  const endStr = getEndDate(profile?.registrationDate);
+  const startStr = '01/06/2026';
+  const endStr = '20/06/2026';
 
   docPDF.text(`Date: ${endStr}`, W - ML, y, { align: 'right' });
-  y += 8;
+  y += 6;
 
   // Body content paragraph (exactly like the second image template)
   const studentName = profile?.fullName || '[Student Full Name]';
@@ -275,7 +275,7 @@ export const generateCertificate = async (
 
   const phrases = parseParagraph(paragraphHTML);
   y = drawStyledParagraph(docPDF, phrases, ML, y, 5.5, W - 2 * ML);
-  y += 10;
+  y += 6;
 
   // Internship duration & grade details block
   docPDF.setFont('Helvetica', 'bold');
@@ -287,25 +287,25 @@ export const generateCertificate = async (
 
   docPDF.text(`Internship Duration : From ${startStr} to ${endStr}`, leftColX, y);
   docPDF.text(`Grade : [${testGrade}]`, rightColX, y);
-  
-  y += 5.5;
 
-  const hoursCompleted = profile?.totalHoursCompleted || 120;
+  y += 4.5;
+
+  const hoursCompleted = 120;
   docPDF.text(`Total Hours Completed : ${hoursCompleted} Hours`, leftColX, y);
   docPDF.text(`Percentage : [${testScore}%]`, rightColX, y);
 
-  y += 5.5;
+  y += 4.5;
 
   docPDF.text('Mode of Internship : Online', leftColX, y);
 
-  y += 10;
+  y += 6;
 
   // Internship Performance Assessment Heading
   docPDF.setFont('Helvetica', 'bold');
   docPDF.setFontSize(10.5);
   docPDF.setTextColor(15, 23, 42);
   docPDF.text('Internship Performance Assessment', ML, y);
-  y += 5;
+  y += 4;
 
   docPDF.setFont('Helvetica', 'normal');
   docPDF.setFontSize(8.5);
@@ -313,7 +313,7 @@ export const generateCertificate = async (
   const closingText = 'During the internship, the student worked on Assigned projects and Tasks. Based on our observation and mentorship, we assess the student’s performance as follows';
   const splitClosing = docPDF.splitTextToSize(closingText, W - 2 * ML);
   docPDF.text(splitClosing, ML, y);
-  y += splitClosing.length * 4.5 + 4;
+  y += splitClosing.length * 3.8 + 2;
 
   // Dynamic Performance Rating Calculation
   const getRating = (baseScore: number, multiplier: number) => {

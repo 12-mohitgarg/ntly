@@ -599,36 +599,7 @@ export default function LMS() {
           </div>
           <div className="flex flex-col gap-4">
 
-            {adminApproved && (
-              <>
 
-                <button
-                  onClick={() => {
-
-                    if (!user?.uid) {
-                      alert("User not found");
-                      return;
-                    }
-
-                    generateCertificate(
-                      profile,
-                      user.uid
-                    );
-                  }}
-                  className="bg-green-600 text-white p-5 px-10 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-green-600/20 hover:bg-green-700 transition uppercase tracking-widest text-xs"
-                >
-                  <Download size={20} />
-                  Download Certificate
-                </button>
-                <button
-                  onClick={() => generateAttendanceReport(profile, attendanceEntries, dailyVideos)}
-                  className="bg-slate-900 text-white p-5 px-10 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition uppercase tracking-widest text-xs"
-                >
-                  <FileText size={20} />
-                  Attendance Report
-                </button>
-              </>
-            )}
 
             {/* VERIFY CERTIFICATE */}
 
