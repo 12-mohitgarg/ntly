@@ -201,11 +201,11 @@ export const generateCertificate = async (
   const ML = 14;
 
   // Background logo
-  const wmSize = 160;
+  const wmSize = 130;
   const wmX = (W - wmSize) / 2;
-  const wmY = (H - wmSize) / 2;
+  const wmY = 108;
   (docPDF as any).saveGraphicsState();
-  (docPDF as any).setGState((docPDF as any).GState({ opacity: 0.07 }));
+  (docPDF as any).setGState((docPDF as any).GState({ opacity: 0.13 }));
   docPDF.addImage(backgroundImg, 'JPEG', wmX, wmY, wmSize, wmSize);
   (docPDF as any).restoreGraphicsState();
 
@@ -314,8 +314,8 @@ export const generateCertificate = async (
       ['5.', 'Punctuality, Discipline & Professional Conduct', punctualityRating]
     ],
     theme: 'grid',
-    styles: { fontSize: 8.5, fontStyle: 'normal', font: 'Helvetica', cellPadding: 3.8, textColor: [30, 41, 59] },
-    headStyles: { fillColor: [224, 231, 255], textColor: [15, 23, 42], fontStyle: 'bold' },
+    styles: { fontSize: 8.5, fontStyle: 'normal', font: 'Helvetica', cellPadding: 3.8, textColor: [30, 41, 59], fillColor: false as any },
+    headStyles: { fillColor: false as any, textColor: [15, 23, 42], fontStyle: 'bold' },
     columnStyles: {
       0: { cellWidth: 15, halign: 'center' },
       1: { cellWidth: 95 },
