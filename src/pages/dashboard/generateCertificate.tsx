@@ -165,7 +165,7 @@ export const generateCertificate = async (
   // Load template images
   const headerImg = await loadImage('/icomp.png');
   const footerImg = await loadImage('/ff.png');
-  const watermarkImg = await loadImage('/dded.jpeg');
+  const backgroundImg = await loadImage('/dded.jpeg');
 
   // Fetch test score and grade
   let testScore = 90;
@@ -200,18 +200,18 @@ export const generateCertificate = async (
   const H = 297;
   const ML = 14;
 
-  // Header image
-  const headerH = (520 / 2060) * W;
-  docPDF.addImage(headerImg, 'PNG', 0, 0, W, headerH);
-
-  // Watermark logo
-  const wmSize = 90;
+  // Background logo
+  const wmSize = 160;
   const wmX = (W - wmSize) / 2;
   const wmY = (H - wmSize) / 2;
   (docPDF as any).saveGraphicsState();
-  (docPDF as any).setGState((docPDF as any).GState({ opacity: 0.10 }));
-  docPDF.addImage(watermarkImg, 'JPEG', wmX, wmY, wmSize, wmSize);
+  (docPDF as any).setGState((docPDF as any).GState({ opacity: 0.07 }));
+  docPDF.addImage(backgroundImg, 'JPEG', wmX, wmY, wmSize, wmSize);
   (docPDF as any).restoreGraphicsState();
+
+  // Header image
+  const headerH = (520 / 2060) * W;
+  docPDF.addImage(headerImg, 'PNG', 0, 0, W, headerH);
 
   let y = headerH + 8;
 
@@ -293,7 +293,7 @@ export const generateCertificate = async (
     if (ratingVal >= 85) return '[Outstanding]';
     if (ratingVal >= 65) return '[Good]';
     if (ratingVal >= 45) return '[Satisfactory]';
-    return '[Needs Improvement]';
+    return 'Needs Improvement';
   };
 
   const technicalRating = getRating(testScore, 1.0);
