@@ -887,7 +887,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Dialog  
+      <Dialog
         open={Boolean(passwordUser)}
         onOpenChange={(open) => {
           if (!open && !savingPassword) {
@@ -963,11 +963,10 @@ export default function AdminDashboard() {
           <DialogHeader>
             <DialogTitle className="text-2xl font-black text-slate-900 flex items-center justify-between uppercase italic">
               <span>Test Details - {viewingSubmission?.studentName}</span>
-              <span className={`px-4 py-1 rounded-full text-xs font-black tracking-widest ${
-                (viewingSubmission?.scorePercentage ?? 0) >= 33 
-                  ? 'bg-green-100 text-green-700' 
+              <span className={`px-4 py-1 rounded-full text-xs font-black tracking-widest ${(viewingSubmission?.scorePercentage ?? 0) >= 33
+                  ? 'bg-green-100 text-green-700'
                   : 'bg-red-100 text-red-700'
-              }`}>
+                }`}>
                 {(viewingSubmission?.scorePercentage ?? 0) >= 33 ? 'PASSED' : 'FAILED'}
               </span>
             </DialogTitle>
@@ -1014,7 +1013,7 @@ export default function AdminDashboard() {
                 <div>
                   <p className="font-black text-amber-950 uppercase tracking-wide text-xs">Test Questions Have Been Modified</p>
                   <p className="text-xs text-amber-800 font-medium mt-1 leading-relaxed">
-                    The admin has added, modified, or deleted {deletedQuestionIds.length} question(s) in this course test since the student submitted their answers. 
+                    The admin has added, modified, or deleted {deletedQuestionIds.length} question(s) in this course test since the student submitted their answers.
                     Because the test questions were changed, some of the student's answered questions are no longer present in the active test definition and cannot be fully displayed.
                   </p>
                 </div>
@@ -1044,34 +1043,31 @@ export default function AdminDashboard() {
                 const selectedAnswer = viewingSubmission.answers[q.id];
                 const isUnanswered = selectedAnswer === undefined;
                 const isCorrect = !isUnanswered && selectedAnswer === q.correctOptionIndex;
-                
+
                 return (
-                  <div key={q.id || index} className={`p-6 rounded-2xl border-2 ${
-                    isCorrect 
-                      ? 'border-green-100 bg-green-50/10' 
-                      : isUnanswered 
-                        ? 'border-yellow-100 bg-yellow-50/10' 
+                  <div key={q.id || index} className={`p-6 rounded-2xl border-2 ${isCorrect
+                      ? 'border-green-100 bg-green-50/10'
+                      : isUnanswered
+                        ? 'border-yellow-100 bg-yellow-50/10'
                         : 'border-red-100 bg-red-50/10'
-                  }`}>
+                    }`}>
                     <div className="flex items-start justify-between gap-4 mb-4">
                       <div>
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase ${
-                          isCorrect 
-                            ? 'bg-green-100 text-green-700' 
-                            : isUnanswered 
-                              ? 'bg-yellow-100 text-yellow-700' 
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase ${isCorrect
+                            ? 'bg-green-100 text-green-700'
+                            : isUnanswered
+                              ? 'bg-yellow-100 text-yellow-700'
                               : 'bg-red-100 text-red-700'
-                        }`}>
+                          }`}>
                           Question {index + 1}
                         </span>
                       </div>
-                      <span className={`text-xs font-black uppercase tracking-wider ${
-                        isCorrect 
-                          ? 'text-green-600' 
-                          : isUnanswered 
-                            ? 'text-yellow-600' 
+                      <span className={`text-xs font-black uppercase tracking-wider ${isCorrect
+                          ? 'text-green-600'
+                          : isUnanswered
+                            ? 'text-yellow-600'
                             : 'text-red-600'
-                      }`}>
+                        }`}>
                         {isCorrect ? 'Correct' : isUnanswered ? 'Unanswered / Added Later' : 'Incorrect'}
                       </span>
                     </div>
@@ -1095,17 +1091,16 @@ export default function AdminDashboard() {
                             key={optIndex}
                             className={`p-4 rounded-xl border flex items-center gap-3 ${optionStyle}`}
                           >
-                            <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs ${
-                              isCorrectAnswer 
-                                ? 'bg-green-600 text-white' 
+                            <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs ${isCorrectAnswer
+                                ? 'bg-green-600 text-white'
                                 : isStudentChoice
                                   ? 'bg-red-600 text-white'
                                   : 'bg-slate-100 text-slate-500'
-                            }`}>
+                              }`}>
                               {String.fromCharCode(65 + optIndex)}
                             </span>
                             <span className="text-sm">{opt}</span>
-                            
+
                             {isCorrectAnswer && (
                               <span className="ml-auto text-[10px] font-black uppercase tracking-wider text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
                                 Correct Answer
@@ -1162,7 +1157,7 @@ export default function AdminDashboard() {
               );
             })()}
           </div>
-          
+
           <DialogFooter className="mt-8 border-t border-slate-100 pt-4">
             <Button
               type="button"
@@ -1275,10 +1270,10 @@ export default function AdminDashboard() {
               <Upload size={16} />
               Assignments
             </TabsTrigger>
-            <TabsTrigger value="test-reports" className="px-6 py-2 font-black">
+            {/* <TabsTrigger value="test-reports" className="px-6 py-2 font-black">
               <ClipboardList size={16} />
               Test Reports
-            </TabsTrigger>
+            </TabsTrigger> */}
             {/* <TabsTrigger value="college-export" className="px-6 py-2 font-black">
               <Download size={16} />
               College Export
@@ -1898,7 +1893,7 @@ export default function AdminDashboard() {
                               {visibleTestSubmissions.map((sub) => {
                                 const student = getStudentProfile(sub.userId);
                                 const isPassed = sub.scorePercentage >= 33;
-                                
+
                                 return (
                                   <tr key={sub.userId + '-' + sub.course} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                                     <td className="p-4">
@@ -1916,9 +1911,8 @@ export default function AdminDashboard() {
                                       {sub.correctCount} / {sub.totalQuestions}
                                     </td>
                                     <td className="p-4">
-                                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black ${
-                                        isPassed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                      }`}>
+                                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black ${isPassed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                        }`}>
                                         {isPassed ? <CheckCircle2 size={12} /> : <Clock size={12} />}
                                         {isPassed ? 'PASSED' : 'FAILED'}
                                       </span>
@@ -1926,12 +1920,12 @@ export default function AdminDashboard() {
                                     <td className="p-4 text-slate-600 text-sm">
                                       {sub.submittedAt
                                         ? new Date(sub.submittedAt).toLocaleString('en-IN', {
-                                            day: '2-digit',
-                                            month: 'short',
-                                            year: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                          })
+                                          day: '2-digit',
+                                          month: 'short',
+                                          year: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })
                                         : '-'}
                                     </td>
                                     <td className="p-4">
