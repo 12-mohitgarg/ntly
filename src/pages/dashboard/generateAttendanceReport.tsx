@@ -91,12 +91,13 @@ export const generateAttendanceReport = async (
   const ML = 14;
 
   // Load template images
-  const headerImg = await loadImage('/dd.png');
+  const headerImg = await loadImage('/attenh.png');
   const footerImg = await loadImage('/hh.png');
   const watermarkImg = await loadImage('/dded.jpeg');
+  const stampAndSignatureImg = await loadImage('/sign.png');
 
-  // Header image (hh.png)
-  const headerH = (300 / 1658) * W;
+  // Header image
+  const headerH = (492 / 2056) * W;
   doc.addImage(headerImg, 'PNG', 0, 0, W, headerH);
 
   // Watermark logo
@@ -219,6 +220,21 @@ export const generateAttendanceReport = async (
   // Footer image at the bottom (dd.png)
   const footerH = (400 / 1653) * W;
   doc.addImage(footerImg, 'PNG', 0, H - footerH, W, footerH);
+
+  // Replace the footer's old signature with the approved stamp and signature.
+  const signatureX = 149;
+  const signatureW = 63;
+  const signatureH = (344 / 724) * signatureW;
+  doc.setFillColor(255, 255, 255);
+  doc.rect(144, H - footerH, W - 144, 38, 'F');
+  doc.addImage(
+    stampAndSignatureImg,
+    'PNG',
+    signatureX,
+    H - footerH + 4,
+    signatureW,
+    signatureH
+  );
 
   doc.save(`${filePrefix}_${studentName.replace(/\s+/g, '_')}.pdf`);
 };
