@@ -52,7 +52,7 @@ export const generateTestReport = async (
   const ML = 14;
 
   // Load template images
-  const headerImg = await loadImage('/ii.png');
+  const headerImg = await loadImage('/assis.png');
   const footerImg = await loadImage('/ff.png');
   const watermarkImg = await loadImage('/dded.jpeg');
 
@@ -74,7 +74,7 @@ export const generateTestReport = async (
   }
 
   // Header image
-  const headerH = (252 / 998) * W;
+  const headerH = (584 / 2054) * W;
   docPDF.addImage(headerImg, 'PNG', 0, 0, W, headerH);
 
   // Watermark
@@ -86,60 +86,11 @@ export const generateTestReport = async (
   docPDF.addImage(watermarkImg, 'JPEG', wmX, wmY, wmSize, wmSize);
   (docPDF as any).restoreGraphicsState();
 
-  // Footer image and mask (drawn as background first so text is never covered)
-  // Footer image at natural proportions shifted up to align signature next to grade distribution
+  // Footer image at the bottom
   const footerH = (322 / 1002) * W;
-  docPDF.addImage(footerImg, 'PNG', 0, H - 92, W, footerH);
+  docPDF.addImage(footerImg, 'PNG', 0, H - footerH, W, footerH);
 
-  // Mask everything below the stamp and signature (logos, blue shapes, printed name & banner) to keep background white
-  docPDF.setFillColor(255, 255, 255);
-  docPDF.rect(0, H - 92 + 23, W, 70, 'F');
-
-  // Draw signature line, name and CEO text dynamically on top of the mask for perfect rendering without cutoff
-  docPDF.setDrawColor(15, 23, 42);
-  docPDF.setLineWidth(0.35);
-  docPDF.line(120, H - 92 + 22, 195, H - 92 + 22);
-
-  docPDF.setFont('Helvetica', 'bold');
-  docPDF.setFontSize(10.5);
-  docPDF.setTextColor(15, 23, 42);
-  docPDF.text('Mr. Amarjeet kumar', 157.5, H - 92 + 27, { align: 'center' });
-
-  docPDF.setFont('Helvetica', 'normal');
-  docPDF.setFontSize(9.5);
-  docPDF.setTextColor(30, 41, 59);
-  docPDF.text('Founder & CEO', 157.5, H - 92 + 32, { align: 'center' });
-
-  let y = headerH + 5;
-
-  // Letter Ref + Date
-  docPDF.setFontSize(8.5);
-  docPDF.setTextColor(15, 23, 42);
-
-  docPDF.setFont('Helvetica', 'bold');
-  docPDF.text('CIN : U78300BR2025PTC081140', ML, y);
-  y += 5;
-
-  // Dashed line top
-  docPDF.setDrawColor(156, 163, 175);
-  docPDF.setLineWidth(0.3);
-  docPDF.setLineDashPattern([1.5, 1.5], 0);
-  docPDF.line(ML, y, W - ML, y);
-  y += 5;
-
-  // Assessment title
-  docPDF.setFontSize(13);
-  docPDF.setFont('Helvetica', 'bold');
-  docPDF.setTextColor(30, 64, 175); // Royal blue
-  docPDF.text('INTERNSHIP ASSESSMENT MARKSHEET', W / 2, y, { align: 'center' });
-  y += 3;
-
-  // Dashed line bottom
-  docPDF.line(ML, y, W - ML, y);
-  y += 6;
-
-  // Reset line dash pattern to solid
-  docPDF.setLineDashPattern([], 0);
+  let y = headerH + 8;
 
   // Student details table
   const semesterStr = student?.semester
@@ -160,28 +111,35 @@ export const generateTestReport = async (
       ['INTERNSHIP TOPIC', domainStr.toUpperCase()]
     ],
     theme: 'grid',
-    styles: { fontSize: 9.5, fontStyle: 'bold', font: 'Helvetica', cellPadding: 3.0, textColor: [30, 41, 59] },
-    columnStyles: {
-      0: { cellWidth: 55, textColor: [30, 41, 59] },
-      1: { cellWidth: 127, textColor: [15, 23, 42], halign: 'center' }
+    styles: {
+      fontSize: 10,
+      fontStyle: 'bold',
+      font: 'Helvetica',
+      cellPadding: { top: 3.4, right: 3.5, bottom: 3.4, left: 3.5 },
+      textColor: [15, 23, 42],
+      valign: 'middle'
     },
-    tableLineColor: [100, 116, 139],
-    tableLineWidth: 0.3
+    columnStyles: {
+      0: { cellWidth: 58, textColor: [30, 41, 59] },
+      1: { cellWidth: 124, textColor: [15, 23, 42], halign: 'center' }
+    },
+    tableLineColor: [71, 85, 105],
+    tableLineWidth: 0.35
   });
 
   const tableEndY = (docPDF as any).lastAutoTable.finalY || y + 40;
-  y = tableEndY + 4;
+  y = tableEndY + 5;
 
   // Assessment result header
-  docPDF.setFontSize(11);
+  docPDF.setFontSize(11.5);
   docPDF.setFont('Helvetica', 'bold');
   docPDF.setTextColor(15, 23, 42);
   docPDF.text('ASSESSMENT RESULT', ML, y);
-  y += 3.5;
+  y += 4.5;
 
   // Assessment result box
   const resultBoxY = y;
-  const resultBoxH = 26;
+  const resultBoxH = 28;
   docPDF.setDrawColor(203, 213, 225); // slate-200
   docPDF.setLineWidth(0.4);
   docPDF.roundedRect(ML, resultBoxY, W - 2 * ML, resultBoxH, 2, 2, 'D');
@@ -206,41 +164,41 @@ export const generateTestReport = async (
   const isPassed = score >= 33;
 
   docPDF.setFont('Helvetica', 'bold');
-  docPDF.setFontSize(10);
+  docPDF.setFontSize(10.5);
   docPDF.setTextColor(30, 41, 59);
 
   const textX = ML + 6;
   const valX = W - ML - 6;
 
-  docPDF.text('SCORE PERCENTAGE', textX, resultBoxY + 7);
-  docPDF.text(`[${score}%]`, valX, resultBoxY + 7, { align: 'right' });
+  docPDF.text('SCORE PERCENTAGE', textX, resultBoxY + 8);
+  docPDF.text(`${score}%`, valX, resultBoxY + 8, { align: 'right' });
 
-  docPDF.text('GRADE', textX, resultBoxY + 14);
-  docPDF.text(`[${testGrade}]`, valX, resultBoxY + 14, { align: 'right' });
+  docPDF.text('GRADE', textX, resultBoxY + 16.5);
+  docPDF.text(testGrade, valX, resultBoxY + 16.5, { align: 'right' });
 
-  docPDF.text('STATUS', textX, resultBoxY + 21);
-  docPDF.text(isPassed ? '[PASSED]' : '[FAILED]', valX, resultBoxY + 21, { align: 'right' });
+  docPDF.text('STATUS', textX, resultBoxY + 25);
+  docPDF.text(isPassed ? 'PASSED' : 'FAILED', valX, resultBoxY + 25, { align: 'right' });
 
   y = resultBoxY + resultBoxH + 4;
 
   // Grade Distribution Pill
   docPDF.setFillColor(22, 28, 166);
-  docPDF.roundedRect(ML, y, 42, 6, 2, 2, 'F');
+  docPDF.roundedRect(ML, y, 48, 7, 2, 2, 'F');
   docPDF.setFont('Helvetica', 'bold');
-  docPDF.setFontSize(8);
+  docPDF.setFontSize(8.5);
   docPDF.setTextColor(255, 255, 255);
-  docPDF.text('GRADE DISTRIBUTION', ML + 21, y + 4.2, { align: 'center' });
+  docPDF.text('GRADE DISTRIBUTION', ML + 24, y + 4.8, { align: 'center' });
 
-  y += 9.5;
+  y += 11;
 
   // Grade distribution header
-  docPDF.setFontSize(8.5);
+  docPDF.setFontSize(9.2);
   docPDF.setFont('Helvetica', 'bold');
   docPDF.setTextColor(15, 23, 42);
   docPDF.text('GRADE', ML, y);
-  docPDF.text('PERCENTAGE', ML + 18, y);
-  docPDF.text('MARKS', ML + 44, y);
-  y += 4.5;
+  docPDF.text('PERCENTAGE', ML + 58, y);
+  docPDF.text('MARKS', W - ML, y, { align: 'right' });
+  y += 5;
 
   const gradesData = [
     ['A+', '90%-100%', '90-100'],
@@ -260,9 +218,12 @@ export const generateTestReport = async (
     docPDF.text('•', ML, y);
     docPDF.text(g, ML + 3, y);
     docPDF.setFont('Helvetica', 'normal');
-    docPDF.text(pct, ML + 18, y);
-    docPDF.text(mrk, ML + 44, y);
-    y += 4.0;
+    docPDF.text(pct, ML + 58, y);
+    docPDF.text(mrk, W - ML, y, { align: 'right' });
+    docPDF.setDrawColor(226, 232, 240);
+    docPDF.setLineWidth(0.2);
+    docPDF.line(ML, y + 1.5, W - ML, y + 1.5);
+    y += 4.5;
   });
 
   // Save PDF

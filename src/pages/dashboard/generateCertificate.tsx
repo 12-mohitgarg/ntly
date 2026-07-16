@@ -25,7 +25,7 @@ const loadImage = (src: string) => {
 const parseRobustDate = (isoStr: string | undefined): Date | null => {
   if (!isoStr) return null;
   let cleaned = isoStr.trim();
-  
+
   // Fix single digit days/months:
   // e.g., 2026-5-1T... -> 2026-05-01T...
   cleaned = cleaned.replace(/-(\d)(T|$)/g, '-0$1$2');
@@ -85,7 +85,7 @@ const drawStyledParagraph = (
 ) => {
   let curX = startX;
   let curY = startY;
-  
+
   const tokens: Array<{ text: string; bold: boolean }> = [];
   phrases.forEach((phrase) => {
     const parts = phrase.text.split(/(\s+)/);
@@ -99,7 +99,7 @@ const drawStyledParagraph = (
   tokens.forEach((tok) => {
     doc.setFont('Helvetica', tok.bold ? 'bold' : 'normal');
     const tokenWidth = doc.getTextWidth(tok.text);
-    
+
     if (tok.text.trim() === '') {
       if (curX === startX) return;
       if (curX + tokenWidth <= startX + maxWidth) {
@@ -163,9 +163,9 @@ export const generateCertificate = async (
   const certificateNumber = await getCertificateNumber();
 
   // Load template images
-  const headerImg = await loadImage('/ii.png');
+  const headerImg = await loadImage('/icomp.png');
   const footerImg = await loadImage('/ff.png');
-  const watermarkImg = await loadImage('/dded.jpeg');
+  const backgroundImg = await loadImage('/dded.jpeg');
 
   // Fetch test score and grade
   let testScore = 90;
@@ -200,61 +200,33 @@ export const generateCertificate = async (
   const H = 297;
   const ML = 14;
 
-  // Header image
-  const headerH = (252 / 998) * W;
-  docPDF.addImage(headerImg, 'PNG', 0, 0, W, headerH);
-
-  // Watermark logo
-  const wmSize = 90;
+  // Background logo
+  const wmSize = 130;
   const wmX = (W - wmSize) / 2;
-  const wmY = (H - wmSize) / 2;
+  const wmY = 108;
   (docPDF as any).saveGraphicsState();
-  (docPDF as any).setGState((docPDF as any).GState({ opacity: 0.10 }));
-  docPDF.addImage(watermarkImg, 'JPEG', wmX, wmY, wmSize, wmSize);
+  (docPDF as any).setGState((docPDF as any).GState({ opacity: 0.13 }));
+  docPDF.addImage(backgroundImg, 'JPEG', wmX, wmY, wmSize, wmSize);
   (docPDF as any).restoreGraphicsState();
 
-  let y = headerH + 3;
+  // Header image
+  const headerH = (520 / 2060) * W;
+  docPDF.addImage(headerImg, 'PNG', 0, 0, W, headerH);
 
-  // 1. Print CIN
-  docPDF.setFontSize(8.5);
-  docPDF.setFont('Helvetica', 'bold');
-  docPDF.setTextColor(15, 23, 42);
-  docPDF.text('CIN : U78300BR2025PTC081140', ML, y);
-  y += 5;
-
-  // 2. Dashed line 1
-  docPDF.setDrawColor(156, 163, 175);
-  docPDF.setLineWidth(0.3);
-  docPDF.setLineDashPattern([1.5, 1.5], 0);
-  docPDF.line(ML, y, W - ML, y);
-  y += 5;
-
-  // 3. Title
-  docPDF.setFontSize(13);
-  docPDF.setFont('Helvetica', 'bold');
-  docPDF.setTextColor(30, 64, 175); // Royal blue
-  docPDF.text('INTERNSHIP COMPLETION CERTIFICATE', W / 2, y, { align: 'center' });
-  y += 3;
-
-  // 4. Dashed line 2
-  docPDF.line(ML, y, W - ML, y);
-  y += 6;
-
-  // Reset line dash pattern to solid
-  docPDF.setLineDashPattern([], 0);
+  let y = headerH + 8;
 
   // 5. Ref and Date (below dashed line 2)
-  docPDF.setFontSize(8.5);
+  docPDF.setFontSize(9.5);
   docPDF.setFont('Helvetica', 'bold');
   docPDF.setTextColor(15, 23, 42);
   docPDF.text('Letter Ref. No.: ', ML, y);
   docPDF.text(`IM/2026/ICC/${certificateNumber}`, ML + docPDF.getTextWidth('Letter Ref. No.: '), y);
 
-  const startStr = formatDate(profile?.registrationDate);
-  const endStr = getEndDate(profile?.registrationDate);
+  const startStr = '01/06/2026';
+  const endStr = '20/06/2026';
 
   docPDF.text(`Date: ${endStr}`, W - ML, y, { align: 'right' });
-  y += 8;
+  y += 7;
 
   // Body content paragraph (exactly like the second image template)
   const studentName = profile?.fullName || '[Student Full Name]';
@@ -266,7 +238,7 @@ export const generateCertificate = async (
   const domain = profile?.internshipDomain || '[Domain Name]';
   const gender = profile?.gender?.toLowerCase() || 'male';
 
-  docPDF.setFontSize(10);
+  docPDF.setFontSize(9.5);
   docPDF.setTextColor(30, 41, 59);
 
   const genderPrefix = gender === 'female' ? 'Ms.' : 'Mr.';
@@ -274,8 +246,8 @@ export const generateCertificate = async (
   const paragraphHTML = `This is certify that <b>${genderPrefix} ${studentName}.</b> S/o or D/o <b>${parentName}.</b> bearing University Registration / Enrolment No. <b>${rollNumber}</b> of <b>${college}.</b> Session <b>${session}</b> with Major in <b>${subject} ,</b> has successfully completed <b>${pronoun}</b> internship in <b>${domain}</b> with InternMitra.`;
 
   const phrases = parseParagraph(paragraphHTML);
-  y = drawStyledParagraph(docPDF, phrases, ML, y, 5.5, W - 2 * ML);
-  y += 10;
+  y = drawStyledParagraph(docPDF, phrases, ML, y, 5.3, W - 2 * ML);
+  y += 7;
 
   // Internship duration & grade details block
   docPDF.setFont('Helvetica', 'bold');
@@ -287,70 +259,69 @@ export const generateCertificate = async (
 
   docPDF.text(`Internship Duration : From ${startStr} to ${endStr}`, leftColX, y);
   docPDF.text(`Grade : [${testGrade}]`, rightColX, y);
-  
-  y += 5.5;
 
-  const hoursCompleted = profile?.totalHoursCompleted || 120;
+  y += 5;
+
+  const hoursCompleted = 120;
   docPDF.text(`Total Hours Completed : ${hoursCompleted} Hours`, leftColX, y);
   docPDF.text(`Percentage : [${testScore}%]`, rightColX, y);
 
-  y += 5.5;
+  y += 5;
 
   docPDF.text('Mode of Internship : Online', leftColX, y);
 
-  y += 10;
+  y += 7;
 
   // Internship Performance Assessment Heading
   docPDF.setFont('Helvetica', 'bold');
-  docPDF.setFontSize(10.5);
+  docPDF.setFontSize(11);
   docPDF.setTextColor(15, 23, 42);
   docPDF.text('Internship Performance Assessment', ML, y);
-  y += 5;
+  y += 4.5;
 
   docPDF.setFont('Helvetica', 'normal');
-  docPDF.setFontSize(8.5);
+  docPDF.setFontSize(9.2);
   docPDF.setTextColor(71, 85, 105);
   const closingText = 'During the internship, the student worked on Assigned projects and Tasks. Based on our observation and mentorship, we assess the student’s performance as follows';
   const splitClosing = docPDF.splitTextToSize(closingText, W - 2 * ML);
   docPDF.text(splitClosing, ML, y);
-  y += splitClosing.length * 4.5 + 4;
-
-  // Dynamic Performance Rating Calculation
-  const getRating = (baseScore: number, multiplier: number) => {
-    const ratingVal = baseScore * multiplier;
-    if (ratingVal >= 85) return '[Outstanding]';
-    if (ratingVal >= 65) return '[Good]';
-    if (ratingVal >= 45) return '[Satisfactory]';
-    return '[Needs Improvement]';
-  };
-
-  const technicalRating = getRating(testScore, 1.0);
-  const qualityRating = getRating(testScore, 1.05);
-  const initiativeRating = getRating(testScore, 0.95);
-  const communicationRating = getRating(testScore, 0.9);
-  const punctualityRating = getRating(testScore, 1.08);
+  y += splitClosing.length * 4.2 + 3;
 
   // Performance Table
   autoTable(docPDF, {
     startY: y,
     head: [['S. No.', 'Assessment Criteria', 'Rating(Outstanding/ Good/\nsatisfactory/ Needs Improvement)']],
     body: [
-      ['1.', 'Technical Knowledge & Application', technicalRating],
-      ['2.', 'Quality of Work & Task Completion', qualityRating],
-      ['3.', 'Initiative & Problem-Solving Ability', initiativeRating],
-      ['4.', 'Communication & Interpersonal Skills', communicationRating],
-      ['5.', 'Punctuality, Discipline & Professional Conduct', punctualityRating]
+      ['1.', 'Technical Knowledge & Application', 'Good'],
+      ['2.', 'Quality of Work & Task Completion', 'Outstanding'],
+      ['3.', 'Initiative & Problem-Solving Ability', 'Good'],
+      ['4.', 'Communication & Interpersonal Skills', 'Good'],
+      ['5.', 'Punctuality, Discipline & Professional Conduct', 'Outstanding']
     ],
     theme: 'grid',
-    styles: { fontSize: 8.5, fontStyle: 'normal', font: 'Helvetica', cellPadding: 3.8, textColor: [30, 41, 59] },
-    headStyles: { fillColor: [224, 231, 255], textColor: [15, 23, 42], fontStyle: 'bold' },
+    styles: {
+      fontSize: 9.5,
+      fontStyle: 'bold',
+      font: 'Helvetica',
+      cellPadding: { top: 6, right: 3.5, bottom: 6, left: 3.5 },
+      textColor: [15, 23, 42],
+      fillColor: false as any,
+      valign: 'middle'
+    },
+    headStyles: {
+      fillColor: false as any,
+      textColor: [15, 23, 42],
+      fontSize: 9.6,
+      fontStyle: 'bold',
+      valign: 'middle'
+    },
     columnStyles: {
       0: { cellWidth: 15, halign: 'center' },
-      1: { cellWidth: 95 },
-      2: { cellWidth: 70, halign: 'center' }
+      1: { cellWidth: 95, halign: 'center' },
+      2: { cellWidth: 70, halign: 'left' }
     },
-    tableLineColor: [209, 213, 219],
-    tableLineWidth: 0.2
+    tableLineColor: [15, 23, 42],
+    tableLineWidth: 0.45
   });
 
   // Footer image at the bottom

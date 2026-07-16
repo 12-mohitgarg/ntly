@@ -6,7 +6,8 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus, Download, Bell, Send, Upload, FileText, Trash2, ClipboardList } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus, Download, Bell, Send, Upload, FileText, Trash2, ClipboardList, KeyRound } from 'lucide-react';
 import { createUserWithEmailAndPassword, deleteUser, getAuth, signOut, User as FirebaseUser } from 'firebase/auth';
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { auth } from '../lib/firebase';
@@ -16,6 +17,8 @@ import { INTERNSHIP_DOMAINS } from '../lib/constants';
 import { jsPDF } from 'jspdf';
 import { backupFirestore } from "./backupFirestore";
 import autoTable from 'jspdf-autotable';
+
+import { QuizSubmission } from './dashboard/generateTestReport';
 
 interface UserProfile {
   uid: string;
@@ -104,10 +107,17 @@ export default function AdminDashboard() {
   const [courseReports, setCourseReports] = useState<CourseReport[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [studentReports, setStudentReports] = useState<StudentReport[]>([]);
+  const [testSubmissions, setTestSubmissions] = useState<QuizSubmission[]>([]);
+  const [courseTests, setCourseTests] = useState<any[]>([]);
+  const [testCourseFilter, setTestCourseFilter] = useState('');
+  const [viewingSubmission, setViewingSubmission] = useState<QuizSubmission | null>(null);
   const [loading, setLoading] = useState(true);
   const [collegeFilter, setCollegeFilter] = useState('');
   const [domainFilter, setDomainFilter] = useState('');
   const [exportCollege, setExportCollege] = useState('');
+  const [passwordUser, setPasswordUser] = useState<UserProfile | null>(null);
+  const [passwordForm, setPasswordForm] = useState({ password: '', confirmPassword: '' });
+  const [savingPassword, setSavingPassword] = useState(false);
   const [teacherForm, setTeacherForm] = useState({
     fullName: '',
     email: '',
@@ -218,6 +228,24 @@ export default function AdminDashboard() {
       setStudentReports(
         studentReportsData.sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || ''))
       );
+
+      // Fetch test submissions
+      try {
+        const testSubmissionsSnapshot = await getDocs(collection(db, 'testSubmissions'));
+        const testSubmissionsData = testSubmissionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        setTestSubmissions(testSubmissionsData);
+      } catch (error) {
+        console.error('Error fetching testSubmissions:', error);
+      }
+
+      // Fetch course tests
+      try {
+        const courseTestsSnapshot = await getDocs(collection(db, 'courseTests'));
+        const courseTestsData = courseTestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        setCourseTests(courseTestsData);
+      } catch (error) {
+        console.error('Error fetching courseTests:', error);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -648,6 +676,56 @@ export default function AdminDashboard() {
       alert('Error rejecting payment');
     }
   };
+
+  const openPasswordModal = (student: UserProfile) => {
+    setPasswordUser(student);
+    setPasswordForm({ password: '', confirmPassword: '' });
+  };
+
+  const handleUpdateUserPassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!passwordUser || !user) return;
+
+    if (passwordForm.password.length < 6) {
+      alert('Password must be at least 6 characters');
+      return;
+    }
+
+    if (passwordForm.password !== passwordForm.confirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+
+    setSavingPassword(true);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/admin/users/${passwordUser.uid}/password`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ uid: passwordUser.uid, password: passwordForm.password }),
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(result?.details || result?.error || 'Error updating password');
+      }
+
+      setPasswordUser(null);
+      setPasswordForm({ password: '', confirmPassword: '' });
+      alert('Password updated successfully');
+    } catch (error: any) {
+      console.error('Error updating password:', error);
+      alert(error?.message || 'Error updating password');
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
   const getGroupName = (value?: string) => value?.trim() || 'Not specified';
 
   const successfulUserIds = new Set(
@@ -809,29 +887,314 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      <Dialog
+        open={Boolean(passwordUser)}
+        onOpenChange={(open) => {
+          if (!open && !savingPassword) {
+            setPasswordUser(null);
+            setPasswordForm({ password: '', confirmPassword: '' });
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md bg-white">
+          <form onSubmit={handleUpdateUserPassword} className="space-y-5">
+            <DialogHeader>
+              <DialogTitle className="font-black text-slate-900">Change Password</DialogTitle>
+              <DialogDescription>
+                Update password for {passwordUser?.fullName || passwordUser?.email || 'selected user'}.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-slate-500 text-xs font-black uppercase">New Password</Label>
+                <Input
+                  type="password"
+                  value={passwordForm.password}
+                  onChange={(event) => setPasswordForm({ ...passwordForm, password: event.target.value })}
+                  className="h-12 rounded-xl font-bold"
+                  minLength={6}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-slate-500 text-xs font-black uppercase">Confirm Password</Label>
+                <Input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(event) => setPasswordForm({ ...passwordForm, confirmPassword: event.target.value })}
+                  className="h-12 rounded-xl font-bold"
+                  minLength={6}
+                  required
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={savingPassword}
+                onClick={() => {
+                  setPasswordUser(null);
+                  setPasswordForm({ password: '', confirmPassword: '' });
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={savingPassword} className="bg-slate-900 hover:bg-blue-700 text-white font-black">
+                {savingPassword ? 'Updating...' : 'Update Password'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <Tabs defaultValue="dashboard" className="gap-6 flex-col">
-          <TabsList className="flex flex-wrap h-auto bg-slate-100 p-1 rounded-2xl gap-1 justify-start border border-slate-200/50 shadow-sm max-w-full overflow-x-auto">
-            <TabsTrigger value="dashboard" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <LayoutDashboard size={14} />
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="teachers" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <UserPlus size={14} />
-              Teachers
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <Bell size={14} />
-              Notifications
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <FileText size={14} />
-              Internship Reports
-            </TabsTrigger>
-            <TabsTrigger value="student-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <Upload size={14} />
-              Assignments
-            </TabsTrigger>
-          </TabsList>
+        <TabsList className="flex flex-wrap h-auto bg-slate-100 p-1 rounded-2xl gap-1 justify-start border border-slate-200/50 shadow-sm max-w-full overflow-x-auto">
+          <TabsTrigger value="dashboard" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+            <LayoutDashboard size={14} />
+            Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="teachers" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+            <UserPlus size={14} />
+            Teachers
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+            <Bell size={14} />
+            Notifications
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+            <FileText size={14} />
+            Internship Reports
+          </TabsTrigger>
+          <TabsTrigger value="student-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+            <Upload size={14} />
+            Assignments
+          </TabsTrigger>
+        </TabsList>
+
+      <Dialog
+        open={Boolean(viewingSubmission)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewingSubmission(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl bg-white max-h-[90vh] overflow-y-auto rounded-[2rem] p-8">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-slate-900 flex items-center justify-between uppercase italic">
+              <span>Test Details - {viewingSubmission?.studentName}</span>
+              <span className={`px-4 py-1 rounded-full text-xs font-black tracking-widest ${(viewingSubmission?.scorePercentage ?? 0) >= 33
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-red-100 text-red-700'
+                }`}>
+                {(viewingSubmission?.scorePercentage ?? 0) >= 33 ? 'PASSED' : 'FAILED'}
+              </span>
+            </DialogTitle>
+            <DialogDescription className="font-bold text-slate-500">
+              Course: <span className="text-slate-900">{viewingSubmission?.course}</span> | Email: <span className="text-slate-900">{viewingSubmission?.email}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Stats summary */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-6">
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+              <p className="text-[10px] font-black uppercase text-slate-400">Score</p>
+              <p className="text-2xl font-black text-blue-600">{viewingSubmission?.scorePercentage}%</p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+              <p className="text-[10px] font-black uppercase text-slate-400">Total Questions</p>
+              <p className="text-2xl font-black text-slate-700">{viewingSubmission?.totalQuestions}</p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+              <p className="text-[10px] font-black uppercase text-slate-400">Correct</p>
+              <p className="text-2xl font-black text-green-600">{viewingSubmission?.correctCount}</p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+              <p className="text-[10px] font-black uppercase text-slate-400">Wrong</p>
+              <p className="text-2xl font-black text-red-600">{viewingSubmission?.wrongCount}</p>
+            </div>
+          </div>
+
+          {/* Warning for modified tests */}
+          {(() => {
+            if (!viewingSubmission) return null;
+            const matchingTest = courseTests.find(t => t.course === viewingSubmission.course);
+            if (!matchingTest || !matchingTest.questions) return null;
+
+            const studentAnswerKeys = Object.keys(viewingSubmission.answers || {});
+            const currentQuestionIds = new Set(matchingTest.questions.map((q: any) => q.id));
+            const deletedQuestionIds = studentAnswerKeys.filter(id => !currentQuestionIds.has(id));
+
+            if (deletedQuestionIds.length === 0) return null;
+
+            return (
+              <div className="bg-amber-50 border border-amber-200 text-amber-900 p-5 rounded-2xl mb-6 text-sm font-bold flex items-start gap-3 shadow-sm">
+                <span className="text-xl">⚠️</span>
+                <div>
+                  <p className="font-black text-amber-950 uppercase tracking-wide text-xs">Test Questions Have Been Modified</p>
+                  <p className="text-xs text-amber-800 font-medium mt-1 leading-relaxed">
+                    The admin has added, modified, or deleted {deletedQuestionIds.length} question(s) in this course test since the student submitted their answers.
+                    Because the test questions were changed, some of the student's answered questions are no longer present in the active test definition and cannot be fully displayed.
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Questions list */}
+          <div className="space-y-6">
+            {(() => {
+              if (!viewingSubmission) return null;
+              // Find matching test
+              const matchingTest = courseTests.find(t => t.course === viewingSubmission.course);
+              if (!matchingTest || !matchingTest.questions || matchingTest.questions.length === 0) {
+                return (
+                  <p className="text-center text-slate-500 font-bold py-6">
+                    Questions template for this course test was not found.
+                  </p>
+                );
+              }
+
+              const studentAnswerKeys = Object.keys(viewingSubmission.answers || {});
+              const currentQuestionIds = new Set(matchingTest.questions.map((q: any) => q.id));
+              const deletedQuestionIds = studentAnswerKeys.filter(id => !currentQuestionIds.has(id));
+
+              const renderedQuestions = matchingTest.questions.map((q: any, index: number) => {
+                const selectedAnswer = viewingSubmission.answers[q.id];
+                const isUnanswered = selectedAnswer === undefined;
+                const isCorrect = !isUnanswered && selectedAnswer === q.correctOptionIndex;
+
+                return (
+                  <div key={q.id || index} className={`p-6 rounded-2xl border-2 ${isCorrect
+                      ? 'border-green-100 bg-green-50/10'
+                      : isUnanswered
+                        ? 'border-yellow-100 bg-yellow-50/10'
+                        : 'border-red-100 bg-red-50/10'
+                    }`}>
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                      <div>
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase ${isCorrect
+                            ? 'bg-green-100 text-green-700'
+                            : isUnanswered
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                          Question {index + 1}
+                        </span>
+                      </div>
+                      <span className={`text-xs font-black uppercase tracking-wider ${isCorrect
+                          ? 'text-green-600'
+                          : isUnanswered
+                            ? 'text-yellow-600'
+                            : 'text-red-600'
+                        }`}>
+                        {isCorrect ? 'Correct' : isUnanswered ? 'Unanswered / Added Later' : 'Incorrect'}
+                      </span>
+                    </div>
+
+                    <p className="text-lg font-bold text-slate-900 mb-4">{q.questionText}</p>
+
+                    <div className="grid gap-3">
+                      {q.options.map((opt: string, optIndex: number) => {
+                        const isStudentChoice = selectedAnswer === optIndex;
+                        const isCorrectAnswer = q.correctOptionIndex === optIndex;
+
+                        let optionStyle = 'border-slate-100 bg-white text-slate-700';
+                        if (isCorrectAnswer) {
+                          optionStyle = 'border-green-500 bg-green-50 text-green-900 font-black';
+                        } else if (isStudentChoice && !isCorrect) {
+                          optionStyle = 'border-red-500 bg-red-50 text-red-900 font-black';
+                        }
+
+                        return (
+                          <div
+                            key={optIndex}
+                            className={`p-4 rounded-xl border flex items-center gap-3 ${optionStyle}`}
+                          >
+                            <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs ${isCorrectAnswer
+                                ? 'bg-green-600 text-white'
+                                : isStudentChoice
+                                  ? 'bg-red-600 text-white'
+                                  : 'bg-slate-100 text-slate-500'
+                              }`}>
+                              {String.fromCharCode(65 + optIndex)}
+                            </span>
+                            <span className="text-sm">{opt}</span>
+
+                            {isCorrectAnswer && (
+                              <span className="ml-auto text-[10px] font-black uppercase tracking-wider text-green-600 bg-green-100 px-2 py-0.5 rounded-full">
+                                Correct Answer
+                              </span>
+                            )}
+                            {isStudentChoice && !isCorrectAnswer && (
+                              <span className="ml-auto text-[10px] font-black uppercase tracking-wider text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
+                                Student's Choice
+                              </span>
+                            )}
+                            {isStudentChoice && isCorrectAnswer && (
+                              <span className="ml-auto text-[10px] font-black uppercase tracking-wider text-green-700 bg-green-200 px-2 py-0.5 rounded-full">
+                                Student's Correct Choice
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              });
+
+              const renderedDeletedQuestions = deletedQuestionIds.map((qId, idx) => {
+                const selectedOptionIndex = viewingSubmission.answers[qId];
+                return (
+                  <div key={qId} className="p-6 rounded-2xl border-2 border-slate-100 bg-slate-50/50">
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                      <div>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase bg-slate-100 text-slate-600">
+                          Modified/Deleted Question
+                        </span>
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                        Content Unavailable
+                      </span>
+                    </div>
+                    <p className="text-lg font-bold text-slate-500 italic">This question has been deleted or its identifier was modified in the course test.</p>
+                    <div className="mt-4 p-4 rounded-xl border border-slate-100 bg-white text-slate-700 flex items-center gap-3">
+                      <span className="w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs bg-slate-100 text-slate-500">
+                        {String.fromCharCode(65 + (selectedOptionIndex ?? 0))}
+                      </span>
+                      <span className="text-sm font-bold text-slate-500">Student selected option (Question content no longer available)</span>
+                    </div>
+                  </div>
+                );
+              });
+
+              return (
+                <div className="space-y-6">
+                  {renderedQuestions}
+                  {renderedDeletedQuestions}
+                </div>
+              );
+            })()}
+          </div>
+
+          <DialogFooter className="mt-8 border-t border-slate-100 pt-4">
+            <Button
+              type="button"
+              className="bg-slate-900 hover:bg-slate-800 text-white font-black"
+              onClick={() => setViewingSubmission(null)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
 
           <TabsContent value="dashboard" className="space-y-8 mt-4">
             {/* Stats Grid */}
@@ -1104,7 +1467,7 @@ export default function AdminDashboard() {
                             })}
                           </td>
                           <td className="p-4">
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
 
                               <button
                                 onClick={() =>
@@ -1120,6 +1483,15 @@ export default function AdminDashboard() {
                                 className="px-3 py-1.5 bg-rose-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-rose-600/10 hover:bg-rose-700 active:scale-[0.98] transition-all cursor-pointer"
                               >
                                 Reject
+                              </button>
+
+                              <button
+                                onClick={() => openPasswordModal(user)}
+                                className="inline-flex items-center gap-1 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                                title="Update password"
+                              >
+                                <KeyRound size={14} />
+                                Change Password
                               </button>
 
                             </div>
@@ -1352,6 +1724,168 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="test-reports">
+            <div className="space-y-6">
+              {/* Summary Stats */}
+              {(() => {
+                const isTeacher = adminProfile?.role === 'teacher';
+                const assignedCourse = adminProfile?.course || '';
+
+                const visibleTestSubmissions = testSubmissions.filter((sub) => {
+                  if (isTeacher && sub.course !== assignedCourse) return false;
+                  if (testCourseFilter && sub.course !== testCourseFilter) return false;
+                  return true;
+                });
+
+                const totalTestsCount = visibleTestSubmissions.length;
+                const passedTestsCount = visibleTestSubmissions.filter(sub => sub.scorePercentage >= 33).length;
+                const failedTestsCount = totalTestsCount - passedTestsCount;
+
+                return (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+                        <div className="flex items-center gap-3 mb-2">
+                          <ClipboardList className="text-blue-600" size={24} />
+                          <span className="text-slate-500 font-black uppercase text-xs">Total Assessments Taken</span>
+                        </div>
+                        <p className="text-4xl font-black text-slate-900">{totalTestsCount}</p>
+                      </div>
+                      <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+                        <div className="flex items-center gap-3 mb-2">
+                          <CheckCircle2 className="text-green-600" size={24} />
+                          <span className="text-slate-500 font-black uppercase text-xs">Passed Students</span>
+                        </div>
+                        <p className="text-4xl font-black text-slate-900">{passedTestsCount}</p>
+                        <p className="text-sm text-slate-400 font-bold">
+                          {totalTestsCount > 0 ? Math.round((passedTestsCount / totalTestsCount) * 100) : 0}% Pass Rate
+                        </p>
+                      </div>
+                      <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Clock className="text-red-600" size={24} />
+                          <span className="text-slate-500 font-black uppercase text-xs">Failed Students</span>
+                        </div>
+                        <p className="text-4xl font-black text-slate-900">{failedTestsCount}</p>
+                        <p className="text-sm text-slate-400 font-bold">Score below 33%</p>
+                      </div>
+                    </div>
+
+                    {/* Course-wise Filter */}
+                    <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center">
+                            <ClipboardList size={24} />
+                          </div>
+                          <div>
+                            <h2 className="text-xl font-black text-slate-900">Student Assessment Reports</h2>
+                            <p className="text-slate-500 text-sm font-bold">View question-by-question breakdown, grades, and completion status of final tests.</p>
+                          </div>
+                        </div>
+                        {!isTeacher && (
+                          <div className="w-full md:w-64">
+                            <Label className="text-slate-500 text-xs font-black uppercase">Filter By Course</Label>
+                            <select
+                              value={testCourseFilter}
+                              onChange={(event) => setTestCourseFilter(event.target.value)}
+                              className="mt-2 w-full h-12 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                            >
+                              <option value="">All Courses</option>
+                              {INTERNSHIP_DOMAINS.map((domain) => (
+                                <option key={domain} value={domain}>
+                                  {domain}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Submissions Table */}
+                    <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+                      {visibleTestSubmissions.length === 0 ? (
+                        <div className="p-12 text-center">
+                          <ClipboardList size={48} className="text-slate-300 mx-auto mb-4" />
+                          <p className="text-slate-500 font-bold">No test submissions found</p>
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-slate-50">
+                              <tr>
+                                <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Student</th>
+                                <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Course</th>
+                                <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Score</th>
+                                <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Answers</th>
+                                <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
+                                <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Submitted At</th>
+                                <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {visibleTestSubmissions.map((sub) => {
+                                const student = getStudentProfile(sub.userId);
+                                const isPassed = sub.scorePercentage >= 33;
+
+                                return (
+                                  <tr key={sub.userId + '-' + sub.course} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                                    <td className="p-4">
+                                      <div className="font-black text-slate-900">{sub.studentName}</div>
+                                      <div className="text-xs text-slate-400">{sub.email}</div>
+                                      {student?.college && (
+                                        <div className="mt-1 text-xs font-bold text-slate-500">{student.college}</div>
+                                      )}
+                                    </td>
+                                    <td className="p-4 text-slate-600 font-bold">{sub.course}</td>
+                                    <td className="p-4">
+                                      <span className="text-lg font-black text-slate-900">{sub.scorePercentage}%</span>
+                                    </td>
+                                    <td className="p-4 text-slate-600 font-bold">
+                                      {sub.correctCount} / {sub.totalQuestions}
+                                    </td>
+                                    <td className="p-4">
+                                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black ${isPassed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                        }`}>
+                                        {isPassed ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+                                        {isPassed ? 'PASSED' : 'FAILED'}
+                                      </span>
+                                    </td>
+                                    <td className="p-4 text-slate-600 text-sm">
+                                      {sub.submittedAt
+                                        ? new Date(sub.submittedAt).toLocaleString('en-IN', {
+                                          day: '2-digit',
+                                          month: 'short',
+                                          year: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })
+                                        : '-'}
+                                    </td>
+                                    <td className="p-4">
+                                      <Button
+                                        type="button"
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-black"
+                                        onClick={() => setViewingSubmission(sub)}
+                                      >
+                                        View Details
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </TabsContent>
 

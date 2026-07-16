@@ -1,3 +1,4 @@
 /api/payment/order /.netlify/functions/payment-order 200
 /api/payment/verify /.netlify/functions/payment-verify 200
+/api/admin/users/:uid/password /.netlify/functions/admin-user-password?uid=:uid 200
 /* /index.html 200

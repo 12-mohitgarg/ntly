@@ -10,51 +10,31 @@ import {
   CheckCircle2,
   FileText
 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
+import { generateCertificate } from './generateCertificate';
+import { generateAttendanceReport } from './generateAttendanceReport';
 
 export default function Certifications() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
 
-  const generatePDF = (type: string) => {
-    const doc = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: 'a4'
-    });
-
-    // Simple Certificate Design
+  const generatePDF = async (type: string) => {
     if (type === 'certificate') {
-      doc.setFillColor(37, 99, 235); // Blue-600 bg
-      doc.rect(0, 0, 297, 24, 'F');
-
-      doc.setFont('Helvetica', 'bold');
-      doc.setFontSize(32);
-      doc.setTextColor(30, 41, 59); // Slate-800
-      doc.text('CERTIFICATE OF ACHIEVEMENT', 148, 65, { align: 'center' });
-
-      doc.setFont('Helvetica', 'normal');
-      doc.setFontSize(16);
-      doc.text('This industry credential is proud presented to', 148, 85, { align: 'center' });
-
-      doc.setFont('Helvetica', 'bolditalic');
-      doc.setFontSize(28);
-      doc.setTextColor(37, 99, 235);
-      doc.text(profile?.fullName || 'STUDENT NAME', 148, 105, { align: 'center' });
-
-      doc.setFont('Helvetica', 'normal');
-      doc.setFontSize(16);
-      doc.setTextColor(30, 41, 59);
-      doc.text(`for fulfilling 120 contact hours of industrial training in`, 148, 125, { align: 'center' });
-
-      doc.setFont('Helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.text(profile?.internshipDomain || 'DOMAIN NAME', 148, 145, { align: 'center' });
-
-      doc.setFontSize(12);
-      doc.text(`Issued: ${new Date().toLocaleDateString()}`, 148, 165, { align: 'center' });
-      doc.text('UGC & Industry Optimized Verification Platform', 148, 175, { align: 'center' });
-
-      doc.save('INTERNMITRA_Official_Certificate.pdf');
+      if (!user?.uid) {
+        alert('User session not found');
+        return;
+      }
+      try {
+        await generateCertificate(profile, user.uid);
+      } catch (error) {
+        console.error(error);
+        alert('Error downloading certificate');
+      }
+    } else if (type === 'attendance') {
+      try {
+        await generateAttendanceReport(profile, [], []);
+      } catch (error) {
+        console.error(error);
+        alert('Error downloading attendance report');
+      }
     }
   };
 

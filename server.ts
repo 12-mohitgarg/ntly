@@ -4,6 +4,8 @@ import { createServer as createViteServer } from "vite";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import dotenv from "dotenv";
+import admin from "firebase-admin";
+import type { Request, Response, NextFunction } from "express";
 
 dotenv.config();
 
@@ -22,9 +24,123 @@ const razorpay = new Razorpay({
   key_secret: RAZORPAY_KEY_SECRET,
 });
 
+function getFirebaseAdminCredential() {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    return admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
+  }
+
+  const projectId = cleanEnvValue(process.env.FIREBASE_PROJECT_ID) || "intermitra-backup";
+  const clientEmail = cleanEnvValue(process.env.FIREBASE_CLIENT_EMAIL);
+  const privateKey = getFirebasePrivateKey();
+
+  if (clientEmail && privateKey) {
+    return admin.credential.cert({
+      projectId,
+      clientEmail,
+      privateKey,
+    });
+  }
+
+  return admin.credential.applicationDefault();
+}
+
+function getFirebasePrivateKey() {
+  if (process.env.FIREBASE_PRIVATE_KEY_BASE64) {
+    return Buffer.from(process.env.FIREBASE_PRIVATE_KEY_BASE64, "base64").toString("utf8");
+  }
+
+  return process.env.FIREBASE_PRIVATE_KEY
+    ?.trim()
+    .replace(/,$/, "")
+    .replace(/^['"]|['"]$/g, "")
+    .replace(/,$/, "")
+    .replace(/\\\\n/g, "\n")
+    .replace(/\\n/g, "\n");
+}
+
+function getFirebaseProjectId() {
+  return cleanEnvValue(process.env.FIREBASE_PROJECT_ID) || "intermitra-backup";
+}
+
+function cleanEnvValue(value?: string) {
+  return value
+    ?.trim()
+    .replace(/,$/, "")
+    .replace(/^['"]|['"]$/g, "")
+    .replace(/,$/, "")
+    .trim();
+}
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: getFirebaseAdminCredential(),
+    projectId: getFirebaseProjectId(),
+  });
+}
+
+const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+
+    if (!token) {
+      return res.status(401).json({ error: "Missing admin authorization token" });
+    }
+
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const email = decodedToken.email || "";
+
+    if (email === "admin@internmitra.com") {
+      return next();
+    }
+
+    const adminDoc = await admin.firestore().collection("admins").doc(decodedToken.uid).get();
+    const adminData = adminDoc.exists ? adminDoc.data() : null;
+    const isAllowedAdmin =
+      adminData?.isActive === true &&
+      ["admin", "super_admin"].includes(String(adminData?.role || ""));
+
+    if (!isAllowedAdmin) {
+      return res.status(403).json({ error: "Only admins can update user passwords" });
+    }
+
+    next();
+  } catch (error: any) {
+    console.error("Admin authorization error:", error);
+    res.status(401).json({
+      error: "Unable to verify admin session",
+      details: error?.message || "Unknown authorization error",
+    });
+  }
+};
+
 // API Routes
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", environment: process.env.NODE_ENV });
+});
+
+app.patch("/api/admin/users/:uid/password", requireAdmin, async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { password } = req.body;
+
+    if (!uid) {
+      return res.status(400).json({ error: "User id is required" });
+    }
+
+    if (typeof password !== "string" || password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+
+    await admin.auth().updateUser(uid, { password });
+    res.json({ status: "success" });
+  } catch (error: any) {
+    console.error("Password update error:", error);
+    res.status(500).json({
+      error: "Error updating user password",
+      details: error?.message || "Unknown error",
+    });
+  }
 });
 
 app.post("/api/payment/order", async (req, res) => {

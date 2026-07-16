@@ -598,19 +598,14 @@ export default function LMS() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row lg:items-start gap-4">
-          {/* Progress Summary Box */}
-          <div className="student-card p-5 flex flex-col justify-between min-w-[200px]">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-2.5 mb-2.5">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Workspace</span>
-              <span className="bg-indigo-50 text-indigo-600 text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">Day {currentDay}/{COURSE_VIDEO_DAY_LIMIT}</span>
-            </div>
-            <div className="text-xs font-semibold text-slate-500 space-y-1">
-              <p><span className="text-slate-800 font-extrabold">{getCompletedVideoDays().size}</span> videos completed</p>
-              <p><span className="text-slate-800 font-extrabold">{getCompletedVideoDays().size}</span> hours training logged</p>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <div className="text-sm font-black text-slate-400 uppercase tracking-widest">Day {currentDay} of {COURSE_VIDEO_DAY_LIMIT}</div>
+            <div className="text-xs font-bold text-slate-500">{getCompletedVideoDays().size} videos completed • {getCompletedVideoDays().size} hours</div>
+          </div>
+          <div className="flex flex-col gap-4">
             {adminApproved && (
-              <div className="flex flex-col gap-2 mt-4">
+              <>
                 <button
                   onClick={() => {
                     if (!user?.uid) {
@@ -619,19 +614,19 @@ export default function LMS() {
                     }
                     generateCertificate(profile, user.uid);
                   }}
-                  className="student-button-primary w-full min-h-[40px] px-4 py-2 bg-emerald-600 text-white rounded-xl font-black flex items-center justify-center gap-2 text-[10px] uppercase tracking-wider"
+                  className="bg-green-600 text-white p-5 px-10 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-green-600/20 hover:bg-green-700 transition uppercase tracking-widest text-xs"
                 >
-                  <Download size={14} />
+                  <Download size={20} />
                   Download Certificate
                 </button>
                 <button
                   onClick={() => generateAttendanceReport(profile, attendanceEntries, dailyVideos)}
-                  className="student-button-soft w-full min-h-[40px] px-4 py-2 text-[10px]"
+                  className="bg-slate-900 text-white p-5 px-10 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition uppercase tracking-widest text-xs"
                 >
-                  <FileText size={14} />
+                  <FileText size={20} />
                   Attendance Report
                 </button>
-              </div>
+              </>
             )}
           </div>
 
@@ -810,7 +805,7 @@ export default function LMS() {
           <div className="col-span-full text-center py-12 text-slate-500 font-semibold italic">No daily videos available yet.</div>
         ) : (
           dailyVideos.map((video, i) => {
-            const isLocked = video.day > currentDay;
+            const isLocked = false; // Always unlocked for students
             const isCompleted = hasAttendanceForDay(video.day);
 
             return (
