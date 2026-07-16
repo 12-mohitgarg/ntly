@@ -26,7 +26,9 @@ import ManageCourses from './pages/admin/ManageCourses';
 import ManageUniversities from './pages/admin/ManageUniversities';
 import ManageSubjects from './pages/admin/ManageSubjects';
 import ManageDailyVideos from './pages/admin/ManageDailyVideos';
+import BulkAddColleges from './pages/admin/BulkAddColleges';
 import Notifications from "./pages/dashboard/Notifications";
+import AdminLayout from './components/AdminLayout';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth();
@@ -52,40 +54,52 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function AppContent() {
+  const location = useLocation();
+  const hideNavbar = location.pathname.startsWith('/dashboard') ||
+                     location.pathname.startsWith('/admin') ||
+                     location.pathname === '/admin-dashboard';
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans selection:bg-blue-100 selection:text-blue-900">
+      {!hideNavbar && <Navbar />}
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/features" element={<Features />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
+        <Route path="/dashboard/*" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/admin-dashboard" element={<AdminRoute><AdminLayout><AdminDashboard /></AdminLayout></AdminRoute>} />
+        <Route path="/admin/districts" element={<AdminRoute><AdminLayout><ManageDistricts /></AdminLayout></AdminRoute>} />
+        <Route path="/admin/colleges" element={<AdminRoute><AdminLayout><ManageColleges /></AdminLayout></AdminRoute>} />
+        <Route path="/admin/courses" element={<AdminRoute><AdminLayout><ManageCourses /></AdminLayout></AdminRoute>} />
+        <Route path="/admin/universities" element={<AdminRoute><AdminLayout><ManageUniversities /></AdminLayout></AdminRoute>} />
+        <Route path="/admin/subjects" element={<AdminRoute><AdminLayout><ManageSubjects /></AdminLayout></AdminRoute>} />
+        <Route path="/admin/daily-videos" element={<AdminRoute><AdminLayout><ManageDailyVideos /></AdminLayout></AdminRoute>} />
+        <Route path="/admin/bulk-colleges" element={<AdminRoute><AdminLayout><BulkAddColleges /></AdminLayout></AdminRoute>} />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <Notifications />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <Router>
       <AuthProvider>
-        <div className="min-h-screen bg-slate-50 font-sans selection:bg-blue-100 selection:text-blue-900">
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/features" element={<Features />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
-            <Route path="/dashboard/*" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/admin-dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-            <Route path="/admin/districts" element={<AdminRoute><ManageDistricts /></AdminRoute>} />
-            <Route path="/admin/colleges" element={<AdminRoute><ManageColleges /></AdminRoute>} />
-            <Route path="/admin/courses" element={<AdminRoute><ManageCourses /></AdminRoute>} />
-            <Route path="/admin/universities" element={<AdminRoute><ManageUniversities /></AdminRoute>} />
-            <Route path="/admin/subjects" element={<AdminRoute><ManageSubjects /></AdminRoute>} />
-            <Route path="/admin/daily-videos" element={<AdminRoute><ManageDailyVideos /></AdminRoute>} />
-            <Route
-              path="/notifications"
-              element={
-                <ProtectedRoute>
-                  <Notifications />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </div>
+        <AppContent />
       </AuthProvider>
     </Router>
   );

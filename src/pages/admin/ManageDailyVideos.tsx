@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db } from '../../lib/firebase';
 import {
   collection,
@@ -25,7 +26,8 @@ import {
   Clock,
   CheckCircle2,
   Sparkles,
-  ClipboardList
+  ClipboardList,
+  ArrowLeft
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -44,6 +46,7 @@ interface DailyVideo {
 }
 
 export default function ManageDailyVideos() {
+  const navigate = useNavigate();
   const { adminProfile } = useAuth();
   const [videos, setVideos] = useState<DailyVideo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -381,336 +384,331 @@ export default function ManageDailyVideos() {
   };
 
   return (
-    <div className="space-y-8">
-      <header className="bg-gradient-to-r from-blue-600 to-purple-600 p-8 rounded-[3rem] text-white shadow-2xl shadow-blue-600/20">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                <Video size={24} />
-              </div>
-              <h1 className="text-4xl font-black tracking-tighter uppercase italic">Daily Videos</h1>
-            </div>
-            <p className="text-white/80 font-bold italic flex items-center gap-2">
-              <Sparkles size={16} />
-              Manage {COURSE_VIDEO_DAY_LIMIT}-day learning video schedule for students
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Label className="text-white font-bold">Select Course:</Label>
-            <select
-              value={selectedCourse}
-              onChange={(e) => setSelectedCourse(e.target.value)}
-              disabled={isTeacher}
-              className={`h-12 px-6 bg-white/20 backdrop-blur-sm border-2 border-white/30 rounded-2xl font-bold text-white focus:outline-none focus:ring-2 focus:ring-white/50 ${isTeacher ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
-            >
-              <option value="" className="text-slate-900">{isTeacher ? 'No course assigned' : '-- Select Course --'}</option>
-              {INTERNSHIP_DOMAINS.map((course) => (
-                <option key={course} value={course} className="text-slate-900">{course}</option>
-              ))}
-            </select>
-          </div>
+    <div className="space-y-6">
+      {/* Course Selector Card */}
+      <div className="student-card p-5 bg-white/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-black text-slate-900 gradient-text">Manage Daily Videos</h1>
+          <p className="text-slate-500 text-xs font-semibold">Upload and curate daily lecture videos by course.</p>
         </div>
-      </header>
+        <div className="flex items-center gap-3 self-stretch sm:self-auto min-w-[240px]">
+          <Label className="student-label shrink-0">Select Course:</Label>
+          <select
+            value={selectedCourse}
+            onChange={(e) => setSelectedCourse(e.target.value)}
+            disabled={isTeacher}
+            className={`student-input h-11 px-4 py-0 text-xs text-slate-800 rounded-xl border-slate-200/80 bg-white ${isTeacher ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
+          >
+            <option value="" className="text-slate-900">{isTeacher ? 'No course assigned' : '-- Select Course --'}</option>
+            {INTERNSHIP_DOMAINS.map((course) => (
+              <option key={course} value={course} className="text-slate-900">{course}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-      {!selectedCourse && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-[2rem] p-8 text-center shadow-xl"
-        >
-          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Video size={32} className="text-yellow-600" />
-          </div>
-          <p className="text-yellow-700 font-black italic text-lg">Please select a course to manage videos</p>
-        </motion.div>
-      )}
-
-      {/* Add/Edit Form */}
-      {selectedCourse && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-2xl"
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${editingVideo ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
-              {editingVideo ? <Edit2 size={24} /> : <Plus size={24} />}
+      <div className="space-y-6 sm:space-y-8">
+        {!selectedCourse && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="student-card p-8 text-center bg-white/80"
+          >
+            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 ring-1 ring-blue-100">
+              <Video size={32} />
             </div>
-            <h2 className="text-2xl font-black text-slate-900 uppercase italic">
-              {editingVideo ? 'Edit Video' : 'Add New Video'}
-            </h2>
-            <div className="mb-4">
-              {courseCompleted ? (
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    className="bg-green-600 text-white px-5 py-2 rounded-lg"
-                    disabled
-                  >
-                    Course Completed
-                  </button>
-                  <button
-                    onClick={handleOpenTestManager}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg font-bold flex items-center gap-2"
-                  >
-                    <ClipboardList size={16} />
-                    Manage Course Test
-                  </button>
-                  <button
-                    onClick={() => generateCourseAttendanceReport(selectedCourse, attendanceEntries, courseStudents, videos)}
-                    className="bg-slate-900 text-white px-5 py-2 rounded-lg"
-                  >
-                    Generate Attendance Report
-                  </button>
+            <p className="text-slate-700 font-black text-lg">Please select a course to manage videos</p>
+            <p className="text-slate-400 font-bold text-sm mt-1">Select a course from the dropdown selector above to view or add daily videos.</p>
+          </motion.div>
+        )}
+
+        {/* Add/Edit Form */}
+        {selectedCourse && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="student-card p-6 bg-white/80"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className={`student-icon ${editingVideo ? 'bg-amber-50 text-amber-600 ring-amber-100' : 'bg-emerald-50 text-emerald-600 ring-emerald-100'}`}>
+                  {editingVideo ? <Edit2 size={20} /> : <Plus size={20} />}
                 </div>
-              ) : (
-                <button
-                  onClick={markCourseCompleted}
-                  className="bg-blue-600 text-white px-5 py-2 rounded-lg"
-                >
-                  Mark Course As Done
-                </button>
-              )}
-            </div>
-            <span className="bg-blue-100 text-blue-600 text-xs font-black px-4 py-2 rounded-full uppercase ml-auto">
-              {selectedCourse}
-            </span>
-          </div>
-
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label className="text-slate-700 font-bold mb-2 block">Day (1-20)</Label>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    min="1"
-                    max={COURSE_VIDEO_DAY_LIMIT}
-                    value={formData.day}
-                    disabled
-                    className="mt-0 bg-gradient-to-r from-slate-100 to-slate-50 border-slate-200 font-black text-slate-900"
-                  />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
-                    <Clock size={18} />
+                <h2 className="text-xl font-black text-slate-900 gradient-text">
+                  {editingVideo ? 'Edit Video' : 'Add New Video'}
+                </h2>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                {courseCompleted ? (
+                  <div className="flex flex-wrap gap-2">
+                    <span className="bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider inline-flex items-center gap-1.5">
+                      <CheckCircle2 size={14} />
+                      Completed
+                    </span>
+                    <button
+                      onClick={handleOpenTestManager}
+                      className="px-4 py-1.5 rounded-xl bg-purple-600 text-white hover:bg-purple-700 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
+                    >
+                      <ClipboardList size={14} />
+                      Test
+                    </button>
+                    <button
+                      onClick={() => generateCourseAttendanceReport(selectedCourse, attendanceEntries, courseStudents, videos)}
+                      className="px-4 py-1.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+                    >
+                      Attendance Report
+                    </button>
                   </div>
-                </div>
-                <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
-                  <CheckCircle2 size={12} />
-                  Auto-calculated based on existing videos
-                </p>
-              </div>
-              <div>
-                <Label className="text-slate-700 font-bold mb-2 block">Video Title</Label>
-                <Input
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Enter video title"
-                  className="mt-0 border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                />
+                ) : (
+                  <button
+                    onClick={markCourseCompleted}
+                    className="px-4 py-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-black uppercase tracking-wider shadow-sm shadow-indigo-600/10 transition-all active:scale-[0.98] cursor-pointer"
+                  >
+                    Mark Course Completed
+                  </button>
+                )}
+                <span className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-indigo-100/80">
+                  {selectedCourse}
+                </span>
               </div>
             </div>
 
-            <div>
-              <Label className="text-slate-700 font-bold mb-2 block">YouTube URL</Label>
-              <div className="relative">
-                <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 text-red-500" size={20} />
-                <Input
-                  value={formData.youtubeUrl}
-                  onChange={(e) => setFormData({ ...formData, youtubeUrl: e.target.value })}
-                  placeholder="https://youtube.com/watch?v=..."
-                  className="mt-0 pl-12 border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-slate-700 font-bold mb-2 block">Description (Optional)</Label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Brief description of the video content"
-                className="mt-0 w-full p-4 rounded-2xl border border-slate-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:outline-none resize-none transition-all"
-                rows={3}
-              />
-            </div>
-
-            <div className="flex gap-4 pt-4">
-              <Button
-                onClick={handleSave}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-xl shadow-blue-600/20 flex-1"
-              >
-                <Save size={20} className="mr-2" />
-                {editingVideo ? 'Update Video' : 'Add Video'}
-              </Button>
-              {editingVideo && (
-                <Button
-                  onClick={resetForm}
-                  variant="outline"
-                  className="border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                >
-                  <X size={20} className="mr-2" />
-                  Cancel
-                </Button>
-              )}
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Videos List */}
-      {selectedCourse && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-black text-slate-900 uppercase italic">Current Schedule</h2>
-            <div className="flex items-center gap-2 bg-slate-100 rounded-full px-4 py-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm font-bold text-slate-600">{videos.length} / {COURSE_VIDEO_DAY_LIMIT} videos</span>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-spin">
-                <Video size={24} className="text-slate-400" />
-              </div>
-              <p className="text-slate-500 font-bold italic">Loading videos...</p>
-            </div>
-          ) : videos.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-r from-slate-50 to-slate-100 border-2 border-slate-200 rounded-[2rem] p-12 text-center"
-            >
-              <div className="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Video size={36} className="text-slate-400" />
-              </div>
-              <p className="text-slate-600 font-black italic text-lg mb-2">No videos added yet</p>
-              <p className="text-slate-400 font-bold">Start by adding Day 1 video for {selectedCourse}</p>
-            </motion.div>
-          ) : (
-            <div className="grid gap-4">
-              {videos.map((video, index) => (
-                <motion.div
-                  key={video.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="bg-white p-6 rounded-[2rem] border-2 border-slate-100 shadow-xl hover:shadow-2xl hover:border-blue-200 transition-all duration-300 flex items-center gap-6 group"
-                >
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label className="student-label block mb-2">Day (1-{COURSE_VIDEO_DAY_LIMIT})</Label>
                   <div className="relative">
-                    <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center text-white flex-shrink-0 shadow-lg shadow-red-500/30 group-hover:scale-110 transition-transform">
-                      <Youtube size={32} />
-                    </div>
-                    <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-black text-xs border-4 border-white shadow-lg">
-                      {video.day}
+                    <Input
+                      type="number"
+                      min="1"
+                      max={COURSE_VIDEO_DAY_LIMIT}
+                      value={formData.day}
+                      disabled
+                      className="student-input bg-slate-100 to-slate-50 border-slate-200 font-black text-slate-900 pl-4 pr-12"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                      <Clock size={18} />
                     </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-black px-3 py-1 rounded-full uppercase shadow-md">
-                        Day {video.day}
-                      </span>
-                      <h3 className="text-lg font-black text-slate-900 truncate">{video.title}</h3>
-                    </div>
-                    {video.description && (
-                      <p className="text-slate-500 text-sm truncate mb-1">{video.description}</p>
-                    )}
-                    <a
-                      href={video.youtubeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 text-xs font-bold hover:underline truncate block"
-                    >
-                      {video.youtubeUrl}
-                    </a>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleEdit(video)}
-                      variant="outline"
-                      size="icon"
-                      className="border-slate-200 hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50 transition-all"
-                    >
-                      <Edit2 size={18} />
-                    </Button>
-                    <Button
-                      onClick={() => handleDelete(video.id)}
-                      variant="outline"
-                      size="icon"
-                      className="border-slate-200 hover:border-red-600 hover:text-red-600 hover:bg-red-50 transition-all"
-                    >
-                      <Trash2 size={18} />
-                    </Button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                  <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
+                    <CheckCircle2 size={12} />
+                    Auto-calculated based on existing videos
+                  </p>
+                </div>
+                <div>
+                  <Label className="student-label block mb-2">Video Title</Label>
+                  <Input
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="Enter video title"
+                    className="student-input"
+                  />
+                </div>
+              </div>
 
-      {selectedCourse && (
-        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-black text-slate-900 uppercase italic">Attendance Entries</h2>
-              <p className="text-slate-500 text-sm font-bold">{selectedCourse}</p>
+              <div>
+                <Label className="student-label block mb-2">YouTube URL</Label>
+                <div className="relative">
+                  <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 text-red-500" size={20} />
+                  <Input
+                    value={formData.youtubeUrl}
+                    onChange={(e) => setFormData({ ...formData, youtubeUrl: e.target.value })}
+                    placeholder="https://youtube.com/watch?v=..."
+                    className="student-input pl-12"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="student-label block mb-2">Description (Optional)</Label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Brief description of the video content"
+                  className="student-input min-h-[96px] py-3 resize-none"
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex gap-4 pt-2">
+                <Button
+                  onClick={handleSave}
+                  className="student-button-primary flex-1 h-14 shadow-indigo-600/10 cursor-pointer"
+                >
+                  <Save size={20} />
+                  {editingVideo ? 'Update Video' : 'Add Video'}
+                </Button>
+                {editingVideo && (
+                  <Button
+                    onClick={resetForm}
+                    className="student-button-soft h-14 px-6 cursor-pointer"
+                  >
+                    <X size={20} />
+                    Cancel
+                  </Button>
+                )}
+              </div>
             </div>
-            <span className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-xs font-black uppercase">
-              {attendanceEntries.length} Entries
-            </span>
+          </motion.div>
+        )}
+
+        {/* Videos List */}
+        {selectedCourse && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-2xl font-black text-slate-900 uppercase italic gradient-text">Current Schedule</h2>
+              <span className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-indigo-100/80">
+                {videos.length} / {COURSE_VIDEO_DAY_LIMIT} videos
+              </span>
+            </div>
+
+            {loading ? (
+              <div className="text-center py-16">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-slate-500 font-bold">Loading schedule...</span>
+                </div>
+              </div>
+            ) : videos.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="student-card p-12 text-center bg-white/80"
+              >
+                <div className="w-20 h-20 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-6 ring-1 ring-slate-200">
+                  <Video size={36} />
+                </div>
+                <p className="text-slate-700 font-black italic text-lg mb-2">No videos added yet</p>
+                <p className="text-slate-400 font-semibold">Start by adding Day 1 video for {selectedCourse}</p>
+              </motion.div>
+            ) : (
+              <div className="grid gap-4">
+                {videos.map((video, index) => (
+                  <motion.div
+                    key={video.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="student-card p-5 bg-white/60 hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col sm:flex-row items-start sm:items-center gap-4 group"
+                  >
+                    <div className="relative shrink-0">
+                      <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-red-500/30">
+                        <Youtube size={32} />
+                      </div>
+                      <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-black text-xs border-4 border-white shadow-lg">
+                        {video.day}
+                      </div>
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ring-1 ring-indigo-100/50">
+                          Day {video.day}
+                        </span>
+                        <h3 className="text-lg font-black text-slate-900 truncate">{video.title}</h3>
+                      </div>
+                      {video.description && (
+                        <p className="text-slate-500 text-sm font-semibold leading-relaxed line-clamp-2">{video.description}</p>
+                      )}
+                      <a
+                        href={video.youtubeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-600 text-xs font-bold hover:underline truncate block mt-1"
+                      >
+                        {video.youtubeUrl}
+                      </a>
+                    </div>
+                    
+                    <div className="flex gap-2 shrink-0 self-end sm:self-center">
+                      <Button
+                        onClick={() => handleEdit(video)}
+                        variant="outline"
+                        size="icon"
+                        className="border-slate-200 hover:border-indigo-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all cursor-pointer rounded-xl h-10 w-10"
+                      >
+                        <Edit2 size={16} />
+                      </Button>
+                      <Button
+                        onClick={() => handleDelete(video.id)}
+                        variant="outline"
+                        size="icon"
+                        className="border-slate-200 hover:border-rose-600 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer rounded-xl h-10 w-10"
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </div>
+        )}
 
-          {attendanceEntries.length === 0 ? (
-            <div className="p-10 text-center text-slate-500 font-bold">
-              No attendance entries yet.
+        {selectedCourse && (
+          <div className="student-card bg-white/80 overflow-hidden">
+            <div className="p-6 border-b border-slate-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 gradient-text">Attendance Entries</h2>
+                <p className="text-slate-500 text-sm font-bold">{selectedCourse}</p>
+              </div>
+              <span className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-indigo-100/80">
+                {attendanceEntries.length} Entries
+              </span>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Student</th>
-                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Email</th>
-                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Day</th>
-                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Video</th>
-                    <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Attendance Time</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {attendanceEntries.map((entry) => (
-                    <tr key={entry.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                      <td className="p-4 font-black text-slate-900">{entry.studentName}</td>
-                      <td className="p-4 text-slate-600">{entry.email || '-'}</td>
-                      <td className="p-4 text-slate-600 font-bold">Day {entry.day}</td>
-                      <td className="p-4 text-slate-600">{entry.videoTitle}</td>
-                      <td className="p-4 text-slate-600 text-sm">
-                        {new Date(entry.watchedAt).toLocaleString('en-IN')}
-                      </td>
+
+            {attendanceEntries.length === 0 ? (
+              <div className="p-12 text-center text-slate-500 font-bold">
+                No attendance entries yet.
+              </div>
+            ) : (
+              <div className="overflow-x-auto w-full">
+                <table className="w-full min-w-[800px] table-auto">
+                  <thead className="bg-slate-50/50">
+                    <tr>
+                      <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Student</th>
+                      <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Email</th>
+                      <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Day</th>
+                      <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Video</th>
+                      <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Attendance Time</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
+                  </thead>
+                  <tbody>
+                    {attendanceEntries.map((entry) => (
+                      <tr key={entry.id} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
+                        <td className="p-4 font-black text-slate-900">{entry.studentName}</td>
+                        <td className="p-4 text-slate-600 text-sm font-semibold">{entry.email || '-'}</td>
+                        <td className="p-4 text-slate-600 font-bold text-sm">Day {entry.day}</td>
+                        <td className="p-4 text-slate-600 text-sm font-medium">{entry.videoTitle}</td>
+                        <td className="p-4 text-slate-600 text-sm font-medium">
+                          {new Date(entry.watchedAt).toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {showTestModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-3xl bg-white rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <div className="w-full max-w-3xl student-card bg-white/95 overflow-hidden flex flex-col max-h-[90vh] shadow-2xl border-white/50">
+            <div className="p-6 border-b border-slate-100/50 flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-600 mb-1 block">
+                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-600 mb-1 block">
                   Course Assessment
                 </span>
-                <h2 className="text-2xl font-black text-slate-900 uppercase italic">
+                <h2 className="text-2xl font-black text-slate-900 uppercase italic gradient-text">
                   Manage Test: {selectedCourse}
                 </h2>
               </div>
               <button
                 onClick={() => setShowTestModal(false)}
-                className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 transition"
+                className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 transition cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -718,13 +716,16 @@ export default function ManageDailyVideos() {
 
             <div className="p-6 overflow-y-auto flex-1 space-y-6">
               {loadingTest ? (
-                <div className="text-center py-12 text-slate-500 font-bold italic">
-                  Loading test questions...
+                <div className="text-center py-12">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-slate-500 font-bold">Loading questions...</span>
+                  </div>
                 </div>
               ) : (
                 <>
                   {testQuestions.length === 0 ? (
-                    <div className="text-center py-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                    <div className="text-center py-12 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
                       <ClipboardList size={48} className="mx-auto mb-4 text-slate-300" />
                       <p className="text-slate-600 font-black italic">No questions added yet</p>
                       <p className="text-slate-400 text-sm mt-1">Click the button below to add your first question.</p>
@@ -732,43 +733,43 @@ export default function ManageDailyVideos() {
                   ) : (
                     <div className="space-y-6">
                       {testQuestions.map((q, index) => (
-                        <div key={q.id || index} className="bg-slate-50 p-6 rounded-2xl border border-slate-200 relative space-y-4">
+                        <div key={q.id || index} className="student-card p-5 bg-white/60 relative space-y-4">
                           <button
                             type="button"
                             onClick={() => removeQuestion(index)}
-                            className="text-red-500 hover:text-red-700 transition absolute top-4 right-4"
+                            className="text-rose-500 hover:text-rose-700 transition absolute top-4 right-4 cursor-pointer"
                             title="Delete Question"
                           >
                             <Trash2 size={18} />
                           </button>
 
                           <div className="flex items-center gap-2">
-                            <span className="bg-purple-100 text-purple-700 text-xs font-black px-3 py-1 rounded-full uppercase">
+                            <span className="bg-indigo-50 text-indigo-700 text-xs font-black px-3 py-1 rounded-full uppercase ring-1 ring-indigo-100/50">
                               Q {index + 1}
                             </span>
                           </div>
 
                           <div>
-                            <Label className="text-slate-700 font-bold mb-2 block text-xs uppercase tracking-wider">Question Text</Label>
+                            <Label className="student-label block mb-2">Question Text</Label>
                             <Input
                               value={q.questionText}
                               onChange={(e) => updateQuestionField(index, 'questionText', e.target.value)}
                               placeholder="Enter the question here"
-                              className="bg-white border-slate-200"
+                              className="student-input bg-white h-12 px-4"
                             />
                           </div>
 
                           <div>
-                            <Label className="text-slate-700 font-bold mb-2 block text-xs uppercase tracking-wider">Options & Correct Answer</Label>
+                            <Label className="student-label block mb-2">Options & Correct Answer</Label>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               {q.options.map((opt: string, optIndex: number) => (
-                                <div key={optIndex} className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-100 shadow-sm focus-within:border-purple-300">
+                                <div key={optIndex} className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200/60 shadow-sm focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100">
                                   <input
                                     type="radio"
                                     name={`correct-${q.id || index}`}
                                     checked={q.correctOptionIndex === optIndex}
                                     onChange={() => updateQuestionField(index, 'correctOptionIndex', optIndex)}
-                                    className="w-4 h-4 text-purple-600 focus:ring-purple-500 cursor-pointer accent-purple-600"
+                                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600 shrink-0"
                                   />
                                   <span className="text-xs font-black text-slate-400">
                                     {String.fromCharCode(65 + optIndex)}
@@ -796,7 +797,7 @@ export default function ManageDailyVideos() {
                   <button
                     type="button"
                     onClick={addEmptyQuestion}
-                    className="w-full py-4 border-2 border-dashed border-slate-200 hover:border-purple-300 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest text-slate-500 hover:text-purple-600 hover:bg-purple-50 transition"
+                    className="w-full py-4 border-2 border-dashed border-slate-200 hover:border-blue-300 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition cursor-pointer"
                   >
                     <Plus size={16} />
                     Add Question
@@ -805,19 +806,18 @@ export default function ManageDailyVideos() {
               )}
             </div>
 
-            <div className="p-6 border-t border-slate-100 flex gap-4 bg-slate-50">
+            <div className="p-6 border-t border-slate-100/50 flex gap-4 bg-slate-50/50">
               <Button
                 onClick={handleSaveTest}
                 disabled={savingTest || loadingTest}
-                className="bg-purple-600 hover:bg-purple-700 text-white font-black flex-1 h-12 rounded-xl"
+                className="student-button-primary bg-blue-600 hover:bg-blue-700 text-white font-black flex-1 h-12 rounded-xl"
               >
                 {savingTest ? 'Saving...' : 'Save Test'}
               </Button>
               <Button
                 onClick={() => setShowTestModal(false)}
                 disabled={savingTest}
-                variant="outline"
-                className="border-slate-200 hover:bg-slate-100 font-bold h-12 rounded-xl"
+                className="student-button-soft font-bold h-12 px-6"
               >
                 Cancel
               </Button>

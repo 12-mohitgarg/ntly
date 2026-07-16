@@ -130,35 +130,28 @@ export default function ManageSubjects() {
   };
 
   if (loading) {
-    return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-slate-500 font-bold">Loading subjects...</span>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-slate-900 text-white p-6 shadow-lg">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button onClick={() => navigate('/admin-dashboard')} variant="ghost" className="text-white hover:bg-white/10">
-              <ArrowLeft size={20} />
-            </Button>
-            <h1 className="text-2xl font-black tracking-tighter">Manage Subjects</h1>
-          </div>
-        </div>
-      </header>
-
-      {/* Content */}
-      <div className="max-w-7xl mx-auto p-8">
+    <div className="space-y-6">
         {/* Add New Subject Form */}
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6 mb-8">
-          <h2 className="text-xl font-black text-slate-900 mb-4">Add New Subject</h2>
-          <form onSubmit={handleAddSubject} className="flex gap-4">
-            <div className="w-64">
-              <Label className="uppercase tracking-[0.2em] text-[10px] font-black text-slate-400 mb-2 block">Select Branch</Label>
+        <div className="student-card p-6 bg-white/80">
+          <h2 className="text-xl font-black text-slate-900 mb-4 gradient-text">Add New Subject</h2>
+          <form onSubmit={handleAddSubject} className="flex flex-col sm:flex-row gap-4 items-end">
+            <div className="w-full sm:w-64">
+              <Label className="student-label block mb-2">Select Branch</Label>
               <select
                 value={selectedDegree}
                 onChange={(e) => setSelectedDegree(e.target.value)}
-                className="w-full h-12 rounded-xl border border-slate-200 px-4 font-bold"
+                className="student-input h-14 px-4"
                 required
               >
                 <option value="">Select Branch</option>
@@ -167,27 +160,27 @@ export default function ManageSubjects() {
                 ))}
               </select>
             </div>
-            <div className="flex-1">
-              <Label className="uppercase tracking-[0.2em] text-[10px] font-black text-slate-400 mb-2 block">Subject Name</Label>
+            <div className="flex-1 w-full">
+              <Label className="student-label block mb-2">Subject Name</Label>
               <Input
                 type="text"
                 value={newSubject}
                 onChange={(e) => setNewSubject(e.target.value)}
-                className="h-12 rounded-xl"
+                className="student-input"
                 placeholder="Enter subject name"
               />
             </div>
-            <Button type="submit" className="h-12 px-6 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl mt-6">
+            <Button type="submit" className="student-button-primary w-full sm:w-auto h-14 shadow-blue-500/10 cursor-pointer rounded-xl bg-blue-600 hover:bg-blue-700">
               <Plus size={20} />
-              Add
+              Add Subject
             </Button>
           </form>
         </div>
 
         {/* Degrees List */}
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-          <div className="p-6 border-b border-slate-100">
-            <h2 className="text-xl font-black text-slate-900">All Degrees ({degrees.length})</h2>
+        <div className="student-card bg-white/80 overflow-hidden">
+          <div className="p-6 border-b border-slate-100/50">
+            <h2 className="text-xl font-black text-slate-900 gradient-text">All Degrees ({degrees.length})</h2>
           </div>
 
           {degrees.length === 0 ? (
@@ -195,51 +188,51 @@ export default function ManageSubjects() {
               <p className="text-slate-500 font-bold">No degrees found</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-slate-100/50">
               {degrees.map((degree) => (
-                <div key={degree.id} className="p-6 hover:bg-slate-50 transition-colors">
+                <div key={degree.id} className="p-6 hover:bg-blue-50/10 transition-colors">
                   {editingDegreeId === degree.id ? (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-black text-slate-900">{degree.name}</h3>
+                        <h3 className="text-lg font-black text-slate-900 gradient-text">{degree.name}</h3>
                         <div className="flex items-center gap-2">
-                          <Button onClick={() => handleSave(degree.id)} className="h-10 px-4 bg-green-600 hover:bg-green-700 text-white rounded-xl">
+                          <Button onClick={() => handleSave(degree.id)} className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm transition-all active:scale-[0.98] cursor-pointer">
                             <Save size={16} />
                           </Button>
-                          <Button onClick={handleCancel} className="h-10 px-4 bg-slate-600 hover:bg-slate-700 text-white rounded-xl">
+                          <Button onClick={handleCancel} className="h-10 px-4 bg-slate-600 hover:bg-slate-700 text-white rounded-xl shadow-sm transition-all active:scale-[0.98] cursor-pointer">
                             <X size={16} />
                           </Button>
                         </div>
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {editSubjects.map((subject, index) => (
                           <div key={index} className="flex items-center gap-2">
                             <Input
                               type="text"
                               value={subject}
                               onChange={(e) => handleSubjectChange(index, e.target.value)}
-                              className="h-10 rounded-xl flex-1"
+                              className="student-input h-10 px-4 flex-1 rounded-xl border-slate-200/80"
                               placeholder="Subject name"
                             />
-                            <Button onClick={() => handleRemoveSubject(index)} className="h-10 px-3 bg-red-600 hover:bg-red-700 text-white rounded-xl">
+                            <Button onClick={() => handleRemoveSubject(index)} className="h-10 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm transition-all active:scale-[0.98] cursor-pointer shrink-0">
                               <Trash2 size={16} />
                             </Button>
                           </div>
                         ))}
-                        <Button onClick={handleAddSubjectInline} className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm">
-                          <Plus size={16} className="mr-2" />
+                        <Button onClick={handleAddSubjectInline} className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm shadow-blue-500/10 text-xs font-black uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5 mt-2">
+                          <Plus size={14} />
                           Add Subject
                         </Button>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex-1">
-                        <h3 className="text-lg font-black text-slate-900 mb-2">{degree.name}</h3>
+                        <h3 className="text-lg font-black text-slate-900 mb-3">{degree.name}</h3>
                         <div className="flex flex-wrap gap-2">
                           {degree.subjects.length > 0 ? (
                             degree.subjects.map((subject, index) => (
-                              <span key={index} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-bold">
+                              <span key={index} className="px-3 py-1 bg-blue-50 text-blue-700 rounded-xl text-xs font-black ring-1 ring-blue-100/80">
                                 {subject}
                               </span>
                             ))
@@ -248,8 +241,8 @@ export default function ManageSubjects() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <Button onClick={() => handleEdit(degree)} className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
+                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                        <Button onClick={() => handleEdit(degree)} className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm shadow-blue-600/10 transition-all active:scale-[0.98] cursor-pointer">
                           <Edit2 size={16} />
                         </Button>
                       </div>
@@ -260,7 +253,6 @@ export default function ManageSubjects() {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }

@@ -139,18 +139,21 @@ export default function Profile() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-12">
+    <div className="student-page max-w-5xl mx-auto">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <div>
-          <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter leading-tight mb-4 uppercase italic">Account / <span className="text-blue-600">Profile Settings</span></h1>
-          <p className="text-xl text-slate-500 font-bold italic leading-relaxed">Personalize your digital identity and subject selection.</p>
+        <div className="space-y-3">
+          <span className="student-kicker">Settings</span>
+          <h1 className="student-title">
+            Account / <span className="gradient-text">Profile Settings</span>
+          </h1>
+          <p className="student-subtitle">Personalize your digital identity and subject selection.</p>
         </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           {success && (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="px-8 py-4 bg-emerald-50 text-emerald-600 rounded-2xl font-black text-xs uppercase tracking-widest border border-emerald-100 shadow-xl shadow-emerald-500/10"
+              className="px-6 py-3 bg-emerald-50 text-emerald-600 rounded-2xl font-black text-xs uppercase tracking-widest border border-emerald-100 shadow-xl shadow-emerald-500/10"
             >
               Changes Saved
             </motion.div>
@@ -158,119 +161,93 @@ export default function Profile() {
           <Button
             type="button"
             onClick={() => setIsEditOpen(true)}
-            className="h-14 px-7 bg-blue-600 hover:bg-slate-900 text-white font-black text-xs uppercase tracking-[0.18em] rounded-2xl flex items-center gap-3"
+            className="student-button-primary min-h-[48px] px-6"
           >
-            <Edit2 size={18} />
+            <Edit2 size={16} />
             Edit Profile
           </Button>
         </div>
       </header>
 
-      {/* {notifications.length > 0 && (
-        <section className="bg-white p-8 rounded-[2rem] border border-blue-100 shadow-2xl shadow-blue-600/[0.04]">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-11 h-11 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
-              <Bell size={22} />
-            </div>
-            <h2 className="text-xl font-black text-slate-900 uppercase italic">Notifications</h2>
-          </div>
-          <div className="space-y-4">
-            {notifications.map((notification) => (
-              <article key={notification.id} className="border-l-4 border-blue-600 bg-slate-50 p-5 rounded-r-2xl">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                  <h3 className="font-black text-slate-900">{notification.title}</h3>
-                  {notification.createdAt && (
-                    <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
-                      {new Date(notification.createdAt).toLocaleDateString('en-IN')}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-2 text-sm font-bold leading-6 text-slate-600 whitespace-pre-line">{notification.message}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-      )} */}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10">
         {/* Left Column: Avatar & Summary */}
-        <div className="space-y-8">
-          <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-2xl shadow-slate-900/[0.02] text-center relative group overflow-hidden">
+        <div className="space-y-6 sm:space-y-8">
+          <div className="student-card p-10 text-center relative group overflow-hidden">
             <div className="relative z-10">
-              <div className="w-36 h-36 bg-blue-600 rounded-[2.5rem] mx-auto mb-8 border-8 border-white shadow-2xl flex items-center justify-center text-6xl font-black text-white relative transition-transform group-hover:rotate-6">
+              <div className="w-32 h-32 bg-indigo-600 rounded-[2rem] mx-auto mb-6 border-8 border-white shadow-2xl flex items-center justify-center text-5xl font-black text-white relative transition-transform group-hover:rotate-6">
                 {profile?.fullName.charAt(0)}
-                <button className="absolute -bottom-4 -right-4 w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center border-4 border-white shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300">
-                  <Camera size={20} />
+                <button className="absolute -bottom-3 -right-3 w-10 h-10 bg-slate-900 text-white rounded-2xl flex items-center justify-center border-4 border-white shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300">
+                  <Camera size={16} />
                 </button>
               </div>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tighter mb-2 uppercase italic">{profile?.fullName}</h3>
-              <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] mb-8 italic">{profile?.universityRoll}</p>
+              <h3 className="text-xl font-black text-slate-900 tracking-tight mb-1 uppercase italic">{profile?.fullName}</h3>
+              <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.25em] mb-6 italic">{profile?.universityRoll}</p>
 
-              <div className="px-6 py-3 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest inline-block border border-blue-100 shadow-xl shadow-blue-500/5 italic">
+              <div className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[9px] font-black uppercase tracking-widest inline-block border border-indigo-100 shadow-xl shadow-indigo-500/5 italic">
                 {profile?.isPaid ? 'Verified Industry Scholar' : 'Baseline Account'}
               </div>
             </div>
-            <div className="absolute top-0 left-0 w-32 h-32 bg-slate-50 rounded-full -translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute top-0 left-0 w-24 h-24 bg-slate-50 rounded-full -translate-x-1/2 -translate-y-1/2" />
           </div>
 
-          <div className="bg-slate-900 p-10 rounded-[3.5rem] text-white space-y-8 shadow-2xl shadow-slate-900/40 relative overflow-hidden group">
-            <div className="flex items-center gap-6 relative z-10">
-              <div className="w-12 h-12 bg-white/10 border border-white/5 rounded-2xl flex items-center justify-center text-blue-400 shadow-inner group-hover:scale-110 transition-transform">
-                <ShieldCheck size={24} />
+          <div className="student-panel p-8 space-y-6 relative overflow-hidden group">
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="w-10 h-10 bg-white/10 border border-white/5 rounded-2xl flex items-center justify-center text-indigo-400 shadow-inner group-hover:scale-110 transition-transform">
+                <ShieldCheck size={20} />
               </div>
               <div>
-                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] leading-none mb-1">Authorization</p>
-                <p className="text-sm font-black tracking-widest uppercase italic">Fully Verified</p>
+                <p className="text-[9px] text-slate-500 font-black uppercase tracking-wider leading-none mb-1">Authorization</p>
+                <p className="text-xs font-black tracking-wider uppercase italic">Fully Verified</p>
               </div>
             </div>
-            <div className="flex items-center gap-6 relative z-10">
-              <div className="w-12 h-12 bg-white/10 border border-white/5 rounded-2xl flex items-center justify-center text-emerald-400 shadow-inner group-hover:scale-110 transition-transform">
-                <CreditCard size={24} />
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="w-10 h-10 bg-white/10 border border-white/5 rounded-2xl flex items-center justify-center text-emerald-400 shadow-inner group-hover:scale-110 transition-transform">
+                <CreditCard size={20} />
               </div>
               <div>
-                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] leading-none mb-1">Escrow Balance</p>
-                <p className="text-sm font-black tracking-widest uppercase italic text-emerald-400">₹1000.00 IN</p>
+                <p className="text-[9px] text-slate-500 font-black uppercase tracking-wider leading-none mb-1">Escrow Balance</p>
+                <p className="text-xs font-black tracking-wider uppercase italic text-emerald-400">₹1000.00 IN</p>
               </div>
             </div>
-            <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-blue-600/5 blur-3xl rounded-full" />
+            <div className="absolute -bottom-10 -right-10 w-36 h-36 bg-indigo-600/5 blur-2xl rounded-full" />
           </div>
         </div>
 
         {/* Right Column: Profile Details */}
-        <div className="md:col-span-2 space-y-10">
-          <div className="bg-white p-10 lg:p-14 rounded-[3.5rem] border border-slate-100 shadow-2xl shadow-slate-900/[0.02]">
-            <div className="flex items-center justify-between gap-4 mb-10">
-              <h4 className="text-2xl font-black text-slate-900 flex items-center gap-4 uppercase italic">
-                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 shadow-inner">
-                  <UserCircle size={20} className="text-blue-600" />
+        <div className="md:col-span-2 space-y-8">
+          <div className="student-card p-6 sm:p-10">
+            <div className="flex items-center justify-between gap-4 mb-8">
+              <h4 className="text-xl font-black text-slate-900 flex items-center gap-3 uppercase italic">
+                <div className="w-9 h-9 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 shadow-inner">
+                  <UserCircle size={18} className="text-indigo-600" />
                 </div>
                 Personal Details
               </h4>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
                 ['Full Legal Name', profile?.fullName || '-'],
                 ['Personal Contact', profile?.contactNumber || '-'],
                 ['Email Address', profile?.email || '-'],
                 ['Industry Domain', profile?.internshipDomain || '-']
               ].map(([label, value]) => (
-                <div key={label} className="rounded-2xl bg-slate-50 p-5 border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{label}</p>
-                  <p className="text-base font-black text-slate-900 break-words">{value}</p>
+                <div key={label} className="rounded-2xl bg-slate-50/50 p-4 sm:p-5 border border-slate-100">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1.5">{label}</p>
+                  <p className="text-sm font-black text-slate-900 break-words">{value}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="bg-white p-10 lg:p-14 rounded-[3.5rem] border border-slate-100 shadow-2xl shadow-slate-900/[0.02] relative overflow-hidden group">
+          <div className="student-card p-6 sm:p-10 relative overflow-hidden group">
             <div className="relative z-10">
-              <h4 className="text-2xl font-black text-slate-900 mb-10 flex items-center gap-4 uppercase italic">
-                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 shadow-inner group-hover:bg-blue-50 transition-colors">
-                  <BookMarked size={20} className="text-slate-400 group-hover:text-blue-600" />
+              <h4 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3 uppercase italic">
+                <div className="w-9 h-9 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 shadow-inner group-hover:bg-indigo-50 transition-colors">
+                  <BookMarked size={18} className="text-slate-400 group-hover:text-indigo-600" />
                 </div>
                 Academic Registry
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
                   ['University', profile?.university || '-'],
                   ['College', profile?.college || '-'],
@@ -281,14 +258,14 @@ export default function Profile() {
                   ['University Roll Number', profile?.universityRoll || '-'],
                   ['Semester', profile?.semester || '-']
                 ].map(([label, value]) => (
-                  <div key={label} className="rounded-2xl bg-slate-50 p-5 border border-slate-100">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{label}</p>
-                    <p className="text-base font-black text-slate-900 break-words">{value}</p>
+                  <div key={label} className="rounded-2xl bg-slate-50/50 p-4 sm:p-5 border border-slate-100">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1.5">{label}</p>
+                    <p className="text-sm font-black text-slate-900 break-words">{value}</p>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full translate-x-1/2 -translate-y-1/2 -z-0" />
+            <div className="absolute top-0 right-0 w-48 h-48 bg-slate-50 rounded-full translate-x-1/2 -translate-y-1/2 -z-0" />
           </div>
         </div>
       </div>
@@ -303,48 +280,48 @@ export default function Profile() {
           <form onSubmit={handleUpdate} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-2">
-                <Label>Full Legal Name</Label>
+                <Label className="student-label">Full Legal Name</Label>
                 <Input
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  className="h-12 rounded-2xl bg-slate-50 border-transparent font-bold"
+                  className="student-input h-12 px-4"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Personal Contact</Label>
+                <Label className="student-label">Personal Contact</Label>
                 <Input
                   value={formData.contactNumber}
                   onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
-                  className="h-12 rounded-2xl bg-slate-50 border-transparent font-bold"
+                  className="student-input h-12 px-4"
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label>Email Address</Label>
+                <Label className="student-label">Email Address</Label>
                 <div className="relative">
                   <Input
                     disabled
                     value={profile?.email || ''}
-                    className="h-12 rounded-2xl bg-slate-100 border-transparent pl-12 font-bold text-slate-400"
+                    className="student-input h-12 pl-12 text-slate-400 bg-slate-50"
                   />
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 </div>
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label>Chosen Industry Domain</Label>
+                <Label className="student-label">Chosen Industry Domain</Label>
                 <select
                   value={formData.internshipDomain}
                   onChange={(e) => setFormData({ ...formData, internshipDomain: e.target.value })}
-                  className="w-full h-12 rounded-2xl bg-slate-50 border-transparent px-4 font-bold text-slate-900"
+                  className="student-input h-12 px-4"
                 >
                   {INTERNSHIP_DOMAINS.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>Degree</Label>
+                <Label className="student-label">Degree</Label>
                 <select
                   value={formData.degree}
                   onChange={(e) => setFormData({ ...formData, degree: e.target.value })}
-                  className="w-full h-12 rounded-2xl bg-slate-50 px-4 font-bold"
+                  className="student-input h-12 px-4"
                 >
                   <option value="">Select Degree</option>
                   {DEGREES.map((d) => (
@@ -353,11 +330,11 @@ export default function Profile() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>Department</Label>
+                <Label className="student-label">Department</Label>
                 <select
                   value={formData.department}
                   onChange={(e) => setFormData({ ...formData, department: e.target.value, subject: '' })}
-                  className="w-full h-12 rounded-2xl bg-slate-50 px-4 font-bold"
+                  className="student-input h-12 px-4"
                 >
                   <option value="">Select Department</option>
                   {degrees.map((d) => (
@@ -366,11 +343,11 @@ export default function Profile() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>Subject</Label>
+                <Label className="student-label">Subject</Label>
                 <select
                   value={formData.subject}
                   onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  className="w-full h-12 rounded-2xl bg-slate-50 px-4 font-bold"
+                  className="student-input h-12 px-4"
                 >
                   <option value="">Select Subject</option>
                   {formData.department &&
@@ -380,11 +357,11 @@ export default function Profile() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>Session</Label>
+                <Label className="student-label">Session</Label>
                 <select
                   value={formData.session}
                   onChange={(e) => setFormData({ ...formData, session: e.target.value })}
-                  className="w-full h-12 rounded-2xl bg-slate-50 px-4 font-bold"
+                  className="student-input h-12 px-4"
                 >
                   <option value="">Select Session</option>
                   {SESSIONS.map((s) => (
@@ -393,20 +370,20 @@ export default function Profile() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>University Roll Number</Label>
+                <Label className="student-label">University Roll Number</Label>
                 <Input
                   value={formData.universityRoll}
                   onChange={(e) => setFormData({ ...formData, universityRoll: e.target.value })}
                   placeholder="Enter Roll Number"
-                  className="h-12 rounded-2xl bg-slate-50 border-transparent px-4 font-bold"
+                  className="student-input h-12 px-4"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Semester</Label>
+                <Label className="student-label">Semester</Label>
                 <select
                   value={formData.semester}
                   onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
-                  className="w-full h-12 rounded-2xl bg-slate-50 px-4 font-bold"
+                  className="student-input h-12 px-4"
                 >
                   <option value="">Select Semester</option>
                   {SEMESTERS.map((s) => (
@@ -421,17 +398,17 @@ export default function Profile() {
                 type="button"
                 variant="outline"
                 onClick={() => setIsEditOpen(false)}
-                className="h-12 px-6 font-black"
+                className="student-button-soft h-12 px-6"
               >
-                <X size={18} />
+                <X size={16} />
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={loading}
-                className="h-12 px-7 bg-blue-600 hover:bg-slate-900 text-white font-black"
+                className="student-button-primary h-12 px-7"
               >
-                <Save size={18} />
+                <Save size={16} />
                 {loading ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>

@@ -125,45 +125,38 @@ export default function ManageColleges() {
   };
 
   if (loading) {
-    return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-slate-500 font-bold">Loading colleges...</span>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-slate-900 text-white p-6 shadow-lg">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button onClick={() => navigate('/admin-dashboard')} variant="ghost" className="text-white hover:bg-white/10">
-              <ArrowLeft size={20} />
-            </Button>
-            <h1 className="text-2xl font-black tracking-tighter">Manage Colleges</h1>
-          </div>
-        </div>
-      </header>
-
-      {/* Content */}
-      <div className="max-w-7xl mx-auto p-8">
+    <div className="space-y-6">
         {/* Add New College Form */}
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6 mb-8">
-          <h2 className="text-xl font-black text-slate-900 mb-4">Add New College</h2>
-          <form onSubmit={handleAdd} className="flex gap-4">
-            <div className="flex-1">
-              <Label className="uppercase tracking-[0.2em] text-[10px] font-black text-slate-400 mb-2 block">College Name</Label>
+        <div className="student-card p-6 bg-white/80">
+          <h2 className="text-xl font-black text-slate-900 mb-4 gradient-text">Add New College</h2>
+          <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="flex-1 w-full">
+              <Label className="student-label block mb-2">College Name</Label>
               <Input
                 type="text"
                 value={newCollegeName}
                 onChange={(e) => setNewCollegeName(e.target.value)}
-                className="h-12 rounded-xl"
+                className="student-input"
                 placeholder="Enter college name"
               />
             </div>
-            <div className="w-64">
-              <Label className="uppercase tracking-[0.2em] text-[10px] font-black text-slate-400 mb-2 block">Select District</Label>
+            <div className="w-full md:w-64">
+              <Label className="student-label block mb-2">Select District</Label>
               <select
                 value={newDistrictId}
                 onChange={(e) => setNewDistrictId(e.target.value)}
-                className="w-full h-12 rounded-xl border border-slate-200 px-4 font-bold"
+                className="student-input h-14 px-4"
                 required
               >
                 <option value="">Select District</option>
@@ -172,27 +165,27 @@ export default function ManageColleges() {
                 ))}
               </select>
             </div>
-            <div className="w-32">
-              <Label className="uppercase tracking-[0.2em] text-[10px] font-black text-slate-400 mb-2 block">Price (₹)</Label>
+            <div className="w-full md:w-32">
+              <Label className="student-label block mb-2">Price (₹)</Label>
               <Input
                 type="number"
                 value={newPrice}
                 onChange={(e) => setNewPrice(e.target.value)}
-                className="h-12 rounded-xl"
+                className="student-input"
                 placeholder="1000"
               />
             </div>
-            <Button type="submit" className="h-12 px-6 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-xl mt-6">
+            <Button type="submit" className="student-button-primary w-full md:w-auto h-14 shadow-blue-500/10 cursor-pointer rounded-xl bg-blue-600 hover:bg-blue-700">
               <Plus size={20} />
-              Add
+              Add College
             </Button>
           </form>
         </div>
 
         {/* Colleges List */}
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-          <div className="p-6 border-b border-slate-100">
-            <h2 className="text-xl font-black text-slate-900">All Colleges ({colleges.length})</h2>
+        <div className="student-card bg-white/80 overflow-hidden">
+          <div className="p-6 border-b border-slate-100/50">
+            <h2 className="text-xl font-black text-slate-900 gradient-text">All Colleges ({colleges.length})</h2>
           </div>
 
           {colleges.length === 0 ? (
@@ -200,22 +193,24 @@ export default function ManageColleges() {
               <p className="text-slate-500 font-bold">No colleges found</p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-slate-100/50">
               {colleges.map((college) => (
-                <div key={college.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                <div key={college.id} className="p-4 sm:px-6 flex items-center justify-between hover:bg-blue-50/10 transition-colors">
                   {editingId === college.id ? (
-                    <div className="flex items-center gap-4 flex-1">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1">
                       <Input
                         type="text"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        className="h-10 rounded-xl flex-1"
+                        className="student-input h-10 px-4 w-full sm:w-auto rounded-xl border-slate-200/80"
                       />
                       <select
                         value={editDistrictId}
                         onChange={(e) => setEditDistrictId(e.target.value)}
-                        className="h-10 rounded-xl border border-slate-200 px-4 font-bold w-48"
+                        className="student-input h-10 px-4 w-full sm:w-48 rounded-xl border-slate-200/80 bg-white"
+                        required
                       >
+                        <option value="">Select District</option>
                         {districts.map(district => (
                           <option key={district.id} value={district.id}>{district.name}</option>
                         ))}
@@ -224,28 +219,32 @@ export default function ManageColleges() {
                         type="number"
                         value={editPrice}
                         onChange={(e) => setEditPrice(e.target.value)}
-                        className="h-10 rounded-xl w-24"
+                        className="student-input h-10 px-4 w-full sm:w-24 rounded-xl border-slate-200/80"
                         placeholder="1000"
                       />
-                      <Button onClick={() => handleSave(college.id)} className="h-10 px-4 bg-green-600 hover:bg-green-700 text-white rounded-xl">
-                        <Save size={16} />
-                      </Button>
-                      <Button onClick={handleCancel} className="h-10 px-4 bg-slate-600 hover:bg-slate-700 text-white rounded-xl">
-                        <X size={16} />
-                      </Button>
+                      <div className="flex gap-2 shrink-0">
+                        <Button onClick={() => handleSave(college.id)} className="h-10 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm transition-all active:scale-[0.98] cursor-pointer">
+                          <Save size={16} />
+                        </Button>
+                        <Button onClick={handleCancel} className="h-10 px-4 bg-slate-600 hover:bg-slate-700 text-white rounded-xl shadow-sm transition-all active:scale-[0.98] cursor-pointer">
+                          <X size={16} />
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <>
                       <div>
-                        <span className="font-bold text-slate-900">{college.name}</span>
-                        <span className="text-slate-500 text-sm ml-2">({getDistrictName(college.districtId)})</span>
-                        <span className="text-blue-600 text-sm ml-2 font-bold">₹{college.price}</span>
+                        <span className="font-bold text-slate-900 text-base">{college.name}</span>
+                        <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ml-2 ring-1 ring-blue-100/50">
+                          {getDistrictName(college.districtId)}
+                        </span>
+                        <span className="text-emerald-600 text-sm ml-2 font-black">₹{college.price}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button onClick={() => handleEdit(college)} className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button onClick={() => handleEdit(college)} className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm shadow-blue-600/10 transition-all active:scale-[0.98] cursor-pointer">
                           <Edit2 size={16} />
                         </Button>
-                        <Button onClick={() => handleDelete(college.id)} className="h-10 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl">
+                        <Button onClick={() => handleDelete(college.id)} className="h-10 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm shadow-rose-600/10 transition-all active:scale-[0.98] cursor-pointer">
                           <Trash2 size={16} />
                         </Button>
                       </div>
@@ -256,7 +255,6 @@ export default function ManageColleges() {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }

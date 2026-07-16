@@ -66,68 +66,70 @@ export default function Certifications() {
   ];
 
   return (
-    <div className="space-y-12">
+    <div className="student-page">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <div>
-          <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter leading-tight mb-4 uppercase italic">Credentials / <span className="text-blue-600">Verification</span></h1>
-          <p className="text-xl text-slate-500 font-bold italic leading-relaxed max-w-2xl">"Official industry-recognized documentation automatically generated upon completion of requirements."</p>
+        <div className="space-y-3">
+          <span className="student-kicker">Verification</span>
+          <h1 className="student-title">
+            Credentials / <span className="gradient-text">Verification</span>
+          </h1>
+          <p className="student-subtitle">Official industry-recognized documentation automatically generated upon completion of requirements.</p>
         </div>
-        <div className="p-6 px-8 bg-blue-50 text-blue-600 rounded-[2rem] border border-blue-100 flex items-center gap-4 shadow-xl shadow-blue-600/5 relative overflow-hidden group">
-          <ShieldCheck size={32} className="relative z-10" />
-          <span className="text-xs font-black uppercase tracking-[0.2em] leading-tight relative z-10">UGC Optimized <br />Platform</span>
-          <div className="absolute top-0 right-0 w-12 h-12 bg-blue-600/5 rounded-full translate-x-1/2 -translate-y-1/2 group-hover:scale-150 transition-transform" />
+        <div className="student-card p-5 px-6 flex items-center gap-4 relative overflow-hidden group min-w-[200px]">
+          <ShieldCheck size={28} className="text-indigo-600 relative z-10" />
+          <span className="text-[10px] font-black uppercase tracking-[0.18em] leading-tight relative z-10 text-slate-700">UGC Optimized <br />Platform</span>
+          <div className="absolute top-0 right-0 w-12 h-12 bg-indigo-600/5 rounded-full translate-x-1/2 -translate-y-1/2 group-hover:scale-150 transition-transform" />
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {docs.map((doc, i) => (
           <motion.div
             key={doc.name}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className={`p-10 rounded-[3.5rem] border shadow-2xl shadow-slate-900/[0.02] transition-all duration-500 flex flex-col justify-between group relative overflow-hidden ${doc.ready ? 'bg-white border-slate-100 hover:shadow-2xl hover:border-blue-100' : 'bg-slate-50 border-slate-100 opacity-60 grayscale-[0.5]'}`}
+            transition={{ delay: i * 0.05 }}
+            className={`student-card p-8 flex flex-col justify-between group relative overflow-hidden ${doc.ready ? 'border-slate-100 hover:border-indigo-500/20' : 'opacity-55 scale-[0.98] blur-[0.5px] cursor-not-allowed border-slate-200/40 bg-slate-50/50'}`}
           >
             <div>
-              <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center mb-10 border border-white shadow-xl transition-transform group-hover:scale-110 relative z-10 ${doc.ready ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
-                <doc.icon size={36} />
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 border border-white shadow-md transition-transform group-hover:scale-105 relative z-10 ${doc.ready ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                <doc.icon size={24} />
               </div>
-              <h3 className="text-3xl font-black text-slate-900 mb-6 tracking-tighter uppercase italic leading-none">{doc.name}</h3>
-              <p className="text-slate-500 font-bold italic mb-12 leading-relaxed text-lg">{doc.desc}</p>
+              <h3 className="text-xl font-black text-slate-900 mb-2 uppercase italic leading-tight">{doc.name}</h3>
+              <p className="text-slate-500 font-semibold italic mb-8 leading-relaxed text-sm">{doc.desc}</p>
             </div>
 
             {doc.ready ? (
               <button
                 onClick={() => generatePDF(doc.type)}
-                className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-blue-600 transition-all duration-500 shadow-xl flex items-center justify-center gap-3 group/btn relative z-10"
+                className="student-button-primary w-full h-11 text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 group/btn relative z-10"
               >
-                <Download size={20} className="group-hover/btn:translate-y-1 transition-transform" />
+                <Download size={16} className="group-hover/btn:translate-y-0.5 transition-transform" />
                 Download PDF
               </button>
             ) : (
-              <div className="flex items-center gap-3 text-slate-400 font-black italic text-xs uppercase tracking-widest relative z-10">
-                <div className="w-2 h-2 bg-slate-300 rounded-full" />
+              <div className="flex items-center gap-2.5 text-slate-400 font-black italic text-[10px] uppercase tracking-widest relative z-10">
+                <div className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
                 Locked: Requires Completion
               </div>
             )}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full translate-x-1/2 -translate-y-1/2 -z-0" />
+            <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-full translate-x-1/2 -translate-y-1/2 -z-0" />
           </motion.div>
         ))}
       </div>
 
-      <div className="bg-slate-900 p-12 lg:p-16 rounded-[4rem] mt-16 text-white relative overflow-hidden shadow-2xl shadow-slate-900/40 group">
-        <div className="relative z-10 max-w-2xl">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mb-10 shadow-xl shadow-blue-600/20 group-hover:rotate-12 transition-transform">
-            <Award size={32} />
+      <div className="student-panel p-8 sm:p-10 lg:p-12 mt-12 text-white relative overflow-hidden group">
+        <div className="relative z-10 max-w-2xl space-y-6">
+          <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-6 transition-transform">
+            <Award size={24} />
           </div>
-          <h2 className="text-4xl font-black mb-8 tracking-tighter uppercase italic">Need Physical <br />Artifacts?</h2>
-          <p className="text-slate-400 text-xl mb-12 leading-relaxed italic font-bold">"Verified physical certificates signed by industry representatives can be requested post-successful completion. Global courier tracking included."</p>
-          <button className="px-12 py-5 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all duration-500 shadow-2xl">Request Physical Hardcopy</button>
+          <h2 className="text-3xl font-black tracking-tighter uppercase italic leading-tight">Need Physical <br />Artifacts?</h2>
+          <p className="text-slate-300 text-base leading-relaxed italic font-semibold">Verified physical certificates signed by industry representatives can be requested post-successful completion. Global courier tracking included.</p>
+          <button className="student-button-primary bg-white text-slate-900 border border-slate-100 hover:bg-slate-50 min-h-[44px] text-[10px] px-8">Request Physical Hardcopy</button>
         </div>
-        <Award size={300} className="absolute -right-20 -bottom-20 text-blue-600/10 opacity-40 rotate-[15deg] group-hover:rotate-[25deg] transition-transform duration-1000" />
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-blue-600/5 blur-[100px] rounded-full pointer-events-none" />
+        <Award size={200} className="absolute -right-10 -bottom-10 text-indigo-500/10 opacity-40 rotate-[15deg] group-hover:rotate-[25deg] transition-transform duration-1000" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-80 h-80 bg-indigo-600/5 blur-[80px] rounded-full pointer-events-none" />
       </div>
     </div>
-
   );
 }

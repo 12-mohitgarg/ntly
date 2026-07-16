@@ -808,153 +808,86 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-slate-900 text-white p-6 shadow-lg">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
-              <Users size={24} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tighter">Admin Dashboard</h1>
-              <p className="text-slate-400 text-sm font-bold">{adminProfile?.email}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link to="/admin-dashboard">
-              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
-                <LayoutDashboard size={18} />
-                Dashboard
-              </Button>
-            </Link>
-            <Link to="/admin/districts">
-              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
-                <MapPin size={18} />
-                Districts
-              </Button>
-            </Link>
-            <Link to="/admin/colleges">
-              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
-                <GraduationCap size={18} />
-                Colleges
-              </Button>
-            </Link>
-            <Link to="/admin/courses">
-              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
-                <BookOpen size={18} />
-                Courses
-              </Button>
-            </Link>
-            <Link to="/admin/universities">
-              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
-                <Building2 size={18} />
-                Universities
-              </Button>
-            </Link>
-            <Link to="/admin/subjects">
-              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
-                <List size={18} />
-                Subjects
-              </Button>
-            </Link>
-            <Link to="/admin/daily-videos">
-              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
-                <Youtube size={18} />
-                Daily Videos
-              </Button>
-            </Link>
-            <Button
-              onClick={handleLogout}
-              variant="ghost"
-              className="text-white hover:bg-white/10 flex items-center gap-2"
-            >
-              <LogOut size={18} />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Content */}
-      <div className="max-w-7xl mx-auto p-8">
-        <Tabs defaultValue="dashboard" className="gap-6 flex-col">
-          <TabsList className="bg-white border border-slate-100 shadow-lg h-12 p-1">
-            <TabsTrigger value="dashboard" className="px-6 py-2 font-black">
-              <LayoutDashboard size={16} />
+    <div className="space-y-6">
+      <Tabs defaultValue="dashboard" className="gap-6 flex-col">
+          <TabsList className="flex flex-wrap h-auto bg-slate-100 p-1 rounded-2xl gap-1 justify-start border border-slate-200/50 shadow-sm max-w-full overflow-x-auto">
+            <TabsTrigger value="dashboard" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+              <LayoutDashboard size={14} />
               Dashboard
             </TabsTrigger>
-            {/* <Button
-              type="button"
-              onClick={handleBackupFirestore}
-              disabled={backupLoading}
-              className="h-10 px-4 font-black flex items-center gap-2"
-            >
-              <Download size={16} />
-              {backupLoading ? 'Backing up...' : 'Backup'}
-            </Button> */}
-            <TabsTrigger value="teachers" className="px-6 py-2 font-black">
-              <UserPlus size={16} />
+            <TabsTrigger value="teachers" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+              <UserPlus size={14} />
               Teachers
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="px-6 py-2 font-black">
-              <Bell size={16} />
+            <TabsTrigger value="notifications" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+              <Bell size={14} />
               Notifications
             </TabsTrigger>
-            <TabsTrigger value="reports" className="px-6 py-2 font-black">
-              <FileText size={16} />
+            <TabsTrigger value="reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+              <FileText size={14} />
               Internship Reports
             </TabsTrigger>
-            <TabsTrigger value="student-reports" className="px-6 py-2 font-black">
-              <Upload size={16} />
+            <TabsTrigger value="student-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+              <Upload size={14} />
               Assignments
             </TabsTrigger>
-            {/* <TabsTrigger value="college-export" className="px-6 py-2 font-black">
-              <Download size={16} />
-              College Export
-            </TabsTrigger> */}
           </TabsList>
 
-          <TabsContent value="dashboard">
+          <TabsContent value="dashboard" className="space-y-8 mt-4">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="student-card p-6 bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 border-indigo-500/15 relative overflow-hidden group">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-indigo-600/10 rounded-xl flex items-center justify-center text-indigo-600 shadow-inner">
+                    <Users size={20} />
+                  </div>
+                  <span className="text-slate-500 font-black uppercase tracking-wider text-[10px]">Total Users</span>
+                </div>
+                <p className="text-3xl sm:text-4xl font-black text-slate-900">{users.length}</p>
+                <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-indigo-600/5 rounded-full" />
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-                <div className="flex items-center gap-3 mb-2">
-                  <Users className="text-blue-600" size={24} />
-                  <span className="text-slate-500 font-black uppercase text-xs">Total Users</span>
+              <div className="student-card p-6 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/15 relative overflow-hidden group">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-emerald-600/10 rounded-xl flex items-center justify-center text-emerald-600 shadow-inner">
+                    <CreditCard size={20} />
+                  </div>
+                  <span className="text-slate-500 font-black uppercase tracking-wider text-[10px]">Total Amount</span>
                 </div>
-                <p className="text-4xl font-black text-slate-900">{users.length}</p>
+                <p className="text-3xl sm:text-4xl font-black text-slate-900">₹{totalAmount.toLocaleString()}</p>
+                <p className="text-[10px] text-slate-400 font-bold mt-1">{successfulUsersCount} successful payments</p>
+                <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-emerald-600/5 rounded-full" />
               </div>
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-                <div className="flex items-center gap-3 mb-2">
-                  <CreditCard className="text-green-600" size={24} />
-                  <span className="text-slate-500 font-black uppercase text-xs">Total Amount</span>
+
+              <div className="student-card p-6 bg-gradient-to-br from-teal-500/10 to-teal-600/5 border-teal-500/15 relative overflow-hidden group">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-teal-600/10 rounded-xl flex items-center justify-center text-teal-600 shadow-inner">
+                    <CheckCircle2 size={20} />
+                  </div>
+                  <span className="text-slate-500 font-black uppercase tracking-wider text-[10px]">Success</span>
                 </div>
-                <p className="text-4xl font-black text-slate-900">₹{totalAmount.toLocaleString()}</p>
-                <p className="text-sm text-slate-400 font-bold">{successfulUsersCount} successful users</p>
+                <p className="text-3xl sm:text-4xl font-black text-slate-900">{successfulUsersCount}</p>
+                <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-teal-600/5 rounded-full" />
               </div>
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-                <div className="flex items-center gap-3 mb-2">
-                  <CheckCircle2 className="text-green-600" size={24} />
-                  <span className="text-slate-500 font-black uppercase text-xs">Success</span>
+
+              <div className="student-card p-6 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/15 relative overflow-hidden group">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-amber-600/10 rounded-xl flex items-center justify-center text-amber-600 shadow-inner">
+                    <Clock size={20} />
+                  </div>
+                  <span className="text-slate-500 font-black uppercase tracking-wider text-[10px]">Pending</span>
                 </div>
-                <p className="text-4xl font-black text-slate-900">{successfulUsersCount}</p>
-              </div>
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-                <div className="flex items-center gap-3 mb-2">
-                  <Clock className="text-yellow-600" size={24} />
-                  <span className="text-slate-500 font-black uppercase text-xs">Pending</span>
-                </div>
-                <p className="text-4xl font-black text-slate-900">{pendingUsersCount}</p>
+                <p className="text-3xl sm:text-4xl font-black text-slate-900">{pendingUsersCount}</p>
+                <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-amber-600/5 rounded-full" />
               </div>
             </div>
             {/* FILTERS */}
             <div className="grid md:grid-cols-2 gap-6 mb-8">
 
               {/* COLLEGE FILTER */}
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+              <div className="student-card p-6 bg-white/80">
 
-                <h3 className="font-black text-slate-900 mb-4">
+                <h3 className="student-label mb-3">
                   Filter By College
                 </h3>
 
@@ -963,7 +896,7 @@ export default function AdminDashboard() {
                   onChange={(e) =>
                     setCollegeFilter(e.target.value)
                   }
-                  className="w-full h-14 rounded-xl border border-slate-200 px-4 font-bold"
+                  className="student-input"
                 >
 
                   <option value="">
@@ -986,9 +919,9 @@ export default function AdminDashboard() {
               </div>
 
               {/* DOMAIN FILTER */}
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+              <div className="student-card p-6 bg-white/80">
 
-                <h3 className="font-black text-slate-900 mb-4">
+                <h3 className="student-label mb-3">
                   Filter By Domain
                 </h3>
 
@@ -997,7 +930,7 @@ export default function AdminDashboard() {
                   onChange={(e) =>
                     setDomainFilter(e.target.value)
                   }
-                  className="w-full h-14 rounded-xl border border-slate-200 px-4 font-bold"
+                  className="student-input"
                 >
 
                   <option value="">
@@ -1025,27 +958,27 @@ export default function AdminDashboard() {
             <div className="grid md:grid-cols-2 gap-6 mb-8">
 
               {/* COLLEGE SUMMARY */}
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+              <div className="student-card p-6 bg-white/80">
 
-                <h3 className="text-xl font-black mb-4">
+                <h3 className="text-xl font-black mb-4 gradient-text">
                   College Wise Users
                 </h3>
 
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
 
                   {Object.entries(collegeCount).map(
                     ([college, count]) => (
 
                       <div
                         key={college}
-                        className="flex justify-between items-center border-b border-slate-100 pb-2"
+                        className="flex justify-between items-center border-b border-slate-100/50 pb-3 last:border-b-0"
                       >
 
-                        <span className="text-slate-700 font-bold">
+                        <span className="text-slate-700 font-bold text-sm">
                           {college}
                         </span>
 
-                        <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-black">
+                        <span className="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-black ring-1 ring-indigo-100/80">
                           {count as number}
                         </span>
 
@@ -1059,27 +992,27 @@ export default function AdminDashboard() {
               </div>
 
               {/* DOMAIN SUMMARY */}
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+              <div className="student-card p-6 bg-white/80">
 
-                <h3 className="text-xl font-black mb-4">
+                <h3 className="text-xl font-black mb-4 gradient-text">
                   Domain Wise Users
                 </h3>
 
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
 
                   {Object.entries(domainCount).map(
                     ([domain, count]) => (
 
                       <div
                         key={domain}
-                        className="flex justify-between items-center border-b border-slate-100 pb-2"
+                        className="flex justify-between items-center border-b border-slate-100/50 pb-3 last:border-b-0"
                       >
 
-                        <span className="text-slate-700 font-bold">
+                        <span className="text-slate-700 font-bold text-sm">
                           {domain}
                         </span>
 
-                        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-black">
+                        <span className="bg-teal-50 text-teal-600 px-3 py-1.5 rounded-xl text-xs font-black ring-1 ring-teal-100/80">
                           {count as number}
                         </span>
 
@@ -1094,9 +1027,12 @@ export default function AdminDashboard() {
 
             </div>
             {/* Users Table */}
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-              <div className="p-6 border-b border-slate-100">
-                <h2 className="text-xl font-black text-slate-900">Registered Users</h2>
+            <div className="student-card bg-white/80 overflow-hidden">
+              <div className="p-6 border-b border-slate-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h2 className="text-xl font-black text-slate-900 gradient-text">Registered Users</h2>
+                <span className="bg-slate-100 text-slate-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
+                  {filteredUsers.length} of {users.length} Users
+                </span>
               </div>
 
               {users.length === 0 ? (
@@ -1105,9 +1041,9 @@ export default function AdminDashboard() {
                   <p className="text-slate-500 font-bold">No users found</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-slate-50">
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full min-w-[1000px] table-auto">
+                    <thead className="bg-slate-50/50">
                       <tr>
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Name</th>
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Email</th>
@@ -1124,38 +1060,42 @@ export default function AdminDashboard() {
                     </thead>
                     <tbody>
                       {filteredUsers.map((user) => (
-                        <tr key={user.uid} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                        <tr key={user.uid} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
                           <td className="p-4">
                             <div className="font-black text-slate-900">{user.fullName}</div>
-                            <div className="text-xs text-slate-400">{user.uid}</div>
+                            <div className="text-xs text-slate-400 font-semibold">{user.uid}</div>
                           </td>
                           <td className="p-4">
-                            <div className="flex items-center gap-2 text-slate-600">
-                              <Mail size={16} />
+                            <div className="flex items-center gap-2 text-slate-600 text-sm font-semibold">
+                              <Mail size={14} className="text-slate-400" />
                               {user.email}
                             </div>
                           </td>
                           <td className="p-4">
-                            <div className="flex items-center gap-2 text-slate-600">
-                              <Phone size={16} />
+                            <div className="flex items-center gap-2 text-slate-600 text-sm font-semibold">
+                              <Phone size={14} className="text-slate-400" />
                               {user.contactNumber}
                             </div>
                           </td>
-                          <td className="p-4 text-slate-600">{user.college}</td>
-                          <td className="p-4 text-slate-600">{user.department}</td>
-                          <td className="p-4 text-slate-600 font-bold">{user.internshipDomain}</td>
+                          <td className="p-4 text-slate-600 text-sm font-medium">{user.college}</td>
+                          <td className="p-4 text-slate-600 text-sm font-medium">{user.department}</td>
+                          <td className="p-4 text-slate-600 font-bold text-sm">{user.internshipDomain}</td>
                           <td className="p-4">
                             {(() => {
                               const paymentStatus = getUserPaymentStatus(user.uid);
                               return (
-                                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black ${paymentStatus.class}`}>
-                                  {paymentStatus.status === 'Success' ? <CheckCircle2 size={14} /> : <Clock size={14} />}
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                                  paymentStatus.status === 'Success' 
+                                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80' 
+                                    : 'bg-amber-50 text-amber-700 ring-1 ring-amber-100/80'
+                                }`}>
+                                  {paymentStatus.status === 'Success' ? <CheckCircle2 size={12} /> : <Clock size={12} />}
                                   {paymentStatus.status}
                                 </span>
                               );
                             })()}
                           </td>
-                          <td className="p-4 text-slate-600 text-sm">
+                          <td className="p-4 text-slate-600 text-sm font-medium">
 
                             {new Date(user.registrationDate).toLocaleDateString('en-IN', {
                               day: '2-digit',
@@ -1170,14 +1110,14 @@ export default function AdminDashboard() {
                                 onClick={() =>
                                   updatePaymentStatus(user.uid)
                                 }
-                                className="px-4 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700"
+                                className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-emerald-600/10 hover:bg-emerald-700 active:scale-[0.98] transition-all cursor-pointer"
                               >
                                 Verify
                               </button>
 
                               <button
                                 onClick={() => rejectPaymentStatus(user.uid)}
-                                className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700"
+                                className="px-3 py-1.5 bg-rose-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-rose-600/10 hover:bg-rose-700 active:scale-[0.98] transition-all cursor-pointer"
                               >
                                 Reject
                               </button>
@@ -1195,39 +1135,39 @@ export default function AdminDashboard() {
 
           <TabsContent value="student-reports">
             <div className="space-y-6">
-              <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+              <div className="student-card p-6 bg-white/80">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center">
+                    <div className="student-icon">
                       <ClipboardList size={24} />
                     </div>
                     <div>
-                      <h2 className="text-xl font-black text-slate-900">Create Assignment</h2>
-                      <p className="text-slate-500 text-sm font-bold">Add assignment questions course-wise. Students can upload answers only after an assignment is available.</p>
+                      <h2 className="text-xl font-black text-slate-900 gradient-text">Create Assignment</h2>
+                      <p className="text-slate-500 text-sm font-semibold">Add assignment questions course-wise. Students can upload answers only after an assignment is available.</p>
                     </div>
                   </div>
-                  <span className="bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-black uppercase">
+                  <span className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-indigo-100/80">
                     {assignments.length} Assignments
                   </span>
                 </div>
 
-                <form onSubmit={handleCreateAssignment} className="border border-slate-100 rounded-2xl p-6 mb-6">
+                <form onSubmit={handleCreateAssignment} className="border border-slate-100/50 rounded-2xl p-5 mb-6 bg-slate-50/30">
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-end">
                     <div>
-                      <Label className="text-slate-500 text-xs font-black uppercase">Assignment Title</Label>
+                      <Label className="student-label">Assignment Title</Label>
                       <Input
                         value={assignmentForm.title}
                         onChange={(event) => setAssignmentForm({ ...assignmentForm, title: event.target.value })}
                         placeholder="Module 1 practical task"
-                        className="mt-2 h-12"
+                        className="student-input mt-2 h-12 px-4"
                       />
                     </div>
                     <div>
-                      <Label className="text-slate-500 text-xs font-black uppercase">Course</Label>
+                      <Label className="student-label">Course</Label>
                       <select
                         value={assignmentForm.course}
                         onChange={(event) => setAssignmentForm({ ...assignmentForm, course: event.target.value })}
-                        className="mt-2 w-full h-12 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                        className="student-input mt-2 h-12 px-4"
                         required
                       >
                         <option value="">Select Course</option>
@@ -1239,27 +1179,27 @@ export default function AdminDashboard() {
                       </select>
                     </div>
                     <div>
-                      <Label className="text-slate-500 text-xs font-black uppercase">Question File</Label>
+                      <Label className="student-label">Question File</Label>
                       <Input
                         key={assignmentFileInputKey}
                         type="file"
                         accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg"
                         onChange={(event) => setAssignmentForm({ ...assignmentForm, file: event.target.files?.[0] || null })}
-                        className="mt-2 h-12"
+                        className="student-input mt-2 h-12 px-4 py-2"
                       />
                     </div>
-                    <Button type="submit" disabled={savingAssignment} className="h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-black">
+                    <Button type="submit" disabled={savingAssignment} className="student-button-primary h-12 px-5 min-h-[48px] shadow-indigo-600/10 cursor-pointer">
                       <ClipboardList size={18} />
                       {savingAssignment ? 'Adding...' : 'Add'}
                     </Button>
                   </div>
                   <div className="mt-4">
-                    <Label className="text-slate-500 text-xs font-black uppercase">Instructions</Label>
+                    <Label className="student-label">Instructions</Label>
                     <textarea
                       value={assignmentForm.description}
                       onChange={(event) => setAssignmentForm({ ...assignmentForm, description: event.target.value })}
                       placeholder="Write the assignment instructions students should follow"
-                      className="mt-2 min-h-24 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      className="student-input mt-2 min-h-24 py-3"
                     />
                   </div>
                 </form>
@@ -1272,16 +1212,16 @@ export default function AdminDashboard() {
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
                     {assignments.map((assignment) => (
-                      <div key={assignment.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                      <div key={assignment.id} className="student-card p-5 bg-white/60 hover:shadow-md hover:-translate-y-0.5 transition-all">
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0">
                             <h3 className="truncate font-black text-slate-900">{assignment.title}</h3>
                             <p className="mt-1 text-xs font-black uppercase tracking-wider text-indigo-600">{assignment.course || 'Course not set'}</p>
                             {assignment.description && (
-                              <p className="mt-2 line-clamp-2 text-sm font-bold leading-6 text-slate-600">{assignment.description}</p>
+                              <p className="mt-2 line-clamp-2 text-sm font-semibold leading-6 text-slate-600">{assignment.description}</p>
                             )}
                             {assignment.fileUrl && (
-                              <a href={assignment.fileUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex text-xs font-black uppercase tracking-wider text-blue-600">
+                              <a href={assignment.fileUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-black uppercase tracking-wider text-indigo-600 hover:text-indigo-700 transition-colors">
                                 Download question file
                               </a>
                             )}
@@ -1289,7 +1229,7 @@ export default function AdminDashboard() {
                           <Button
                             type="button"
                             onClick={() => handleDeleteAssignment(assignment)}
-                            className="bg-red-600 hover:bg-red-700 text-white font-black"
+                            className="bg-rose-600 hover:bg-rose-700 text-white font-black p-2.5 rounded-xl cursor-pointer transition-all active:scale-95"
                           >
                             <Trash2 size={16} />
                           </Button>
@@ -1300,29 +1240,29 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+              <div className="student-card p-6 bg-white/80">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
+                    <div className="student-icon text-emerald-600 bg-emerald-50 ring-emerald-100">
                       <Upload size={24} />
                     </div>
                     <div>
-                      <h2 className="text-xl font-black text-slate-900">Student Assignments</h2>
-                      <p className="text-slate-500 text-sm font-bold">Every student PDF upload appears here with the optional description message.</p>
+                      <h2 className="text-xl font-black text-slate-900 gradient-text">Student Assignments</h2>
+                      <p className="text-slate-500 text-sm font-semibold">Every student PDF upload appears here with the optional description message.</p>
                     </div>
                   </div>
-                  <span className="bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-black uppercase">
+                  <span className="bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-emerald-100/80">
                     {visibleStudentReports.length} Uploads
                   </span>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4 mb-6">
                   <div>
-                    <Label className="text-slate-500 text-xs font-black uppercase">Filter By College</Label>
+                    <Label className="student-label">Filter By College</Label>
                     <select
                       value={collegeFilter}
                       onChange={(event) => setCollegeFilter(event.target.value)}
-                      className="mt-2 w-full h-12 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      className="student-input mt-2 h-12 px-4"
                     >
                       <option value="">All Colleges</option>
                       {uniqueColleges.map((college) => (
@@ -1333,11 +1273,11 @@ export default function AdminDashboard() {
                     </select>
                   </div>
                   <div>
-                    <Label className="text-slate-500 text-xs font-black uppercase">Filter By Course</Label>
+                    <Label className="student-label">Filter By Course</Label>
                     <select
                       value={domainFilter}
                       onChange={(event) => setDomainFilter(event.target.value)}
-                      className="mt-2 w-full h-12 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      className="student-input mt-2 h-12 px-4"
                     >
                       <option value="">All Courses</option>
                       {uniqueDomains.map((domain) => (
@@ -1355,10 +1295,10 @@ export default function AdminDashboard() {
                     <p className="text-slate-500 font-bold">No student assignments uploaded yet</p>
                   </div>
                 ) : (
-                  <div className="border border-slate-100 rounded-2xl overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-slate-50">
+                  <div className="student-card overflow-hidden bg-white/50 border-slate-100/50">
+                    <div className="overflow-x-auto w-full">
+                      <table className="w-full min-w-[1000px] table-auto">
+                        <thead className="bg-slate-50/50">
                           <tr>
                             <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Student</th>
                             <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Assignment</th>
@@ -1374,19 +1314,19 @@ export default function AdminDashboard() {
                             const student = getStudentProfile(report.userId);
 
                             return (
-                              <tr key={report.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                              <tr key={report.id} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
                                 <td className="p-4">
                                   <div className="font-black text-slate-900">{student?.fullName || report.studentName || 'Student'}</div>
-                                  <div className="text-xs text-slate-400">{student?.email || report.email || report.userId}</div>
+                                  <div className="text-xs text-slate-400 font-semibold">{student?.email || report.email || report.userId}</div>
                                   <div className="mt-1 text-xs font-bold text-slate-500">{student?.college || '-'}</div>
                                 </td>
                                 <td className="p-4 text-slate-700 font-black">{getAssignmentTitle(report)}</td>
                                 <td className="p-4 text-slate-600 font-bold">{report.course || student?.internshipDomain || '-'}</td>
-                                <td className="p-4 text-slate-600">{report.fileName}</td>
-                                <td className="p-4 text-sm font-bold leading-6 text-slate-600">
+                                <td className="p-4 text-slate-600 text-sm font-medium">{report.fileName}</td>
+                                <td className="p-4 text-sm font-semibold leading-6 text-slate-600">
                                   {report.description || <span className="text-slate-400">No description</span>}
                                 </td>
-                                <td className="p-4 text-slate-600 text-sm">
+                                <td className="p-4 text-slate-600 text-sm font-medium">
                                   {report.uploadedAt
                                     ? new Date(report.uploadedAt).toLocaleDateString('en-IN', {
                                       day: '2-digit',
@@ -1397,7 +1337,7 @@ export default function AdminDashboard() {
                                 </td>
                                 <td className="p-4">
                                   <a href={report.fileUrl} target="_blank" rel="noreferrer" download>
-                                    <Button type="button" className="bg-green-600 hover:bg-green-700 text-white font-black">
+                                    <Button type="button" className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-black text-xs uppercase tracking-wider hover:bg-emerald-700 transition-all active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5">
                                       <Download size={16} />
                                       Download
                                     </Button>
@@ -1416,18 +1356,18 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="college-export">
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+            <div className="student-card p-6 bg-white/80">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center">
+                  <div className="student-icon bg-emerald-50 text-emerald-600 ring-emerald-100">
                     <Download size={24} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-slate-900">College Student Export</h2>
-                    <p className="text-slate-500 text-sm font-bold">Select one college and export successful payment students as PDF.</p>
+                    <h2 className="text-xl font-black text-slate-900 gradient-text">College Student Export</h2>
+                    <p className="text-slate-500 text-sm font-semibold">Select one college and export successful payment students as PDF.</p>
                   </div>
                 </div>
-                <span className="bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-black uppercase">
+                <span className="bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-emerald-100/80">
                   {exportCollege
                     ? users.filter(user =>
                       getGroupName(user.college) === exportCollege &&
@@ -1437,13 +1377,13 @@ export default function AdminDashboard() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-end border border-slate-100 rounded-2xl p-6">
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-end border border-slate-100/50 rounded-2xl p-5 bg-slate-50/30">
                 <div>
-                  <Label className="text-slate-500 text-xs font-black uppercase">College</Label>
+                  <Label className="student-label">College</Label>
                   <select
                     value={exportCollege}
                     onChange={(event) => setExportCollege(event.target.value)}
-                    className="mt-2 w-full h-12 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                    className="student-input mt-2 h-12 px-4"
                   >
                     <option value="">Select college</option>
                     {uniqueColleges.map((college) => (
@@ -1458,7 +1398,7 @@ export default function AdminDashboard() {
                   type="button"
                   onClick={exportCollegeStudentsPdf}
                   disabled={!exportCollege}
-                  className="h-12 bg-green-600 hover:bg-green-700 text-white font-black px-6"
+                  className="student-button-primary bg-emerald-600 hover:bg-emerald-700 text-white h-12 px-6 shadow-emerald-600/10 cursor-pointer"
                 >
                   <Download size={18} />
                   Export PDF
@@ -1468,43 +1408,43 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="notifications">
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+            <div className="student-card p-6 bg-white/80">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
+                  <div className="student-icon bg-blue-50 text-blue-600 ring-blue-100">
                     <Bell size={24} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-slate-900">User Notifications</h2>
-                    <p className="text-slate-500 text-sm font-bold">Add announcements that appear on every user profile page.</p>
+                    <h2 className="text-xl font-black text-slate-900 gradient-text">User Notifications</h2>
+                    <p className="text-slate-500 text-sm font-semibold">Add announcements that appear on every user profile page.</p>
                   </div>
                 </div>
-                <span className="bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-black uppercase">
+                <span className="bg-blue-50 text-blue-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-blue-100/80">
                   {notifications.length} Notifications
                 </span>
               </div>
 
-              <form onSubmit={handleAddNotification} className="border border-slate-100 rounded-2xl p-6 mb-6">
+              <form onSubmit={handleAddNotification} className="border border-slate-100/50 rounded-2xl p-5 mb-6 bg-slate-50/30">
                 <div className="grid grid-cols-1 md:grid-cols-[280px_1fr_auto] gap-4 items-end">
                   <div>
-                    <Label className="text-slate-500 text-xs font-black uppercase">Title</Label>
+                    <Label className="student-label">Title</Label>
                     <Input
                       value={notificationForm.title}
                       onChange={(event) => setNotificationForm({ ...notificationForm, title: event.target.value })}
                       placeholder="Notification title"
-                      className="mt-2 h-12"
+                      className="student-input mt-2 h-12 px-4"
                     />
                   </div>
                   <div>
-                    <Label className="text-slate-500 text-xs font-black uppercase">Message</Label>
+                    <Label className="student-label">Message</Label>
                     <textarea
                       value={notificationForm.message}
                       onChange={(event) => setNotificationForm({ ...notificationForm, message: event.target.value })}
                       placeholder="Write notification message"
-                      className="mt-2 min-h-12 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      className="student-input mt-2 min-h-12 py-3"
                     />
                   </div>
-                  <Button type="submit" disabled={savingNotification} className="h-12 bg-blue-600 hover:bg-blue-700 text-white font-black">
+                  <Button type="submit" disabled={savingNotification} className="student-button-primary bg-indigo-600 hover:bg-indigo-700 text-white h-12 px-5 min-h-[48px] shadow-indigo-600/10 cursor-pointer">
                     <Send size={18} />
                     {savingNotification ? 'Adding...' : 'Add'}
                   </Button>
@@ -1519,11 +1459,11 @@ export default function AdminDashboard() {
               ) : (
                 <div className="space-y-4">
                   {notifications.map((notification) => (
-                    <div key={notification.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                    <div key={notification.id} className="student-card p-5 bg-white/60 hover:shadow-md transition-all">
                       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                         <div>
                           <h3 className="font-black text-slate-900">{notification.title}</h3>
-                          <p className="mt-2 text-sm font-bold leading-6 text-slate-600 whitespace-pre-line">{notification.message}</p>
+                          <p className="mt-2 text-sm font-semibold leading-6 text-slate-600 whitespace-pre-line">{notification.message}</p>
                         </div>
                         <div className="shrink-0 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
                           {notification.createdAt
@@ -1543,39 +1483,39 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="reports">
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+            <div className="student-card p-6 bg-white/80">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
+                  <div className="student-icon bg-indigo-50 text-indigo-600 ring-indigo-100">
                     <FileText size={24} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-slate-900">Internship Reports</h2>
-                    <p className="text-slate-500 text-sm font-bold">Upload Internship reports course-wise. Students will see only their selected course reports.</p>
+                    <h2 className="text-xl font-black text-slate-900 gradient-text">Internship Reports</h2>
+                    <p className="text-slate-500 text-sm font-semibold">Upload Internship reports course-wise. Students will see only their selected course reports.</p>
                   </div>
                 </div>
-                <span className="bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-black uppercase">
+                <span className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-indigo-100/80">
                   {courseReports.length} Reports
                 </span>
               </div>
 
-              <form onSubmit={handleUploadReport} className="border border-slate-100 rounded-2xl p-6 mb-6">
+              <form onSubmit={handleUploadReport} className="border border-slate-100/50 rounded-2xl p-5 mb-6 bg-slate-50/30">
                 <div className="grid grid-cols-1 md:grid-cols-[1fr_260px_1fr_auto] gap-4 items-end">
                   <div>
-                    <Label className="text-slate-500 text-xs font-black uppercase">Report Title</Label>
+                    <Label className="student-label">Report Title</Label>
                     <Input
                       value={reportForm.title}
                       onChange={(event) => setReportForm({ ...reportForm, title: event.target.value })}
                       placeholder="Monthly performance report"
-                      className="mt-2 h-12"
+                      className="student-input mt-2 h-12 px-4"
                     />
                   </div>
                   <div>
-                    <Label className="text-slate-500 text-xs font-black uppercase">Course</Label>
+                    <Label className="student-label">Course</Label>
                     <select
                       value={reportForm.course}
                       onChange={(event) => setReportForm({ ...reportForm, course: event.target.value })}
-                      className="mt-2 w-full h-12 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                      className="student-input mt-2 h-12 px-4"
                     >
                       <option value="">Select course</option>
                       {INTERNSHIP_DOMAINS.map((course) => (
@@ -1586,16 +1526,16 @@ export default function AdminDashboard() {
                     </select>
                   </div>
                   <div>
-                    <Label className="text-slate-500 text-xs font-black uppercase">Report File</Label>
+                    <Label className="student-label">Report File</Label>
                     <Input
                       key={reportFileInputKey}
                       type="file"
                       accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
                       onChange={(event) => setReportForm({ ...reportForm, file: event.target.files?.[0] || null })}
-                      className="mt-2 h-12"
+                      className="student-input mt-2 h-12 px-4 py-2"
                     />
                   </div>
-                  <Button type="submit" disabled={savingReport} className="h-12 bg-blue-600 hover:bg-blue-700 text-white font-black">
+                  <Button type="submit" disabled={savingReport} className="student-button-primary bg-indigo-600 hover:bg-indigo-700 text-white h-12 px-5 min-h-[48px] shadow-indigo-600/10 cursor-pointer">
                     <Upload size={18} />
                     {savingReport ? 'Uploading...' : 'Upload'}
                   </Button>
@@ -1608,10 +1548,10 @@ export default function AdminDashboard() {
                   <p className="text-slate-500 font-bold">No course reports uploaded yet</p>
                 </div>
               ) : (
-                <div className="border border-slate-100 rounded-2xl overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-slate-50">
+                <div className="student-card overflow-hidden bg-white/50 border-slate-100/50">
+                  <div className="overflow-x-auto w-full">
+                    <table className="w-full min-w-[800px] table-auto">
+                      <thead className="bg-slate-50/50">
                         <tr>
                           <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Report</th>
                           <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Course</th>
@@ -1622,14 +1562,14 @@ export default function AdminDashboard() {
                       </thead>
                       <tbody>
                         {courseReports.map((report) => (
-                          <tr key={report.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                          <tr key={report.id} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
                             <td className="p-4">
                               <div className="font-black text-slate-900">{report.title}</div>
-                              <div className="text-xs text-slate-400">{report.id}</div>
+                              <div className="text-xs text-slate-400 font-semibold">{report.id}</div>
                             </td>
                             <td className="p-4 text-slate-600 font-bold">{report.course}</td>
-                            <td className="p-4 text-slate-600">{report.fileName}</td>
-                            <td className="p-4 text-slate-600 text-sm">
+                            <td className="p-4 text-slate-600 text-sm font-medium">{report.fileName}</td>
+                            <td className="p-4 text-slate-600 text-sm font-medium">
                               {report.uploadedAt
                                 ? new Date(report.uploadedAt).toLocaleDateString('en-IN', {
                                   day: '2-digit',
@@ -1641,7 +1581,7 @@ export default function AdminDashboard() {
                             <td className="p-4">
                               <div className="flex gap-2">
                                 <a href={report.fileUrl} target="_blank" rel="noreferrer" download>
-                                  <Button type="button" className="bg-green-600 hover:bg-green-700 text-white font-black">
+                                  <Button type="button" className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-black text-xs uppercase tracking-wider hover:bg-emerald-700 transition-all active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5">
                                     <Download size={16} />
                                     Download
                                   </Button>
@@ -1649,7 +1589,7 @@ export default function AdminDashboard() {
                                 <Button
                                   type="button"
                                   onClick={() => handleDeleteReport(report)}
-                                  className="bg-red-600 hover:bg-red-700 text-white font-black"
+                                  className="px-3 py-1.5 rounded-xl bg-rose-600 text-white font-black text-xs uppercase tracking-wider hover:bg-rose-700 transition-all active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
                                 >
                                   <Trash2 size={16} />
                                   Delete
@@ -1667,72 +1607,72 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="teachers">
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+            <div className="student-card p-4 sm:p-6 bg-white/80">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
+                  <div className="student-icon bg-blue-50 text-blue-600 ring-blue-100">
                     <UserPlus size={24} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-slate-900">Teacher Management</h2>
-                    <p className="text-slate-500 text-sm font-bold">Teachers can access only Daily Videos.</p>
+                    <h2 className="text-xl font-black text-slate-900 gradient-text">Teacher Management</h2>
+                    <p className="text-slate-500 text-sm font-semibold">Teachers can access only Daily Videos.</p>
                   </div>
                 </div>
-                <span className="bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-black uppercase">
+                <span className="bg-blue-50 text-blue-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-blue-100/80 w-fit">
                   {teachers.length} Teachers
                 </span>
               </div>
 
-              <Tabs defaultValue="add" className="gap-6">
-                <TabsList className="bg-slate-100 h-11 p-1">
-                  <TabsTrigger value="add" className="px-5 py-2 font-black">
+              <Tabs defaultValue="add" className="gap-6 flex-col">
+                <TabsList className="bg-slate-100/70 rounded-xl h-11 p-1">
+                  <TabsTrigger value="add" className="px-5 py-2 rounded-lg font-black text-xs uppercase tracking-wider transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
                     <UserPlus size={16} />
                     Add Teacher
                   </TabsTrigger>
-                  <TabsTrigger value="list" className="px-5 py-2 font-black">
+                  <TabsTrigger value="list" className="px-5 py-2 rounded-lg font-black text-xs uppercase tracking-wider transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
                     <Users size={16} />
                     Teacher List
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="add">
-                  <form onSubmit={handleAddTeacher} className="border border-slate-100 rounded-2xl p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                      <div>
-                        <Label className="text-slate-500 text-xs font-black uppercase">Teacher Name</Label>
+                  <form onSubmit={handleAddTeacher} className="border border-slate-200/60 rounded-3xl p-4 sm:p-6 bg-white/70 backdrop-blur-sm shadow-sm mt-4">
+                    <div className="flex flex-col lg:grid lg:grid-cols-5 gap-5 lg:items-end w-full">
+                      <div className="w-full">
+                        <Label className="student-label">Teacher Name</Label>
                         <Input
                           value={teacherForm.fullName}
                           onChange={(event) => setTeacherForm({ ...teacherForm, fullName: event.target.value })}
                           placeholder="Teacher name"
-                          className="mt-2 h-12"
+                          className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80"
                         />
                       </div>
-                      <div>
-                        <Label className="text-slate-500 text-xs font-black uppercase">Email</Label>
+                      <div className="w-full">
+                        <Label className="student-label">Email</Label>
                         <Input
                           type="email"
                           value={teacherForm.email}
                           onChange={(event) => setTeacherForm({ ...teacherForm, email: event.target.value })}
                           placeholder="teacher@example.com"
-                          className="mt-2 h-12"
+                          className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80"
                         />
                       </div>
-                      <div>
-                        <Label className="text-slate-500 text-xs font-black uppercase">Password</Label>
+                      <div className="w-full">
+                        <Label className="student-label">Password</Label>
                         <Input
                           type="password"
                           value={teacherForm.password}
                           onChange={(event) => setTeacherForm({ ...teacherForm, password: event.target.value })}
                           placeholder="Minimum 6 characters"
-                          className="mt-2 h-12"
+                          className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80"
                         />
                       </div>
-                      <div>
-                        <Label className="text-slate-500 text-xs font-black uppercase">Course</Label>
+                      <div className="w-full">
+                        <Label className="student-label">Course</Label>
                         <select
                           value={teacherForm.course}
                           onChange={(event) => setTeacherForm({ ...teacherForm, course: event.target.value })}
-                          className="mt-2 w-full h-12 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                          className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80 bg-white"
                         >
                           <option value="">Select course</option>
                           {INTERNSHIP_DOMAINS.map((course) => (
@@ -1742,25 +1682,28 @@ export default function AdminDashboard() {
                           ))}
                         </select>
                       </div>
-                      <Button type="submit" disabled={savingTeacher} className="h-12 bg-blue-600 hover:bg-blue-700 text-white font-black">
-                        <UserPlus size={18} />
-                        {savingTeacher ? 'Adding...' : 'Add Teacher'}
-                      </Button>
+                      <div className="w-full">
+                        <Button type="submit" disabled={savingTeacher} className="student-button-primary bg-blue-600 hover:bg-blue-700 text-white h-12 w-full px-5 min-h-[48px] shadow-blue-500/10 cursor-pointer rounded-xl transition-all">
+                          <UserPlus size={18} />
+                          {savingTeacher ? 'Adding...' : 'Add Teacher'}
+                        </Button>
+                      </div>
                     </div>
                   </form>
                 </TabsContent>
 
-                <TabsContent value="list">
+                <TabsContent value="list" className="mt-4">
                   {teachers.length === 0 ? (
                     <div className="border border-dashed border-slate-200 rounded-2xl p-12 text-center">
                       <Users size={48} className="text-slate-300 mx-auto mb-4" />
                       <p className="text-slate-500 font-bold">No teachers added yet</p>
                     </div>
                   ) : (
-                    <div className="border border-slate-100 rounded-2xl overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead className="bg-slate-50">
+                    <div className="student-card overflow-hidden bg-white/50 border-slate-100/50">
+                      {/* Desktop Table View */}
+                      <div className="hidden lg:block overflow-x-auto w-full">
+                        <table className="w-full min-w-[800px] table-auto">
+                          <thead className="bg-slate-50/50">
                             <tr>
                               <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Teacher</th>
                               <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Email</th>
@@ -1771,27 +1714,31 @@ export default function AdminDashboard() {
                           </thead>
                           <tbody>
                             {teachers.map((teacher) => (
-                              <tr key={teacher.uid} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                              <tr key={teacher.uid} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
                                 <td className="p-4">
                                   <div className="font-black text-slate-900">{teacher.fullName}</div>
-                                  <div className="text-xs text-slate-400">{teacher.uid}</div>
+                                  <div className="text-xs text-slate-400 font-semibold">{teacher.uid}</div>
                                 </td>
                                 <td className="p-4">
-                                  <div className="flex items-center gap-2 text-slate-600">
-                                    <Mail size={16} />
+                                  <div className="flex items-center gap-2 text-slate-600 text-sm font-semibold">
+                                    <Mail size={14} className="text-slate-400" />
                                     {teacher.email}
                                   </div>
                                 </td>
-                                <td className="p-4 text-slate-600 font-bold">
+                                <td className="p-4 text-slate-600 font-bold text-sm">
                                   {teacher.course || '-'}
                                 </td>
                                 <td className="p-4">
-                                  <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black ${teacher.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-                                    {teacher.isActive ? <CheckCircle2 size={14} /> : <Clock size={14} />}
+                                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                                    teacher.isActive 
+                                      ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80' 
+                                      : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
+                                  }`}>
+                                    {teacher.isActive ? <CheckCircle2 size={12} /> : <Clock size={12} />}
                                     {teacher.isActive ? 'Active' : 'Inactive'}
                                   </span>
                                 </td>
-                                <td className="p-4 text-slate-600 text-sm">
+                                <td className="p-4 text-slate-600 text-sm font-medium">
                                   {teacher.createdAt
                                     ? new Date(teacher.createdAt).toLocaleDateString('en-IN', {
                                       day: '2-digit',
@@ -1805,6 +1752,50 @@ export default function AdminDashboard() {
                           </tbody>
                         </table>
                       </div>
+
+                      {/* Mobile Card List View */}
+                      <div className="lg:hidden divide-y divide-slate-100/50">
+                        {teachers.map((teacher) => (
+                          <div key={teacher.uid} className="p-4 space-y-3">
+                            <div className="flex justify-between items-start gap-2">
+                              <div>
+                                <div className="font-black text-slate-900 text-sm">{teacher.fullName}</div>
+                                <div className="text-[10px] text-slate-400 font-semibold truncate max-w-[180px]">{teacher.uid}</div>
+                              </div>
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                teacher.isActive 
+                                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80' 
+                                  : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
+                              }`}>
+                                {teacher.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                            
+                            <div className="flex flex-col gap-1.5 text-xs text-slate-600 font-medium">
+                              <div className="flex items-center gap-2">
+                                <Mail size={12} className="text-slate-400 shrink-0" />
+                                <span className="truncate">{teacher.email}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <BookOpen size={12} className="text-slate-400 shrink-0" />
+                                <span>{teacher.course || '-'}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock size={12} className="text-slate-400 shrink-0" />
+                                <span>
+                                  {teacher.createdAt
+                                    ? new Date(teacher.createdAt).toLocaleDateString('en-IN', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      year: 'numeric'
+                                    })
+                                    : '-'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </TabsContent>
@@ -1812,7 +1803,6 @@ export default function AdminDashboard() {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
     </div>
   );
 }

@@ -235,616 +235,551 @@ export default function Home() {
       : allTestimonials.filter((item) => item.type === activeFilter);
 
   return (
-    <div className="bg-white overflow-hidden">
+    <div className="bg-[#f8fafc] overflow-hidden">
 
       {/* HERO SECTION */}
-      <section className="bg-[#071B4D] text-white pt-28 pb-20">
-        <div className="max-w-7xl mx-auto px-4 grid lg:grid-cols-2 gap-12 items-center">
-
-          <motion.div
-            initial={{ opacity: 0, x: -40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-
-            <div className="inline-flex items-center gap-2 bg-blue-500/20 border border-blue-400/30 px-5 py-2 rounded-full mb-6">
-              <BadgeCheck className="w-4 h-4" />
-              UGC Compliant Internship Platform
-            </div>
-
-            <h1 className="text-5xl lg:text-6xl font-extrabold leading-tight mb-6">
-              Empowering Students With
-              <span className="text-cyan-400"> Industry Skills </span>
-              & Internship Certification
-            </h1>
-
-            <p className="text-slate-300 text-lg leading-8 mb-8">
-              Complete internship management platform for students and colleges.
-              Learn with live sessions, projects, mentorship and certification.
-            </p>
-
-            <div className="flex flex-wrap gap-4">
-              <Link to="/register">
-                <button className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-4 rounded-2xl font-semibold flex items-center gap-2 hover:scale-105 transition">
-                  Register Now
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              </Link>
-
-              <Link to="/login">
-                <button className="border border-white/20 px-8 py-4 rounded-2xl font-semibold hover:bg-white/10 transition">
-                  Login
-                </button>
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12">
-
-              <div className="bg-white/10 rounded-2xl p-5 text-center">
-                <h2 className="text-2xl font-bold">10000+</h2>
-                <p className="text-sm text-slate-300">Students</p>
+      <section className="relative bg-gradient-to-br from-[#060814] via-[#0b132b] to-[#04060d] text-white pt-32 pb-24 lg:pt-40 lg:pb-32 overflow-hidden">
+        {/* Background glow effects */}
+        <div className="absolute top-1/4 left-1/10 w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-indigo-600/10 rounded-full blur-[100px] md:blur-[130px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/10 w-[250px] h-[250px] md:w-[500px] md:h-[500px] bg-purple-600/10 rounded-full blur-[100px] md:blur-[130px] pointer-events-none" />
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+            
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              className="lg:col-span-7 text-left"
+            >
+              <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-400/20 px-4 py-2 rounded-full mb-6 shadow-[0_0_20px_rgba(99,102,241,0.1)]">
+                <BadgeCheck className="w-4 h-4 text-indigo-400" />
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-indigo-300">UGC Compliant Platform</span>
               </div>
 
-              <div className="bg-white/10 rounded-2xl p-5 text-center">
-                <h2 className="text-2xl font-bold">120 Hrs</h2>
-                <p className="text-sm text-slate-300">Training</p>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] mb-6 tracking-tight">
+                Empowering Students With
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-300 mt-2">
+                  Industry-Ready Skills
+                </span>
+                & Verified Certifications
+              </h1>
+
+              <p className="text-slate-400 text-base sm:text-lg leading-relaxed mb-8 max-w-2xl font-medium">
+                InternMitra is India's leading internship management platform. Learn with live sessions, structured syllabus, real-time tracking, placement mentors, and get verified certification.
+              </p>
+
+              <div className="flex flex-wrap gap-4">
+                <Link to="/register">
+                  <button className="bg-gradient-to-r from-indigo-600 to-violet-600 px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest text-white shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/35 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center gap-2">
+                    Register Now
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </Link>
+
+                <Link to="/login">
+                  <button className="border border-white/10 bg-white/5 backdrop-blur-sm px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest text-white hover:bg-white/10 hover:border-white/20 transition-all duration-300">
+                    Login
+                  </button>
+                </Link>
               </div>
 
-              <div className="bg-white/10 rounded-2xl p-5 text-center">
-                <h2 className="text-2xl font-bold">99%</h2>
-                <p className="text-sm text-slate-300">Success</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-14 pt-8 border-t border-white/5">
+                {[
+                  { value: "10K+", label: "Students Trained" },
+                  { value: "120 Hrs", label: "Structured Course" },
+                  { value: "99%", label: "Placement Help" },
+                  { value: "24/7", label: "Mentor Support" }
+                ].map((stat, i) => (
+                  <div key={i} className="bg-white/[0.02] border border-white/[0.04] rounded-2xl p-4 text-center">
+                    <h3 className="text-2xl font-black text-white bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-300">{stat.value}</h3>
+                    <p className="text-[10px] uppercase tracking-wider font-extrabold text-slate-500 mt-1">{stat.label}</p>
+                  </div>
+                ))}
               </div>
+            </motion.div>
 
-              <div className="bg-white/10 rounded-2xl p-5 text-center">
-                <h2 className="text-2xl font-bold">24/7</h2>
-                <p className="text-sm text-slate-300">Support</p>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              className="lg:col-span-5 relative"
+            >
+              <div className="relative mx-auto max-w-md lg:max-w-none">
+                {/* Decorative glow behind image */}
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[2.5rem] blur-2xl opacity-20" />
+                <div className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-3 rounded-[2.5rem] border border-white/10 relative z-10 backdrop-blur-md shadow-2xl">
+                  <img
+                    src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1200&auto=format&fit=crop"
+                    alt="Students studying together"
+                    className="rounded-[2rem] h-[350px] md:h-[420px] object-cover w-full shadow-inner"
+                  />
+                </div>
               </div>
+            </motion.div>
 
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1 }}
-          >
-            <div className="bg-gradient-to-br from-blue-600 to-purple-700 p-8 rounded-[40px] shadow-2xl">
-              <img
-                src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1200&auto=format&fit=crop"
-                alt=""
-                className="rounded-3xl h-[500px] object-cover w-full"
-              />
-            </div>
-          </motion.div>
-
+          </div>
         </div>
       </section>
 
       {/* CERTIFICATE VERIFY */}
-      <section className="py-20 bg-white">
+      <section className="py-24 bg-[#fafbfc] relative">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-slate-950 border border-slate-800 rounded-[2.5rem] p-8 md:p-14 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-400/5 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="max-w-5xl mx-auto px-4">
-
-          <div className="bg-gradient-to-r from-[#071B4D] to-blue-700 rounded-[40px] p-10 lg:p-16 shadow-2xl overflow-hidden relative">
-
-            <div className="absolute top-0 right-0 w-72 h-72 bg-cyan-400/10 rounded-full blur-3xl" />
-
-            <div className="relative z-10">
-
-              <div className="text-center mb-12">
-
-                <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-5 py-2 rounded-full mb-6">
-
-                  <SearchCheck className="w-4 h-4 text-cyan-300" />
-
-                  <span className="text-white text-sm font-semibold">
-                    Verify Certificate
-                  </span>
-
-                </div>
-
-                <h2 className="text-4xl lg:text-5xl font-extrabold text-white mb-5">
-                  Download Verified
-                  <span className="text-cyan-300">
-                    {" "}Certificate
-                  </span>
-                </h2>
-
-                <p className="text-slate-300 text-lg max-w-2xl mx-auto">
-
-                  Enter your certificate number to verify and download your official internship certificate.  This certificate is verified by Internmitra.org
-                </p>
-
+            <div className="relative z-10 text-center">
+              <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-400/20 px-4 py-2 rounded-full mb-6">
+                <SearchCheck className="w-4 h-4 text-indigo-400" />
+                <span className="text-xs font-extrabold uppercase tracking-widest text-indigo-300">
+                  Verify Credentials
+                </span>
               </div>
 
-              <div className="max-w-2xl mx-auto flex flex-col md:flex-row gap-4">
+              <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-4">
+                Download Verified <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-300">Internship Certificate</span>
+              </h2>
 
+              <p className="text-slate-400 text-sm md:text-base max-w-2xl mx-auto mb-8 font-medium">
+                Enter your certificate number to instantly verify and download your official, UGC-compliant digital certificate. Secured and verified by InternMitra.
+              </p>
+
+              <div className="max-w-xl mx-auto flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
-                  placeholder="Enter Certificate Number"
+                  placeholder="e.g. IM-2026-XXXX"
                   value={certificateNo}
                   onChange={(e) => setCertificateNo(e.target.value)}
-                  className="
-      flex-1
-      h-16
-      px-6
-      rounded-2xl
-      bg-white
-      text-slate-900
-      placeholder:text-gray-400
-      text-lg
-      font-semibold
-      border-2
-      border-gray-200
-      outline-none
-      focus:border-cyan-400
-      focus:ring-4
-      focus:ring-cyan-200
-      transition-all
-      duration-300
-      shadow-lg
-    "
+                  className="flex-1 h-14 px-5 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-slate-500 text-base font-semibold outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-300"
                 />
 
                 <button
                   onClick={verifyCertificate}
                   disabled={verifying}
-                  className="h-16 px-8 rounded-2xl bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-bold flex items-center justify-center gap-3 transition-all duration-300 shadow-xl hover:scale-105"
+                  className="h-14 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all duration-300 shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
                 >
-
-                  <Download className="w-5 h-5" />
-
-                  {verifying
-                    ? "VERIFYING..."
-                    : "VERIFY & DOWNLOAD"}
-
+                  <Download className="w-4 h-4" />
+                  {verifying ? "VERIFYING..." : "VERIFY & DOWNLOAD"}
                 </button>
-
               </div>
-
             </div>
-
           </div>
-
         </div>
-
       </section>
+
       {/* FEATURES */}
-      <section className="py-24 bg-slate-50">
-
-        <div className="max-w-7xl mx-auto px-4">
-
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-bold mb-5">
-              Powerful Features For
-              <span className="text-purple-600"> Internship Management </span>
+      <section className="py-24 bg-white border-y border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <span className="text-xs font-black uppercase tracking-[0.25em] text-indigo-600 bg-indigo-50 px-3 py-1 rounded-md inline-block mb-3">Dashboard Hub</span>
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mb-4 tracking-tight">
+              Powerful Features For <span className="gradient-text">Complete Management</span>
             </h2>
-
-            <p className="text-slate-600 text-lg max-w-3xl mx-auto">
-              End-to-end internship platform for colleges and students.
+            <p className="text-slate-500 text-sm sm:text-base font-semibold leading-relaxed">
+              InternMitra handles everything from learning to verified digital credentials, backed by industry standards.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-
-            {features.map((item, index) => (
+            {[
+              {
+                title: "Student Workspace",
+                desc: "Beautiful personal dashboard to track lectures, tasks, attendance, and documents.",
+                icon: "📝",
+                color: "from-orange-500/10 to-amber-500/10 text-orange-600 border-orange-100"
+              },
+              {
+                title: "Razorpay Checkout",
+                desc: "Secure instant enrollment, receipt generation, and fee receipt download system.",
+                icon: "💳",
+                color: "from-blue-500/10 to-cyan-500/10 text-blue-600 border-blue-100"
+              },
+              {
+                title: "Live Progress Monitor",
+                desc: "Monitor your completion benchmarks, assignment statuses, and active session hours.",
+                icon: "📊",
+                color: "from-indigo-500/10 to-violet-500/10 text-indigo-600 border-indigo-100"
+              },
+              {
+                title: "Assessments & Quizzes",
+                desc: "Integrated tests to evaluate domain comprehension and get feedback metrics.",
+                icon: "📱",
+                color: "from-pink-500/10 to-fuchsia-500/10 text-pink-600 border-pink-100"
+              },
+              {
+                title: "Rich LMS Library",
+                desc: "Access video lectures, PPT notes, reference codes, and curriculum handouts.",
+                icon: "🎓",
+                color: "from-emerald-500/10 to-teal-500/10 text-emerald-600 border-emerald-100"
+              },
+              {
+                title: "Auto Certificates",
+                desc: "One-click generation of verified completion certificates and marksheet records.",
+                icon: "🏆",
+                color: "from-yellow-500/10 to-amber-500/10 text-yellow-600 border-yellow-100"
+              }
+            ].map((item, index) => (
               <motion.div
-                whileHover={{ y: -8 }}
+                whileHover={{ y: -6 }}
                 key={index}
-                className="bg-white rounded-3xl border p-8 shadow-sm hover:shadow-xl transition"
+                className="bg-slate-50/50 hover:bg-white rounded-3xl border border-slate-100 p-8 shadow-sm hover:shadow-[0_20px_50px_-12px_rgba(79,70,229,0.06)] hover:border-indigo-100/50 transition-all duration-300"
               >
-
-                <div className="w-16 h-16 rounded-2xl bg-green-500 flex items-center justify-center text-3xl mb-6">
+                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${item.color} border flex items-center justify-center text-2xl mb-6 shadow-sm`}>
                   {item.icon}
                 </div>
 
-                <h3 className="text-2xl font-bold mb-4">
+                <h3 className="text-xl font-black text-slate-900 mb-3 tracking-tight">
                   {item.title}
                 </h3>
 
-                <p className="text-slate-600 leading-7">
+                <p className="text-slate-500 leading-relaxed text-sm font-semibold">
                   {item.desc}
                 </p>
-
               </motion.div>
             ))}
-
           </div>
+
         </div>
       </section>
 
       {/* SIMPLE STEPS */}
-      <section className="py-24 bg-white">
-
-        <div className="max-w-7xl mx-auto px-4">
-
-          <div className="text-center mb-20">
-
-            <h2 className="text-5xl font-bold text-slate-900 mb-5">
-              How It Works —
-              <span className="text-blue-600">
-                {" "}4 Simple Steps
-              </span>
+      <section className="py-24 bg-[#fafbfc]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-2xl mx-auto mb-20">
+            <span className="text-xs font-black uppercase tracking-[0.25em] text-indigo-600 bg-indigo-50 px-3 py-1 rounded-md inline-block mb-3">Workflow</span>
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mb-4 tracking-tight">
+              Get Certified in <span className="gradient-text">4 Easy Steps</span>
             </h2>
-
-            <p className="text-slate-500 text-lg">
-              From registration to certificate in easy steps.
+            <p className="text-slate-500 text-sm sm:text-base font-semibold leading-relaxed">
+              Your step-by-step roadmap to successful program completion and credentialing.
             </p>
-
           </div>
 
           <div className="relative">
+            {/* Connecting line */}
+            <div className="hidden md:block absolute top-10 left-12 right-12 h-0.5 bg-slate-200/60 z-0" />
 
-            {/* CONNECTING LINE */}
-            <div className="hidden md:block absolute top-10 left-0 w-full h-1 bg-slate-200 z-0" />
-
-            <div className="grid md:grid-cols-4 gap-10 relative z-10">
-
+            <div className="grid md:grid-cols-4 gap-8 relative z-10">
               {[
                 {
-                  title: "Register",
-                  desc: "Fill form with academic details and choose domain."
+                  title: "Register Profile",
+                  desc: "Fill in academic details, college name, and choose your internship track."
                 },
                 {
-                  title: "Pay & Verify",
-                  desc: "Complete payment and get verification instantly."
+                  title: "Instant Enrollment",
+                  desc: "Complete enrollment payment via secure Razorpay checkout to activate dashboard."
                 },
                 {
-                  title: "Training",
-                  desc: "Attend live sessions and complete assignments."
+                  title: "Learn & Upload",
+                  desc: "Attend structured video hours, check resource materials, and submit reports."
                 },
                 {
-                  title: "Certificate",
-                  desc: "Download your verified digital certificate."
+                  title: "Earn Certificate",
+                  desc: "Clear final quiz criteria to download your verified digital credentials."
                 }
               ].map((item, index) => (
-
-                <div
-                  key={index}
-                  className="relative text-center"
-                >
-
-                  {/* NUMBER CIRCLE */}
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white flex items-center justify-center text-2xl font-bold mx-auto mb-6 shadow-xl border-8 border-white">
-                    {index + 1}
+                <div key={index} className="text-center flex flex-col items-center">
+                  <div className="w-18 h-18 rounded-2xl bg-white border border-slate-200/80 shadow-[0_10px_25px_-5px_rgba(79,70,229,0.05)] text-indigo-600 flex items-center justify-center text-xl font-black mb-5 relative hover:border-indigo-300 transition-colors">
+                    <span className="bg-gradient-to-br from-indigo-600 to-violet-600 text-white rounded-lg px-2.5 py-1 text-xs absolute -top-3 -right-3 shadow-md shadow-indigo-600/10">0{index + 1}</span>
+                    🎓
                   </div>
 
-                  <h3 className="text-2xl font-bold mb-3 text-slate-900">
+                  <h3 className="text-lg font-black text-slate-900 mb-2 tracking-tight">
                     {item.title}
                   </h3>
 
-                  <p className="text-slate-500 leading-7">
+                  <p className="text-slate-500 leading-relaxed text-xs sm:text-sm font-semibold max-w-xs">
                     {item.desc}
                   </p>
-
                 </div>
-
               ))}
-
             </div>
-
           </div>
 
         </div>
-
       </section>
 
       {/* UNIVERSITIES */}
-      <section className="py-24 bg-slate-50 overflow-hidden">
-
-        <div className="max-w-7xl mx-auto px-4">
-
-          <div className="text-center mb-16">
-
-            <h2 className="text-5xl font-bold text-slate-900 mb-5">
-              Universities
-              <span className="text-blue-600">
-                {" "}Covered
-              </span>
+      <section className="py-24 bg-white overflow-hidden border-t border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <span className="text-xs font-black uppercase tracking-[0.25em] text-indigo-600 bg-indigo-50 px-3 py-1 rounded-md inline-block mb-3">Coverage</span>
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mb-4 tracking-tight">
+              Universities and Colleges <span className="gradient-text">We Work With</span>
             </h2>
-
-            <p className="text-slate-500 text-lg">
-              Trusted by universities across Bihar.
+            <p className="text-slate-500 text-sm sm:text-base font-semibold leading-relaxed">
+              UGC compliant industrial framework recognized across top partner institutions.
             </p>
-
           </div>
 
         </div>
 
-        <div className="relative">
-
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Fading gradient covers on left and right for seamless look */}
+          <div className="absolute top-0 bottom-0 left-0 w-24 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+          <div className="absolute top-0 bottom-0 right-0 w-24 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+          
           <motion.div
-            className="flex gap-8"
+            className="flex gap-6 whitespace-nowrap py-4"
             animate={{
-              x: ["0%", "-100%"]
+              x: ["0%", "-50%"]
             }}
             transition={{
               repeat: Infinity,
-              duration: 25,
+              duration: 35,
               ease: "linear"
             }}
           >
-
             {[...universities, ...universities].map((item, index) => (
-
               <div
                 key={index}
-                className="min-w-[320px] bg-white rounded-3xl p-8 shadow-lg border border-slate-100"
+                className="inline-block min-w-[280px] bg-slate-50 rounded-2xl p-6 border border-slate-100 shadow-sm"
               >
-
-                <div className="w-20 h-20 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-3xl mb-6">
-                  🎓
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-2xl text-indigo-600">
+                    🏫
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 whitespace-normal line-clamp-1 max-w-[200px]">
+                      {item.name}
+                    </h3>
+                    <p className="text-[10px] text-emerald-600 font-extrabold uppercase tracking-wider mt-0.5">
+                      Partner Institute
+                    </p>
+                  </div>
                 </div>
-
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">
-                  {item.name}
-                </h3>
-
-                <p className="text-green-600 font-semibold text-sm">
-                  PARTNER UNIVERSITY
-                </p>
-
               </div>
-
             ))}
-
           </motion.div>
-
         </div>
-
       </section>
+
       {/* TESTIMONIALS */}
-      <section className="py-24 bg-slate-50">
-
-        <div className="max-w-7xl mx-auto px-4">
-
-          <div className="text-center mb-14">
-
-            <h2 className="text-5xl font-bold mb-5">
-              What People Say About
-              <span className="text-blue-600"> Internmitra </span>
+      <section className="py-24 bg-[#fafbfc] border-y border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <span className="text-xs font-black uppercase tracking-[0.25em] text-indigo-600 bg-indigo-50 px-3 py-1 rounded-md inline-block mb-3">Feedback</span>
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mb-4 tracking-tight">
+              Scholars and Mentors <span className="gradient-text">Love InternMitra</span>
             </h2>
-
-            <p className="text-slate-600 text-lg">
-              Trusted by students and teachers across India.
+            <p className="text-slate-500 text-sm sm:text-base font-semibold leading-relaxed">
+              Read real-world reviews from learners across technical and management domains.
             </p>
-
           </div>
 
           {/* FILTER BUTTONS */}
-          <div className="flex justify-center mb-14">
-
-            <div className="bg-white shadow-lg rounded-full p-2 flex items-center gap-2 border border-slate-100">
-
+          <div className="flex justify-center mb-12">
+            <div className="bg-white shadow-md rounded-2xl p-1.5 flex gap-1 border border-slate-100">
               {["All", "Students", "Teachers"].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setActiveFilter(filter === "Students" ? "Student" : filter === "Teachers" ? "Teacher" : "All")}
-                  className={`px-8 py-3 rounded-full font-semibold text-sm transition ${(filter === "All" && activeFilter === "All") ||
+                  className={`px-6 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all duration-300 ${
+                    (filter === "All" && activeFilter === "All") ||
                     (filter === "Students" && activeFilter === "Student") ||
                     (filter === "Teachers" && activeFilter === "Teacher")
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "text-slate-600 hover:bg-slate-100"
-                    }`}
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/10"
+                      : "text-slate-600 hover:bg-slate-50"
+                  }`}
                 >
                   {filter}
                 </button>
               ))}
-
             </div>
-
           </div>
 
           {/* TESTIMONIAL GRID */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-
-            {filteredTestimonials.map((item, index) => (
-
+            {filteredTestimonials.slice(0, 6).map((item, index) => (
               <motion.div
                 key={index}
-                whileHover={{ y: -8 }}
-                className="bg-white rounded-[30px] p-8 border border-slate-100 shadow-lg hover:shadow-2xl transition-all duration-300"
+                whileHover={{ y: -4 }}
+                className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between"
               >
-
-                {/* STARS */}
-                <div className="flex gap-1 mb-5 text-yellow-400 text-xl">
-                  ★★★★★
+                <div>
+                  <div className="flex gap-0.5 mb-4 text-yellow-400 text-sm">
+                    {"★".repeat(5)}
+                  </div>
+                  <p className="text-slate-600 leading-relaxed text-sm font-semibold italic mb-6">
+                    "{item.review}"
+                  </p>
                 </div>
 
-                {/* REVIEW */}
-                <p className="text-slate-600 leading-8 mb-8 text-lg">
-                  "{item.review}"
-                </p>
-
-                {/* USER */}
-                <div className="flex items-center justify-between">
-
-                  <div className="flex items-center gap-4">
-
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white font-black text-sm shadow-md shadow-indigo-600/10">
                       {item.name.charAt(0)}
                     </div>
-
                     <div>
-
-                      <h4 className="font-bold text-lg text-slate-900">
+                      <h4 className="font-black text-sm text-slate-900 leading-tight">
                         {item.name}
                       </h4>
-
-                      <p className="text-slate-500">
+                      <p className="text-[10px] text-slate-400 font-bold mt-0.5">
                         {item.role}
                       </p>
-
                     </div>
-
                   </div>
 
-                  <span className={`px-4 py-1 rounded-full text-xs font-semibold ${item.type === "Student"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-blue-100 text-blue-700"
-                    }`}>
+                  <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${
+                    item.type === "Student"
+                      ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                      : "bg-indigo-50 text-indigo-600 border border-indigo-100"
+                  }`}>
                     {item.type}
                   </span>
-
                 </div>
-
               </motion.div>
-
             ))}
-
           </div>
 
         </div>
-
       </section>
 
       {/* INTERNSHIP FLOW */}
-      <section className="py-24 bg-[#071B4D] text-white">
-
-        <div className="max-w-7xl mx-auto px-4">
-
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-bold mb-5">
-              From Registration To Certification
+      <section className="py-24 bg-slate-950 text-white relative">
+        <div className="absolute top-0 left-0 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <span className="text-xs font-black uppercase tracking-[0.25em] text-indigo-400 bg-indigo-500/10 border border-indigo-400/20 px-3 py-1 rounded-md inline-block mb-3">Milestones</span>
+            <h2 className="text-3xl sm:text-4xl font-black text-white mb-4 tracking-tight">
+              Structured Digital Internship Path
             </h2>
-
-            <p className="text-slate-300 text-lg">
-              Structured internship journey for every student.
+            <p className="text-slate-400 text-sm sm:text-base font-medium">
+              A comprehensive checklist milestones timeline from onboarding registration to certificate release.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-
             {[
-              "Quick Registration",
-              "Payment & Enrollment",
-              "Access Training",
-              "Live Sessions",
-              "Assessments",
-              "Certificate Generation",
+              "Profile Registration",
+              "Razorpay Enrollment Payment",
+              "Access Learning Dashboard",
+              "Complete Daily Videos",
+              "Submit Assignment Reports",
+              "Generate Final Certificates",
             ].map((step, index) => (
-
               <div
                 key={index}
-                className="bg-white/5 border border-white/10 rounded-3xl p-8"
+                className="bg-white/[0.02] border border-white/5 rounded-3xl p-8 hover:bg-white/[0.04] transition-colors"
               >
-
-                <div className="flex justify-between items-center mb-5">
-                  <span className="text-cyan-400 font-semibold">
-                    STEP {index + 1}
+                <div className="flex justify-between items-center mb-6">
+                  <span className="text-[10px] text-indigo-400 font-extrabold uppercase tracking-widest bg-indigo-400/10 px-2.5 py-1 rounded-md border border-indigo-500/20">
+                    Step 0{index + 1}
                   </span>
-
-                  <span className="bg-white/10 px-4 py-1 rounded-full text-sm">
-                    ACTIVE
+                  <span className="bg-emerald-500/10 border border-emerald-400/20 text-emerald-400 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">
+                    Active
                   </span>
                 </div>
 
-                <h3 className="text-2xl font-bold mb-4">
+                <h3 className="text-lg font-black text-white mb-4 tracking-tight">
                   {step}
                 </h3>
 
-                <ul className="space-y-3 text-slate-300">
-                  <li>✔ Live Classes</li>
-                  <li>✔ Study Materials</li>
-                  <li>✔ Internship Tasks</li>
-                  <li>✔ Certification</li>
+                <ul className="space-y-2.5 text-xs text-slate-400 font-medium">
+                  <li className="flex items-center gap-2">
+                    <span className="text-indigo-400">✔</span> Industry standard syllabus
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-indigo-400">✔</span> Realtime dashboard log
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-indigo-400">✔</span> Online test verification
+                  </li>
                 </ul>
-
               </div>
-
             ))}
-
           </div>
         </div>
       </section>
 
       {/* TECHNOLOGY */}
-      <section className="py-24 bg-[#031131] text-white">
-
-        <div className="max-w-7xl mx-auto px-4">
-
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-bold mb-4">
-              Enterprise Grade Technology
+      <section className="py-24 bg-[#030612] text-white border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <span className="text-xs font-black uppercase tracking-[0.25em] text-indigo-400 bg-indigo-500/10 border border-indigo-400/20 px-3 py-1 rounded-md inline-block mb-3">Infrastructure</span>
+            <h2 className="text-3xl sm:text-4xl font-black text-white mb-4 tracking-tight">
+              Enterprise Grade Performance
             </h2>
-
-            <p className="text-slate-300">
-              Powerful infrastructure for large-scale internship management.
+            <p className="text-slate-400 text-sm sm:text-base font-medium">
+              Powered by advanced cloud-native architecture ensuring low latency learning access.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 lg:gap-8">
             {[
               {
-                icon: <Users />,
-                title: "500K+ Concurrent Users",
+                icon: <Users className="w-6 h-6 text-indigo-400" />,
+                title: "500K+ Concurrent Capacity",
               },
               {
-                icon: <Clock />,
-                title: "Ultra Low Latency",
+                icon: <Clock className="w-6 h-6 text-indigo-400" />,
+                title: "Ultra Low Latency Streaming",
               },
               {
-                icon: <Shield />,
-                title: "Advanced Security",
+                icon: <Shield className="w-6 h-6 text-indigo-400" />,
+                title: "Advanced Data Security",
               },
               {
-                icon: <BookOpen />,
-                title: "Real-time Learning",
+                icon: <BookOpen className="w-6 h-6 text-indigo-400" />,
+                title: "Real-time Progress Logs",
               },
               {
-                icon: <BarChart3 />,
-                title: "Advanced Analytics",
+                icon: <BarChart3 className="w-6 h-6 text-indigo-400" />,
+                title: "Interactive Syllabus Grids",
               },
               {
-                icon: <Shield />,
-                title: "99.99% Uptime",
+                icon: <Shield className="w-6 h-6 text-indigo-400" />,
+                title: "99.9% High Availability",
               },
             ].map((item, index) => (
-
               <div
                 key={index}
-                className="bg-white/5 border border-white/10 rounded-3xl p-8"
+                className="bg-white/[0.01] border border-white/[0.03] rounded-3xl p-6 hover:border-indigo-500/20 transition-all duration-300"
               >
-
-                <div className="w-16 h-16 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mb-6">
+                <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mb-5 border border-indigo-400/10 shadow-inner">
                   {item.icon}
                 </div>
 
-                <h3 className="text-2xl font-bold">
+                <h3 className="text-sm sm:text-base font-black text-white tracking-tight">
                   {item.title}
                 </h3>
-
               </div>
-
             ))}
-
           </div>
+
         </div>
       </section>
+          {/* SUPPORT */}
+      <section className="py-20 bg-gradient-to-r from-indigo-600 to-violet-700 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_120%,rgba(6,182,212,0.15),transparent_50%)] pointer-events-none" />
+        <div className="max-w-5xl mx-auto text-center px-4 relative z-10">
 
-      {/* SUPPORT */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
-
-        <div className="max-w-5xl mx-auto text-center px-4">
-
-          <h2 className="text-5xl font-bold mb-4">
-            24/7 Student Support
+          <h2 className="text-4xl font-black mb-4 tracking-tight">
+            24/7 Live Mentor Support
           </h2>
 
-          <p className="text-lg text-blue-100 mb-10">
-            Dedicated support team available anytime.
+          <p className="text-base text-indigo-100 mb-10 font-medium">
+            Have questions? Our support team and expert trainers are here to guide you.
           </p>
 
-          <div className="flex flex-wrap justify-center gap-8">
+          <div className="flex flex-wrap justify-center gap-8 font-semibold">
 
-            <div className="flex items-center gap-3">
-              <Mail />
+            <div className="flex items-center gap-3 bg-white/10 px-5 py-3 rounded-2xl border border-white/10 backdrop-blur-sm">
+              <Mail className="w-5 h-5 text-cyan-300" />
               info@internmitra.com
             </div>
 
-            <div className="flex items-center gap-3">
-              <Phone />
+            <div className="flex items-center gap-3 bg-white/10 px-5 py-3 rounded-2xl border border-white/10 backdrop-blur-sm">
+              <Phone className="w-5 h-5 text-cyan-300" />
               +91 9693921517
             </div>
 
@@ -854,9 +789,9 @@ export default function Home() {
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-[#07142E] text-white pt-20 pb-10">
+      <footer className="bg-slate-950 text-white pt-20 pb-10 border-t border-slate-900">
 
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           <div className="grid lg:grid-cols-5 gap-10 mb-16">
 
@@ -864,37 +799,36 @@ export default function Home() {
 
               <div className="flex items-center gap-3 mb-6">
 
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-2xl font-bold">
-                  I
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-600/10">
+                  IM
                 </div>
 
                 <div>
-                  <h2 className="text-3xl font-bold">
-                    Internmitra
+                  <h2 className="text-2xl font-black tracking-tight">
+                    InternMitra
                   </h2>
 
-                  <p className="text-slate-400 text-sm">
-                    Empowering Students
+                  <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mt-0.5">
+                    Empowering Scholars
                   </p>
                 </div>
 
               </div>
 
-              <p className="text-slate-300 leading-8 mb-8">
-                Internship platform helping students across India gain
-                practical skills and certification.
+              <p className="text-slate-400 leading-relaxed text-sm font-semibold mb-8 max-w-sm">
+                Structured digital internship portal providing industry training, project-based learning logs, and verified credentials.
               </p>
 
-              <div className="flex gap-4 mb-8">
+              <div className="flex gap-3 mb-8">
 
                 {[Facebook, Instagram, Twitter, Linkedin, Youtube].map(
                   (Icon, index) => (
 
                     <div
                       key={index}
-                      className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center hover:bg-blue-600 transition cursor-pointer"
+                      className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all cursor-pointer"
                     >
-                      <Icon className="w-5 h-5" />
+                      <Icon className="w-4 h-4" />
                     </div>
 
                   )
@@ -902,21 +836,21 @@ export default function Home() {
 
               </div>
 
-              <div className="space-y-4 text-slate-300">
+              <div className="space-y-3.5 text-sm text-slate-400 font-semibold">
 
                 <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-cyan-400" />
+                  <Mail className="w-4 h-4 text-indigo-400" />
                   info@internmitra.com
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Phone className="w-5 h-5 text-cyan-400" />
+                  <Phone className="w-4 h-4 text-indigo-400" />
                   +91 9693921517
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-cyan-400 mt-1" />
-                  Patna,Bihar, India
+                  <MapPin className="w-4 h-4 text-indigo-400 mt-1" />
+                  Patna, Bihar, India
                 </div>
 
               </div>
@@ -924,76 +858,76 @@ export default function Home() {
             </div>
 
             <div>
-              <h3 className="text-xl font-bold mb-6">
+              <h3 className="text-sm font-black uppercase tracking-widest text-white mb-6">
                 Platform
               </h3>
 
-              <ul className="space-y-4 text-slate-300">
+              <ul className="space-y-3.5 text-slate-400 text-sm font-semibold">
                 <li>
                   <Link
                     to="/features"
-                    className="hover:text-white transition-colors duration-300"
+                    className="hover:text-indigo-400 transition-colors"
                   >
                     Features
                   </Link>
                 </li>
-                <li>Pricing</li>
-                <li>For Students</li>
-                <li>For Colleges</li>
+                <li className="hover:text-indigo-400 cursor-pointer">Pricing</li>
+                <li className="hover:text-indigo-400 cursor-pointer">For Students</li>
+                <li className="hover:text-indigo-400 cursor-pointer">For Colleges</li>
               </ul>
             </div>
 
             <div>
-              <h3 className="text-xl font-bold mb-6">
+              <h3 className="text-sm font-black uppercase tracking-widest text-white mb-6">
                 Support
               </h3>
 
-              <ul className="space-y-4 text-slate-300">
-                <li>FAQs</li>
+              <ul className="space-y-3.5 text-slate-400 text-sm font-semibold">
+                <li className="hover:text-indigo-400 cursor-pointer">FAQs</li>
                 <li>
                   <Link
                     to="/about"
-                    className="hover:text-white transition-colors duration-300"
+                    className="hover:text-indigo-400 transition-colors"
                   >
-                    About
+                    About Us
                   </Link>
                 </li>
                 <li>
                   <Link
                     to="/contact"
-                    className="hover:text-white transition-colors duration-300"
+                    className="hover:text-indigo-400 transition-colors"
                   >
                     Contact us
                   </Link>
                 </li>
-                <li>Certificates</li>
+                <li className="hover:text-indigo-400 cursor-pointer">Credentials</li>
               </ul>
             </div>
 
             <div>
-              <h3 className="text-xl font-bold mb-6">
+              <h3 className="text-sm font-black uppercase tracking-widest text-white mb-6">
                 Legal
               </h3>
 
-              <ul className="space-y-4 text-slate-300">
-                <li>Privacy Policy</li>
-                <li>Terms & Conditions</li>
-                <li>Refund Policy</li>
-                <li>Cookie Policy</li>
+              <ul className="space-y-3.5 text-slate-400 text-sm font-semibold">
+                <li className="hover:text-indigo-400 cursor-pointer">Privacy Policy</li>
+                <li className="hover:text-indigo-400 cursor-pointer">Terms & Conditions</li>
+                <li className="hover:text-indigo-400 cursor-pointer">Refund Policy</li>
+                <li className="hover:text-indigo-400 cursor-pointer">Cookie Settings</li>
               </ul>
             </div>
 
           </div>
 
-          <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-400">
+          <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-semibold text-slate-500">
 
             <p>
               © 2026 Internmitra. All rights reserved.
             </p>
 
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              20,000+ Students
+              <Users className="w-4 h-4 text-indigo-400/80" />
+              20,000+ Registered Scholars
             </div>
 
           </div>

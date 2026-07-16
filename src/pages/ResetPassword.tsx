@@ -67,19 +67,19 @@ export default function ResetPassword() {
 
   if (verifying) {
     return (
-      <div className="min-h-[calc(100vh-80px)] bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-[calc(100vh-80px)] bg-[#fafbfc] flex items-center justify-center p-4">
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="max-w-md w-full"
         >
-          <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-900/5 p-10 lg:p-14 border border-slate-100 flex flex-col items-center relative overflow-hidden">
-            <div className="w-20 h-20 bg-slate-100 text-slate-600 rounded-3xl flex items-center justify-center mb-8 shadow-xl relative z-10 animate-pulse">
-              <Lock size={40} />
+          <div className="bg-white rounded-[2.5rem] shadow-md p-10 lg:p-14 border border-slate-100 flex flex-col items-center relative overflow-hidden">
+            <div className="w-18 h-18 bg-slate-50 border border-slate-100 text-slate-400 rounded-3xl flex items-center justify-center mb-8 shadow-sm relative z-10 animate-pulse">
+              <Lock size={32} />
             </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tighter mb-4 uppercase italic relative z-10">Verifying...</h2>
-            <p className="text-slate-500 font-bold italic text-sm text-center relative z-10">
-              Please wait while we verify your reset link.
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2 uppercase relative z-10">Verifying Link</h2>
+            <p className="text-slate-400 font-semibold text-xs text-center relative z-10">
+              Please wait while we verify your password reset link.
             </p>
           </div>
         </motion.div>
@@ -89,32 +89,32 @@ export default function ResetPassword() {
 
   if (error && !codeValid) {
     return (
-      <div className="min-h-[calc(100vh-80px)] bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-[calc(100vh-80px)] bg-[#fafbfc] flex items-center justify-center p-4">
         <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="max-w-md w-full"
         >
-          <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-900/5 p-10 lg:p-14 border border-slate-100 flex flex-col items-center relative overflow-hidden">
-            <div className="w-20 h-20 bg-red-100 text-red-600 rounded-3xl flex items-center justify-center mb-8 shadow-xl shadow-red-600/20 relative z-10">
-              <AlertCircle size={40} />
+          <div className="bg-white rounded-[2.5rem] shadow-md p-10 lg:p-14 border border-slate-100 flex flex-col items-center relative overflow-hidden">
+            <div className="w-18 h-18 bg-red-50 text-red-600 border border-red-100 rounded-3xl flex items-center justify-center mb-8 shadow-lg shadow-red-600/10 relative z-10">
+              <AlertCircle size={32} />
             </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tighter mb-4 uppercase italic relative z-10">Invalid Link</h2>
-            <p className="text-slate-500 font-bold italic mb-10 text-sm text-center relative z-10">
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-4 uppercase relative z-10">Invalid Link</h2>
+            <p className="text-slate-400 font-semibold mb-8 text-xs text-center relative z-10 leading-relaxed">
               {error}
             </p>
             
             <div className="w-full space-y-4 relative z-10">
               <Button 
                 onClick={() => navigate('/forgot-password')}
-                className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white text-lg font-black rounded-2xl shadow-xl shadow-blue-600/20 uppercase tracking-widest"
+                className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-2xl shadow-lg shadow-indigo-600/10 uppercase tracking-widest"
               >
                 Request New Link
               </Button>
               <Button 
                 onClick={() => navigate('/login')}
                 variant="outline"
-                className="w-full h-16 border-2 border-slate-200 hover:border-slate-300 text-slate-600 text-lg font-black rounded-2xl uppercase tracking-widest"
+                className="w-full h-14 border border-slate-200 hover:border-slate-300 text-slate-600 text-xs font-black rounded-2xl uppercase tracking-widest"
               >
                 Back to Login
               </Button>
@@ -127,32 +127,31 @@ export default function ResetPassword() {
 
   if (success) {
     return (
-      <div className="min-h-[calc(100vh-80px)] bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-[calc(100vh-80px)] bg-[#fafbfc] flex items-center justify-center p-4">
         <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="max-w-md w-full"
         >
-          <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-900/5 p-10 lg:p-14 border border-slate-100 flex flex-col items-center relative overflow-hidden">
-            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-3xl flex items-center justify-center mb-8 shadow-xl shadow-green-600/20 relative z-10">
-              <CheckCircle2 size={40} />
+          <div className="bg-white rounded-[2.5rem] shadow-md p-10 lg:p-14 border border-slate-100 flex flex-col items-center relative overflow-hidden">
+            <div className="w-18 h-18 bg-green-50 text-green-600 rounded-3xl flex items-center justify-center mb-8 shadow-lg shadow-green-600/10 relative z-10">
+              <CheckCircle2 size={32} />
             </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tighter mb-4 uppercase italic relative z-10">Password Updated!</h2>
-            <p className="text-slate-500 font-bold italic mb-10 text-sm text-center relative z-10">
-              Your password has been successfully reset. You can now login with your new password.
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-4 uppercase relative z-10">Password Updated!</h2>
+            <p className="text-slate-400 font-semibold mb-8 text-xs text-center relative z-10 leading-relaxed">
+              Your password has been successfully reset. You can now login with your new credentials.
             </p>
             
             <div className="w-full relative z-10">
               <Button 
                 onClick={() => navigate('/login')}
-                className="w-full h-16 bg-slate-900 hover:bg-slate-800 text-white text-lg font-black rounded-2xl shadow-xl shadow-slate-900/10 uppercase tracking-widest"
+                className="w-full h-14 bg-slate-900 hover:bg-slate-800 text-white text-xs font-black rounded-2xl shadow-md uppercase tracking-widest"
               >
                 Go to Login
               </Button>
             </div>
 
-            <div className="absolute top-0 right-0 w-32 h-32 bg-green-600/5 rounded-full translate-x-1/2 -translate-y-1/2 blur-2xl" />
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-green-600/5 rounded-full -translate-x-1/2 translate-y-1/2 blur-2xl" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-green-600/5 rounded-full translate-x-1/2 -translate-y-1/2 blur-2xl pointer-events-none" />
           </div>
         </motion.div>
       </div>
@@ -160,66 +159,65 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-[calc(100vh-80px)] bg-[#fafbfc] flex items-center justify-center p-4">
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-md w-full"
       >
-        <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-900/5 p-10 lg:p-14 border border-slate-100 flex flex-col items-center relative overflow-hidden">
-          <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-3xl flex items-center justify-center mb-8 shadow-xl shadow-blue-600/20 relative z-10">
-            <Lock size={40} />
+        <div className="bg-white rounded-[2.5rem] shadow-md p-10 lg:p-14 border border-slate-100 flex flex-col items-center relative overflow-hidden">
+          <div className="w-18 h-18 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-3xl flex items-center justify-center mb-8 shadow-sm relative z-10 hover:rotate-6 transition-transform">
+            <Lock size={32} />
           </div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tighter mb-2 uppercase italic relative z-10">New Password</h2>
-          <p className="text-slate-500 font-bold italic mb-10 text-sm relative z-10">Enter your new password below</p>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2 uppercase relative z-10">New Password</h2>
+          <p className="text-slate-400 font-semibold mb-8 text-xs relative z-10 text-center">Enter your new password below</p>
 
-          <form onSubmit={handleResetPassword} className="w-full space-y-6 relative z-10">
+          <form onSubmit={handleResetPassword} className="w-full space-y-5 relative z-10">
             {error && (
-              <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl flex items-center gap-3 text-[10px] font-black uppercase tracking-tight">
+              <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl flex items-center gap-3 text-xs font-bold uppercase tracking-tight">
                 <AlertCircle size={16} />
                 {error}
               </div>
             )}
 
-            <div className="space-y-3">
-              <Label className="uppercase tracking-[0.2em] text-[10px] font-black text-slate-400 px-1">New Password</Label>
+            <div className="space-y-2">
+              <Label className="uppercase tracking-[0.2em] text-[10px] font-black text-slate-500 px-1">New Password</Label>
               <div className="relative">
                 <Input 
                   type="password" 
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)} 
-                  className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 pl-12 transition-all font-bold"
+                  className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 pl-12 transition-all font-semibold"
                   placeholder="••••••••"
                   required
                   minLength={6}
                 />
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
               </div>
             </div>
 
-            <div className="space-y-3">
-              <Label className="uppercase tracking-[0.2em] text-[10px] font-black text-slate-400 px-1">Confirm Password</Label>
+            <div className="space-y-2">
+              <Label className="uppercase tracking-[0.2em] text-[10px] font-black text-slate-500 px-1">Confirm Password</Label>
               <div className="relative">
                 <Input 
                   type="password" 
                   value={confirmPassword} 
                   onChange={(e) => setConfirmPassword(e.target.value)} 
-                  className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 pl-12 transition-all font-bold"
+                  className="h-14 rounded-2xl bg-slate-50 border-transparent focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 pl-12 transition-all font-semibold"
                   placeholder="••••••••"
                   required
                   minLength={6}
                 />
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
               </div>
             </div>
 
-            <Button type="submit" disabled={loading} className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white text-lg font-black rounded-2xl shadow-xl shadow-blue-600/20 uppercase tracking-widest">
+            <Button type="submit" disabled={loading} className="w-full h-14 bg-indigo-600 hover:bg-slate-900 text-white text-xs font-black rounded-2xl shadow-lg shadow-indigo-600/10 uppercase tracking-widest">
               {loading ? 'Updating...' : 'Update Password'}
             </Button>
           </form>
 
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/5 rounded-full translate-x-1/2 -translate-y-1/2 blur-2xl" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-600/5 rounded-full -translate-x-1/2 translate-y-1/2 blur-2xl" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 rounded-full translate-x-1/2 -translate-y-1/2 blur-2xl pointer-events-none" />
         </div>
       </motion.div>
     </div>

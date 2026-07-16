@@ -490,22 +490,22 @@ export default function LMS() {
     const progressPercent = Math.round(((currentQuestionIndex + 1) / courseTest.questions.length) * 100);
 
     return (
-      <div className="min-h-[70vh] flex items-center justify-center p-4">
-        <div className="w-full max-w-2xl bg-white rounded-[3rem] border border-slate-100 shadow-2xl p-10 flex flex-col space-y-8 relative overflow-hidden">
+      <div className="min-h-[70vh] flex items-center justify-center p-4 pt-12 md:pt-16">
+        <div className="w-full max-w-2xl bg-white/90 backdrop-blur-md rounded-[2.5rem] border border-white/60 shadow-2xl p-8 sm:p-10 flex flex-col space-y-8 relative overflow-hidden">
           {/* Top Progress bar */}
           <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden absolute top-0 left-0 right-0">
             <div
-              className="bg-gradient-to-r from-blue-600 to-purple-600 h-full rounded-full transition-all duration-300"
+              className="bg-gradient-to-r from-blue-600 to-cyan-500 h-full rounded-full transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-sm font-black text-slate-400 uppercase tracking-widest">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
               Question {currentQuestionIndex + 1} of {courseTest.questions.length}
             </span>
             <div className="flex items-center gap-2">
-              <span className="bg-purple-100 text-purple-700 text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-wider">
+              <span className="bg-indigo-50 text-indigo-700 text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-wider">
                 {profile?.internshipDomain}
               </span>
               <button
@@ -523,7 +523,7 @@ export default function LMS() {
           </div>
 
           <div className="space-y-4">
-            <h2 className="text-2xl font-black text-slate-900 leading-snug">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-snug">
               {q.questionText}
             </h2>
           </div>
@@ -535,18 +535,18 @@ export default function LMS() {
                 <button
                   key={optIndex}
                   onClick={() => handleSelectOption(q.id, optIndex)}
-                  className={`w-full p-5 rounded-2xl border-2 text-left font-bold transition flex items-center gap-4 group ${isSelected
-                    ? 'border-blue-600 bg-blue-50/50 text-blue-900'
-                    : 'border-slate-100 hover:border-blue-200 hover:bg-slate-50 text-slate-700'
+                  className={`w-full p-4 sm:p-5 rounded-2xl border-2 text-left font-bold transition flex items-center gap-4 group ${isSelected
+                    ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900'
+                    : 'border-slate-100 hover:border-indigo-200 hover:bg-slate-50 text-slate-700'
                     }`}
                 >
                   <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs transition-colors ${isSelected
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                    : 'bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-700'
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                    : 'bg-slate-100 text-slate-500 group-hover:bg-indigo-100 group-hover:text-indigo-700'
                     }`}>
                     {String.fromCharCode(65 + optIndex)}
                   </span>
-                  <span>{opt}</span>
+                  <span className="text-sm sm:text-base">{opt}</span>
                 </button>
               );
             })}
@@ -556,7 +556,7 @@ export default function LMS() {
             <button
               onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
               disabled={currentQuestionIndex === 0}
-              className="px-6 py-4 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition disabled:opacity-50"
+              className="px-5 py-3.5 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition disabled:opacity-50"
             >
               <ChevronLeft size={16} />
               Back
@@ -565,7 +565,7 @@ export default function LMS() {
             {currentQuestionIndex < courseTest.questions.length - 1 ? (
               <button
                 onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
-                className="px-6 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition"
+                className="px-5 py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition"
               >
                 Next
                 <ChevronRight size={16} />
@@ -574,7 +574,7 @@ export default function LMS() {
               <button
                 onClick={handleSubmitTest}
                 disabled={submittingTest}
-                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition shadow-xl shadow-blue-600/20 disabled:opacity-50"
+                className="px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition shadow-xl shadow-indigo-600/20 disabled:opacity-50"
               >
                 {submittingTest ? 'Submitting...' : 'Submit Test'}
               </button>
@@ -586,146 +586,139 @@ export default function LMS() {
   }
 
   return (
-    <div className="space-y-12">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <div>
-          <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter leading-tight mb-4 uppercase italic">Learning / <span className="text-blue-600">LMS Archive</span></h1>
-          <p className="text-xl text-slate-500 font-bold italic leading-relaxed">Access your curated library for <span className="text-slate-900 border-b-4 border-blue-50">{profile?.internshipDomain}</span>.</p>
+    <div className="student-page">
+      <header className="flex flex-col lg:flex-row lg:items-start justify-between gap-8">
+        <div className="space-y-3">
+          <span className="student-kicker">LMS Center</span>
+          <h1 className="student-title">
+            Learning / <span className="gradient-text">LMS Archive</span>
+          </h1>
+          <p className="student-subtitle">
+            Access your curated library for <span className="text-slate-800 font-extrabold">{profile?.internshipDomain}</span>.
+          </p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <div className="text-sm font-black text-slate-400 uppercase tracking-widest">Day {currentDay} of {COURSE_VIDEO_DAY_LIMIT}</div>
-            <div className="text-xs font-bold text-slate-500">{getCompletedVideoDays().size} videos completed • {getCompletedVideoDays().size} hours</div>
-          </div>
-          <div className="flex flex-col gap-4">
 
+        <div className="flex flex-col sm:flex-row lg:items-start gap-4">
+          {/* Progress Summary Box */}
+          <div className="student-card p-5 flex flex-col justify-between min-w-[200px]">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-2.5 mb-2.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Workspace</span>
+              <span className="bg-indigo-50 text-indigo-600 text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">Day {currentDay}/{COURSE_VIDEO_DAY_LIMIT}</span>
+            </div>
+            <div className="text-xs font-semibold text-slate-500 space-y-1">
+              <p><span className="text-slate-800 font-extrabold">{getCompletedVideoDays().size}</span> videos completed</p>
+              <p><span className="text-slate-800 font-extrabold">{getCompletedVideoDays().size}</span> hours training logged</p>
+            </div>
             {adminApproved && (
-              <>
-
+              <div className="flex flex-col gap-2 mt-4">
                 <button
                   onClick={() => {
-
                     if (!user?.uid) {
                       alert("User not found");
                       return;
                     }
-
-                    generateCertificate(
-                      profile,
-                      user.uid
-                    );
+                    generateCertificate(profile, user.uid);
                   }}
-                  className="bg-green-600 text-white p-5 px-10 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-green-600/20 hover:bg-green-700 transition uppercase tracking-widest text-xs"
+                  className="student-button-primary w-full min-h-[40px] px-4 py-2 bg-emerald-600 text-white rounded-xl font-black flex items-center justify-center gap-2 text-[10px] uppercase tracking-wider"
                 >
-                  <Download size={20} />
+                  <Download size={14} />
                   Download Certificate
                 </button>
                 <button
                   onClick={() => generateAttendanceReport(profile, attendanceEntries, dailyVideos)}
-                  className="bg-slate-900 text-white p-5 px-10 rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition uppercase tracking-widest text-xs"
+                  className="student-button-soft w-full min-h-[40px] px-4 py-2 text-[10px]"
                 >
-                  <FileText size={20} />
+                  <FileText size={14} />
                   Attendance Report
                 </button>
-              </>
-            )}
-
-            {/* VERIFY CERTIFICATE */}
-
-            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-lg flex flex-col gap-3">
-
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                Verify Existing Certificate
               </div>
+            )}
+          </div>
 
-              <input
-                type="text"
-                placeholder="Enter Certificate No."
-                value={certificateNo}
-                onChange={(e) =>
-                  setCertificateNo(e.target.value)
-                }
-                className="h-14 px-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold"
-              />
-
-              <button
-                onClick={verifyCertificate}
-                disabled={verifying}
-                className="bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition"
-              >
-                <SearchCheck size={18} />
-
-                {verifying
-                  ? 'VERIFYING...'
-                  : 'VERIFY & DOWNLOAD'}
-              </button>
-
+          {/* VERIFY CERTIFICATE */}
+          <div className="student-card p-5 flex flex-col gap-3 min-w-[220px]">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+              Verify Certificate
             </div>
-
+            <input
+              type="text"
+              placeholder="Enter Certificate No."
+              value={certificateNo}
+              onChange={(e) => setCertificateNo(e.target.value)}
+              className="student-input h-10 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold"
+            />
+            <button
+              onClick={verifyCertificate}
+              disabled={verifying}
+              className="student-button-primary w-full min-h-[40px] px-4 py-2 text-[10px]"
+            >
+              <SearchCheck size={14} />
+              {verifying ? 'VERIFYING...' : 'VERIFY & DOWNLOAD'}
+            </button>
           </div>
         </div>
       </header>
 
       {/* Test Assessment Section */}
       {isCourseCompleted && courseTest && courseTest.questions && courseTest.questions.length > 0 && (
-        <div className="mb-10">
+        <div className="mb-6">
           {!testSubmission ? (
-            <div className="bg-gradient-to-r from-purple-900 to-indigo-900 rounded-[3rem] p-10 lg:p-14 text-white shadow-2xl relative overflow-hidden group">
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/20 rounded-3xl p-8 lg:p-12 text-white shadow-2xl relative overflow-hidden group">
               <div className="relative z-10 max-w-2xl">
-                <div className="inline-flex items-center gap-2 px-5 py-2 bg-purple-500/20 text-purple-200 rounded-full text-[10px] font-black uppercase tracking-widest mb-8 border border-purple-500/30">
-                  <ClipboardList size={14} />
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-500/20 text-indigo-200 rounded-full text-[9px] font-black uppercase tracking-widest mb-6 border border-indigo-500/30">
+                  <ClipboardList size={12} />
                   Final Course Assessment
                 </div>
-                <h2 className="text-4xl lg:text-5xl font-black mb-6 tracking-tighter uppercase italic leading-tight">
+                <h2 className="text-3xl sm:text-4xl font-black mb-4 tracking-tighter uppercase italic leading-tight">
                   Take Your Final <br />
-                  <span className="text-purple-300">Assessment Test</span>
+                  <span className="gradient-text-cyan">Assessment Test</span>
                 </h2>
-                <p className="text-purple-200/80 font-bold italic mb-10 text-lg leading-relaxed">
+                <p className="text-slate-300 font-semibold italic mb-8 text-sm sm:text-base leading-relaxed">
                   You have successfully completed all daily training videos for {profile?.internshipDomain}!
                   Take the final exam now to test your learning and view your grade.
                 </p>
                 <button
                   onClick={handleStartTest}
-                  className="px-10 py-5 bg-white text-indigo-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-purple-100 transition shadow-2xl flex items-center gap-2 animate-bounce"
+                  className="px-8 py-4 bg-white text-indigo-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-50 transition shadow-2xl flex items-center gap-2 animate-bounce"
                 >
                   <ClipboardList size={16} />
                   Start Exam Now
                 </button>
               </div>
-              <ClipboardList size={300} className="absolute -right-20 -bottom-20 text-purple-700/10 opacity-30 rotate-[15deg] group-hover:rotate-[25deg] transition-transform duration-1000" />
+              <ClipboardList size={200} className="absolute -right-10 -bottom-10 text-indigo-500/5 opacity-20 rotate-[15deg] group-hover:rotate-[25deg] transition-transform duration-1000" />
             </div>
           ) : (
-            <div className="bg-gradient-to-r from-emerald-900 to-teal-900 rounded-[3rem] p-10 lg:p-14 text-white shadow-2xl relative overflow-hidden group">
+            <div className="bg-gradient-to-r from-[#0d2719] via-[#091f14] to-[#040e0a] border border-emerald-500/20 rounded-3xl p-8 lg:p-12 text-white shadow-2xl relative overflow-hidden group">
               <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
                 <div>
-                  <div className="inline-flex items-center gap-2 px-5 py-2 bg-emerald-500/20 text-emerald-200 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-emerald-500/30">
-                    <CheckCircle2 size={14} />
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/20 text-emerald-200 rounded-full text-[9px] font-black uppercase tracking-widest mb-4 border border-emerald-500/30">
+                    <CheckCircle2 size={12} />
                     Assessment Completed
                   </div>
-                  <h2 className="text-4xl font-black tracking-tighter uppercase italic leading-tight mb-4">
-                    Your Performance <span className="text-emerald-300">Report</span>
+                  <h2 className="text-3xl font-black tracking-tighter uppercase italic leading-tight mb-4">
+                    Your Performance <span className="gradient-text-cyan">Report</span>
                   </h2>
-                  <p className="text-emerald-200/80 font-bold italic text-lg max-w-lg leading-relaxed">
+                  <p className="text-slate-300 font-semibold italic text-base max-w-lg leading-relaxed">
                     Congratulations! You completed the final assessment for {profile?.internshipDomain}.
                     Your grade has been successfully calculated and stored.
                   </p>
                 </div>
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 p-8 rounded-3xl text-center min-w-[220px] shadow-2xl flex flex-col items-center justify-center">
-                  <span className="text-xs font-black text-emerald-300 uppercase tracking-widest mb-1">Your Score</span>
-                  <span className="text-5xl font-black mb-4">{testSubmission.scorePercentage}%</span>
-                  <div className="text-xs font-bold text-emerald-100 mb-6">
+                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-6 rounded-3xl text-center min-w-[200px] shadow-2xl flex flex-col items-center justify-center">
+                  <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Your Score</span>
+                  <span className="text-4xl font-black mb-2">{testSubmission.scorePercentage}%</span>
+                  <div className="text-[10px] font-semibold text-slate-400 mb-5">
                     {testSubmission.correctCount} Correct • {testSubmission.wrongCount} Wrong
                   </div>
-                  <div className="flex flex-col w-full gap-3">
+                  <div className="flex flex-col w-full gap-2.5">
                     <button
                       onClick={() => setShowReportModal(true)}
-                      className="w-full py-3 bg-white text-emerald-900 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-50 transition"
+                      className="w-full py-2.5 bg-white text-slate-900 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-50 transition"
                     >
                       Review Answers
                     </button>
                     <button
                       onClick={() => generateTestReport(profile, testSubmission, courseTest.questions)}
-                      className="w-full py-3 bg-emerald-600 border border-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition flex items-center justify-center gap-1.5"
+                      className="w-full py-2.5 bg-emerald-600 border border-emerald-500 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-emerald-700 transition flex items-center justify-center gap-1.5"
                     >
                       <Download size={12} />
                       Download PDF
@@ -733,58 +726,60 @@ export default function LMS() {
                   </div>
                 </div>
               </div>
-              <CheckCircle2 size={300} className="absolute -left-20 -bottom-20 text-emerald-700/10 opacity-30 rotate-[15deg]" />
+              <CheckCircle2 size={200} className="absolute -left-10 -bottom-10 text-emerald-500/5 opacity-20 rotate-[15deg]" />
             </div>
           )}
         </div>
       )}
 
       {/* Search & Filters */}
-      <div className="flex flex-col md:flex-row gap-6">
+      <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-grow group">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={24} />
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
           <input
             type="text"
             placeholder="Search for videos, PPTs, or assignments..."
-            className="w-full h-16 pl-16 pr-6 bg-white border border-slate-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all font-bold text-slate-900 placeholder:text-slate-400"
+            className="student-input pl-14 pr-5 h-14"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <button className="h-16 px-10 bg-white border border-slate-100 rounded-2xl shadow-sm flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition">
-          <Filter size={20} /> Filters
+        <button className="student-button-soft h-14 px-8 gap-2">
+          <Filter size={16} /> Filters
         </button>
       </div>
 
       {/* Featured Video Section */}
-      <div className="bg-white p-10 lg:p-14 rounded-[4rem] border border-slate-100 shadow-2xl shadow-slate-900/[0.02] overflow-hidden relative group">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 px-5 py-2 bg-red-50 text-red-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-8 border border-red-100 animate-pulse">
-              <div className="w-2 h-2 bg-red-600 rounded-full" />
+      <div className="student-card p-6 sm:p-10 lg:p-12 overflow-hidden relative group">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-50 text-red-600 rounded-full text-[9px] font-black uppercase tracking-widest border border-red-100 animate-pulse">
+              <div className="w-1.5 h-1.5 bg-red-600 rounded-full" />
               Live Training Session
             </div>
-            <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mb-8 tracking-tighter leading-tight uppercase italic">Watch Daily <br /><span className="text-blue-600">Live Classes</span></h2>
-            <p className="text-slate-500 font-bold italic mb-10 text-xl leading-relaxed max-w-lg">
-              "Direct access to our YouTube live broadcast. Join the daily 4-hour immersive sessions with industry experts."
+            <h2 className="text-3xl font-black text-slate-900 tracking-tighter leading-tight uppercase italic">
+              Watch Daily <br/><span className="gradient-text">Live Classes</span>
+            </h2>
+            <p className="text-slate-500 font-semibold italic text-base leading-relaxed max-w-lg">
+              Direct access to our YouTube live broadcast. Join the daily 4-hour immersive sessions with industry experts.
             </p>
-            <div className="flex flex-wrap gap-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
-                  <PlayCircle size={20} />
+            <div className="flex flex-wrap gap-6 pt-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 border border-slate-100">
+                  <PlayCircle size={16} />
                 </div>
-                <span className="text-xs font-black uppercase tracking-widest text-slate-900 italic">4.5 Hours Daily</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 italic">4.5 Hours Daily</span>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
-                  <MonitorPlay size={20} />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 border border-slate-100">
+                  <MonitorPlay size={16} />
                 </div>
-                <span className="text-xs font-black uppercase tracking-widest text-slate-900 italic">Interactive Chat</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 italic">Interactive Chat</span>
               </div>
             </div>
           </div>
 
-          <div className="aspect-video w-full bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl relative group-hover:scale-[1.02] transition-transform duration-700">
+          <div className="aspect-video w-full bg-slate-900 rounded-[2rem] overflow-hidden shadow-2xl relative border border-white/10 group-hover:scale-[1.01] transition-transform duration-500">
             {videoActive ? (
               <iframe
                 className="w-full h-full"
@@ -796,10 +791,10 @@ export default function LMS() {
             ) : (
               <button
                 onClick={() => setVideoActive(true)}
-                className="w-full h-full flex items-center justify-center bg-slate-900 group/play"
+                className="w-full h-full flex items-center justify-center bg-slate-950 group/play relative"
               >
-                <div className="w-20 h-20 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all group-hover/play:scale-110">
-                  <PlayCircle size={48} className="text-white" />
+                <div className="w-16 h-16 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all group-hover/play:scale-110 border border-white/20">
+                  <PlayCircle size={36} className="text-white" />
                 </div>
               </button>
             )}
@@ -807,11 +802,12 @@ export default function LMS() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {/* Videos Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
-          <div className="col-span-full text-center py-12 text-slate-500 font-bold italic">Loading daily videos...</div>
+          <div className="col-span-full text-center py-12 text-slate-500 font-semibold italic">Loading daily videos...</div>
         ) : dailyVideos.length === 0 ? (
-          <div className="col-span-full text-center py-12 text-slate-500 font-bold italic">No daily videos available yet.</div>
+          <div className="col-span-full text-center py-12 text-slate-500 font-semibold italic">No daily videos available yet.</div>
         ) : (
           dailyVideos.map((video, i) => {
             const isLocked = video.day > currentDay;
@@ -820,171 +816,187 @@ export default function LMS() {
             return (
               <motion.div
                 key={video.id}
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.1 }}
-                className={`bg-white p-10 rounded-[3rem] border shadow-xl flex flex-col group transition-all duration-500 relative overflow-hidden ${isLocked
-                  ? 'border-slate-100 opacity-60'
-                  : isCompleted
-                    ? 'border-green-200 shadow-green-900/[0.02]'
-                    : 'border-slate-100 shadow-slate-900/[0.02] hover:shadow-2xl hover:border-blue-100'
-                  }`}
+                transition={{ delay: i * 0.05 }}
+                className={`student-card p-6 flex flex-col justify-between group transition-all duration-300 relative overflow-hidden ${
+                  isLocked
+                    ? 'opacity-55 scale-[0.98] blur-[0.5px] cursor-not-allowed border-slate-200/40 bg-slate-50/50'
+                    : isCompleted
+                      ? 'border-emerald-500/25 bg-emerald-500/[0.01] shadow-emerald-500/5'
+                      : 'border-slate-100 hover:border-indigo-500/20 hover:shadow-indigo-500/5'
+                }`}
               >
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-10 border border-white shadow-md group-hover:rotate-12 transition-transform relative z-10 ${isLocked
-                  ? 'bg-slate-100 text-slate-400'
-                  : isCompleted
-                    ? 'bg-green-50 text-green-600'
-                    : 'bg-blue-50 text-blue-600'
+                <div>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 border border-white shadow-md group-hover:rotate-6 transition-transform ${
+                    isLocked
+                      ? 'bg-slate-100 text-slate-400'
+                      : isCompleted
+                        ? 'bg-emerald-50 text-emerald-600'
+                        : 'bg-indigo-50 text-indigo-600'
                   }`}>
-                  {isLocked ? <Lock size={32} /> : isCompleted ? <CheckCircle2 size={32} /> : <PlayCircle size={32} />}
-                </div>
-                <div className="flex-grow relative z-10">
-                  <div className="text-[10px] font-black uppercase tracking-[0.3em] mb-3 flex items-center gap-2 ${
-                    isLocked ? 'text-slate-400' : isCompleted ? 'text-green-600' : 'text-blue-600'
-                  }">
-                    <Calendar size={12} />
-                    Day {video.day}
+                    {isLocked ? <Lock size={20} /> : isCompleted ? <CheckCircle2 size={20} /> : <PlayCircle size={20} />}
                   </div>
-                  <h3 className={`text-2xl font-black mb-6 leading-tight uppercase tracking-tighter ${isLocked ? 'text-slate-400' : 'text-slate-900 group-hover:text-blue-600 transition-colors'
-                    }`}>{video.title}</h3>
-                  {video.description && (
-                    <p className="text-slate-500 italic font-bold mb-10 text-sm line-clamp-2">{video.description}</p>
-                  )}
+
+                  <div className="space-y-2.5">
+                    <div className={`text-[9px] font-black uppercase tracking-[0.25em] flex items-center gap-1.5 ${
+                      isLocked ? 'text-slate-400' : isCompleted ? 'text-emerald-600' : 'text-indigo-600'
+                    }`}>
+                      <Calendar size={10} />
+                      Day {video.day}
+                    </div>
+                    <h3 className={`text-lg font-black leading-tight uppercase tracking-tight ${
+                      isLocked ? 'text-slate-400' : 'text-slate-900 group-hover:text-indigo-600 transition-colors'
+                    }`}>
+                      {video.title}
+                    </h3>
+                    {video.description && (
+                      <p className="text-slate-500 italic font-semibold text-xs line-clamp-2">{video.description}</p>
+                    )}
+                  </div>
                 </div>
-                <div className="pt-8 border-t border-slate-50 flex items-center justify-between relative z-10">
+
+                <div className="pt-6 mt-6 border-t border-slate-100/60 flex items-center justify-between">
                   {isLocked ? (
-                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      <Lock size={14} className="inline mr-1" /> Unlocks Day {video.day}
+                    <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
+                      <Lock size={12} /> Unlocks Day {video.day}
                     </div>
                   ) : isCompleted ? (
-                    <div className="text-[10px] font-black uppercase tracking-widest text-green-600">
-                      <CheckCircle2 size={14} className="inline mr-1" /> Completed
+                    <div className="text-[9px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-1">
+                      <CheckCircle2 size={12} /> Completed
                     </div>
                   ) : (
                     <button
                       onClick={() => requestAttendance(video)}
-                      className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition underline underline-offset-8"
+                      className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition underline underline-offset-4 decoration-2"
                     >
-                      <CheckCircle2 size={14} /> Mark Attendance
+                      <CheckCircle2 size={12} /> Mark Attendance
                     </button>
                   )}
                   {!isLocked && (
                     <button
                       onClick={() => openVideo(video)}
-                      className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all duration-300 shadow-inner group/btn"
+                      className="w-10 h-10 bg-slate-50 hover:bg-indigo-600 hover:text-white rounded-xl flex items-center justify-center transition-all duration-300 shadow-inner group/btn"
                       title={isCompleted ? 'Open video' : 'Mark attendance first'}
                     >
-                      <ChevronRight size={24} className="group-hover/btn:translate-x-0.5 transition-transform" />
+                      <ChevronRight size={18} className="group-hover/btn:translate-x-0.5 transition-transform" />
                     </button>
                   )}
                 </div>
-                <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full translate-x-1/2 -translate-y-1/2 -z-0" />
               </motion.div>
             );
           })
         )}
 
         {/* Feature Teaser Card */}
-        <div className="bg-slate-900 p-10 rounded-[3rem] text-white flex flex-col justify-between shadow-2xl shadow-slate-900/40 overflow-hidden relative group">
-          <div className="relative z-10">
-            <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mb-10 shadow-xl shadow-blue-600/20 group-hover:scale-110 transition-transform">
-              <BookOpenCheck size={36} />
+        <div className="student-panel p-6 sm:p-8 flex flex-col justify-between overflow-hidden relative group">
+          <div className="relative z-10 space-y-4">
+            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+              <BookOpenCheck size={24} className="text-white" />
             </div>
-            <h3 className="text-3xl font-black mb-6 tracking-tighter leading-tight italic uppercase">Live Training <br />Archive</h3>
-            <p className="text-slate-400 font-bold leading-relaxed italic mb-10 text-sm">Access all past 4-hour daily sessions for reference.</p>
-            <button className="w-full py-5 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition shadow-xl">Watch Recordings</button>
+            <h3 className="text-xl font-black tracking-tight leading-tight italic uppercase">
+              Live Training <br />Archive
+            </h3>
+            <p className="text-slate-400 font-semibold leading-relaxed italic text-xs">
+              Access all past 4-hour daily sessions for quick reference.
+            </p>
+            <button className="student-button-primary w-full bg-white text-slate-900 border border-slate-100 hover:bg-slate-50 min-h-[40px] text-[10px]">
+              Watch Recordings
+            </button>
           </div>
-
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[80px] -translate-y-1/2 translate-x-1/2 rounded-full group-hover:scale-150 transition-all duration-700" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/10 blur-[40px] rounded-full group-hover:scale-150 transition-all duration-500" />
         </div>
       </div>
 
+      {/* Attendance Modal */}
       {attendanceVideo && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4">
               <div>
-                <div className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-600 mb-2">
+                <div className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-600 mb-1">
                   Attendance Required
                 </div>
-                <h2 className="text-2xl font-black text-slate-900 uppercase italic leading-tight">
+                <h2 className="text-xl font-black text-slate-900 uppercase italic leading-tight">
                   Day {attendanceVideo.day}
                 </h2>
               </div>
               <button
                 onClick={() => setAttendanceVideo(null)}
                 disabled={attendanceSaving}
-                className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 transition disabled:opacity-50"
+                className="w-8 h-8 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 transition disabled:opacity-50"
               >
-                <X size={20} />
+                <X size={16} />
               </button>
             </div>
             <div className="p-6 space-y-5">
-              <p className="text-slate-600 font-bold leading-relaxed">
+              <p className="text-slate-600 font-semibold leading-relaxed text-sm">
                 Please mark your attendance before opening this class video. If attendance is not marked for a day, the report will show that day as absent.
               </p>
               <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Video</div>
-                <div className="font-black text-slate-900">{attendanceVideo.title}</div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Video</div>
+                <div className="font-extrabold text-slate-900 text-sm">{attendanceVideo.title}</div>
               </div>
               <button
                 onClick={() => markVideoAsDone(attendanceVideo)}
                 disabled={attendanceSaving}
-                className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition disabled:opacity-60"
+                className="student-button-primary w-full h-12 text-xs"
               >
-                <CheckCircle2 size={18} />
+                <CheckCircle2 size={16} />
                 {attendanceSaving ? 'Marking...' : 'Mark Attendance'}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Quiz Report Modal */}
       {showReportModal && testSubmission && courseTest && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-3xl bg-white rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-white/50 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-600 mb-1 block">
                   Evaluation Report
                 </span>
-                <h2 className="text-2xl font-black text-slate-900 uppercase italic">
+                <h2 className="text-xl font-black text-slate-900 uppercase italic">
                   Performance Review
                 </h2>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => generateTestReport(profile, testSubmission, courseTest.questions)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-1.5 transition"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition"
                 >
-                  <Download size={14} /> PDF
+                  <Download size={12} /> PDF
                 </button>
                 <button
                   onClick={() => setShowReportModal(false)}
-                  className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 transition"
+                  className="w-8 h-8 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 transition"
                 >
-                  <X size={20} />
+                  <X size={16} />
                 </button>
               </div>
             </div>
 
             <div className="p-6 overflow-y-auto flex-1 space-y-6">
               {/* Score Stats Banner */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
                 <div className="text-center">
-                  <div className="text-2xl font-black text-slate-900">{testSubmission.scorePercentage}%</div>
-                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Score</div>
+                  <div className="text-xl font-black text-slate-900">{testSubmission.scorePercentage}%</div>
+                  <div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Total Score</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-black text-green-600">{testSubmission.correctCount}</div>
-                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Correct</div>
+                  <div className="text-xl font-black text-green-600">{testSubmission.correctCount}</div>
+                  <div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Correct</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-black text-red-600">{testSubmission.wrongCount}</div>
-                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Incorrect</div>
+                  <div className="text-xl font-black text-red-600">{testSubmission.wrongCount}</div>
+                  <div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Incorrect</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-black text-slate-955">{testSubmission.totalQuestions}</div>
-                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Questions</div>
+                  <div className="text-xl font-black text-slate-800">{testSubmission.totalQuestions}</div>
+                  <div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Questions</div>
                 </div>
               </div>
 
@@ -995,27 +1007,27 @@ export default function LMS() {
                   const isCorrect = selectedIdx === q.correctOptionIndex;
 
                   return (
-                    <div key={q.id || index} className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-4">
+                    <div key={q.id || index} className="bg-slate-50 p-5 rounded-2xl border border-slate-200/60 space-y-4">
                       <div className="flex items-center justify-between">
-                        <span className="bg-slate-200 text-slate-700 text-[10px] font-black px-3 py-1 rounded-full uppercase">
+                        <span className="bg-slate-200 text-slate-700 text-[9px] font-black px-2.5 py-1 rounded-md uppercase">
                           Question {index + 1}
                         </span>
                         {isCorrect ? (
-                          <span className="text-green-600 text-xs font-black uppercase tracking-wider flex items-center gap-1">
-                            <CheckCircle2 size={14} /> Correct
+                          <span className="text-green-600 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                            <CheckCircle2 size={12} /> Correct
                           </span>
                         ) : (
-                          <span className="text-red-600 text-xs font-black uppercase tracking-wider flex items-center gap-1">
-                            <X size={14} /> Incorrect
+                          <span className="text-red-600 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                            <X size={12} /> Incorrect
                           </span>
                         )}
                       </div>
 
-                      <h3 className="text-lg font-bold text-slate-900 leading-snug">
+                      <h3 className="text-base font-black text-slate-900 leading-snug">
                         {q.questionText}
                       </h3>
 
-                      <div className="grid gap-3">
+                      <div className="grid gap-2.5">
                         {q.options.map((opt: string, optIndex: number) => {
                           const isSelected = selectedIdx === optIndex;
                           const isCorrectOpt = q.correctOptionIndex === optIndex;
@@ -1034,7 +1046,7 @@ export default function LMS() {
                           return (
                             <div
                               key={optIndex}
-                              className={`p-4 rounded-xl border-2 font-semibold text-sm flex items-center gap-3 ${optStyle}`}
+                              className={`p-3.5 rounded-xl border-2 font-bold text-sm flex items-center gap-3 ${optStyle}`}
                             >
                               <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs ${badgeStyle}`}>
                                 {String.fromCharCode(65 + optIndex)}
@@ -1050,7 +1062,7 @@ export default function LMS() {
               </div>
             </div>
 
-            <div className="p-6 border-t border-slate-100 flex gap-4 bg-slate-50">
+            <div className="p-4 border-t border-slate-100 flex gap-4 bg-slate-50">
               <button
                 onClick={() => setShowReportModal(false)}
                 className="bg-slate-900 hover:bg-slate-800 text-white font-black w-full h-12 rounded-xl text-xs uppercase tracking-widest transition"
