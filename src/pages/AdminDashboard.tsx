@@ -886,7 +886,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-slate-50">
       <Dialog
         open={Boolean(passwordUser)}
         onOpenChange={(open) => {
@@ -951,30 +951,6 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      <Tabs defaultValue="dashboard" className="gap-6 flex-col">
-        <TabsList className="flex flex-wrap h-auto bg-slate-100 p-1 rounded-2xl gap-1 justify-start border border-slate-200/50 shadow-sm max-w-full overflow-x-auto">
-          <TabsTrigger value="dashboard" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-            <LayoutDashboard size={14} />
-            Dashboard
-          </TabsTrigger>
-          <TabsTrigger value="teachers" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-            <UserPlus size={14} />
-            Teachers
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-            <Bell size={14} />
-            Notifications
-          </TabsTrigger>
-          <TabsTrigger value="reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-            <FileText size={14} />
-            Internship Reports
-          </TabsTrigger>
-          <TabsTrigger value="student-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-            <Upload size={14} />
-            Assignments
-          </TabsTrigger>
-        </TabsList>
-
       <Dialog
         open={Boolean(viewingSubmission)}
         onOpenChange={(open) => {
@@ -988,8 +964,8 @@ export default function AdminDashboard() {
             <DialogTitle className="text-2xl font-black text-slate-900 flex items-center justify-between uppercase italic">
               <span>Test Details - {viewingSubmission?.studentName}</span>
               <span className={`px-4 py-1 rounded-full text-xs font-black tracking-widest ${(viewingSubmission?.scorePercentage ?? 0) >= 33
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-red-100 text-red-700'
+                ? 'bg-green-100 text-green-700'
+                : 'bg-red-100 text-red-700'
                 }`}>
                 {(viewingSubmission?.scorePercentage ?? 0) >= 33 ? 'PASSED' : 'FAILED'}
               </span>
@@ -1070,27 +1046,27 @@ export default function AdminDashboard() {
 
                 return (
                   <div key={q.id || index} className={`p-6 rounded-2xl border-2 ${isCorrect
-                      ? 'border-green-100 bg-green-50/10'
-                      : isUnanswered
-                        ? 'border-yellow-100 bg-yellow-50/10'
-                        : 'border-red-100 bg-red-50/10'
+                    ? 'border-green-100 bg-green-50/10'
+                    : isUnanswered
+                      ? 'border-yellow-100 bg-yellow-50/10'
+                      : 'border-red-100 bg-red-50/10'
                     }`}>
                     <div className="flex items-start justify-between gap-4 mb-4">
                       <div>
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase ${isCorrect
-                            ? 'bg-green-100 text-green-700'
-                            : isUnanswered
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-red-100 text-red-700'
+                          ? 'bg-green-100 text-green-700'
+                          : isUnanswered
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-red-100 text-red-700'
                           }`}>
                           Question {index + 1}
                         </span>
                       </div>
                       <span className={`text-xs font-black uppercase tracking-wider ${isCorrect
-                          ? 'text-green-600'
-                          : isUnanswered
-                            ? 'text-yellow-600'
-                            : 'text-red-600'
+                        ? 'text-green-600'
+                        : isUnanswered
+                          ? 'text-yellow-600'
+                          : 'text-red-600'
                         }`}>
                         {isCorrect ? 'Correct' : isUnanswered ? 'Unanswered / Added Later' : 'Incorrect'}
                       </span>
@@ -1116,10 +1092,10 @@ export default function AdminDashboard() {
                             className={`p-4 rounded-xl border flex items-center gap-3 ${optionStyle}`}
                           >
                             <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs ${isCorrectAnswer
-                                ? 'bg-green-600 text-white'
-                                : isStudentChoice
-                                  ? 'bg-red-600 text-white'
-                                  : 'bg-slate-100 text-slate-500'
+                              ? 'bg-green-600 text-white'
+                              : isStudentChoice
+                                ? 'bg-red-600 text-white'
+                                : 'bg-slate-100 text-slate-500'
                               }`}>
                               {String.fromCharCode(65 + optIndex)}
                             </span>
@@ -1194,7 +1170,106 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Header */}
+      <header className="bg-slate-900 text-white p-6 shadow-lg">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
+              <Users size={24} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black tracking-tighter">Admin Dashboard</h1>
+              <p className="text-slate-400 text-sm font-bold">{adminProfile?.email}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link to="/admin-dashboard">
+              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
+                <LayoutDashboard size={18} />
+                Dashboard
+              </Button>
+            </Link>
+            <Link to="/admin/districts">
+              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
+                <MapPin size={18} />
+                Districts
+              </Button>
+            </Link>
+            <Link to="/admin/colleges">
+              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
+                <GraduationCap size={18} />
+                Colleges
+              </Button>
+            </Link>
+            <Link to="/admin/courses">
+              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
+                <BookOpen size={18} />
+                Courses
+              </Button>
+            </Link>
+            <Link to="/admin/universities">
+              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
+                <Building2 size={18} />
+                Universities
+              </Button>
+            </Link>
+            <Link to="/admin/subjects">
+              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
+                <List size={18} />
+                Subjects
+              </Button>
+            </Link>
+            <Link to="/admin/daily-videos">
+              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
+                <Youtube size={18} />
+                Daily Videos
+              </Button>
+            </Link>
+            <Button
+              onClick={handleLogout}
+              variant="ghost"
+              className="text-white hover:bg-white/10 flex items-center gap-2"
+            >
+              <LogOut size={18} />
+              Logout
+            </Button>
+          </div>
+        </div>
+      </header>
 
+      {/* Content */}
+      <div className="max-w-7xl mx-auto p-8">
+        <Tabs defaultValue="dashboard" className="gap-6 flex-col">
+          <TabsList className="bg-white border border-slate-100 shadow-lg h-12 p-1">
+            <TabsTrigger value="dashboard" className="px-6 py-2 font-black">
+              <LayoutDashboard size={16} />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="teachers" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+              <UserPlus size={14} />
+              Teachers
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+              <Bell size={14} />
+              Notifications
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+              <FileText size={14} />
+              Internship Reports
+            </TabsTrigger>
+            <TabsTrigger value="student-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+              <Upload size={14} />
+              Assignments
+            </TabsTrigger>
+            {/* <TabsTrigger value="test-reports" className="px-6 py-2 font-black">
+              <ClipboardList size={16} />
+              Test Reports
+            </TabsTrigger> */}
+            {/* <TabsTrigger value="college-export" className="px-6 py-2 font-black">
+              <Download size={16} />
+              College Export
+            </TabsTrigger> */}
+          </TabsList >
 
           <TabsContent value="dashboard" className="space-y-8 mt-4">
             {/* Stats Grid */}
@@ -1447,11 +1522,10 @@ export default function AdminDashboard() {
                             {(() => {
                               const paymentStatus = getUserPaymentStatus(user.uid);
                               return (
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                                  paymentStatus.status === 'Success' 
-                                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80' 
-                                    : 'bg-amber-50 text-amber-700 ring-1 ring-amber-100/80'
-                                }`}>
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${paymentStatus.status === 'Success'
+                                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80'
+                                  : 'bg-amber-50 text-amber-700 ring-1 ring-amber-100/80'
+                                  }`}>
                                   {paymentStatus.status === 'Success' ? <CheckCircle2 size={12} /> : <Clock size={12} />}
                                   {paymentStatus.status}
                                 </span>
@@ -2263,11 +2337,10 @@ export default function AdminDashboard() {
                                   {teacher.course || '-'}
                                 </td>
                                 <td className="p-4">
-                                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                                    teacher.isActive 
-                                      ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80' 
-                                      : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
-                                  }`}>
+                                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${teacher.isActive
+                                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80'
+                                    : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
+                                    }`}>
                                     {teacher.isActive ? <CheckCircle2 size={12} /> : <Clock size={12} />}
                                     {teacher.isActive ? 'Active' : 'Inactive'}
                                   </span>
@@ -2296,15 +2369,14 @@ export default function AdminDashboard() {
                                 <div className="font-black text-slate-900 text-sm">{teacher.fullName}</div>
                                 <div className="text-[10px] text-slate-400 font-semibold truncate max-w-[180px]">{teacher.uid}</div>
                               </div>
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                teacher.isActive 
-                                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80' 
-                                  : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
-                              }`}>
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${teacher.isActive
+                                ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80'
+                                : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
+                                }`}>
                                 {teacher.isActive ? 'Active' : 'Inactive'}
                               </span>
                             </div>
-                            
+
                             <div className="flex flex-col gap-1.5 text-xs text-slate-600 font-medium">
                               <div className="flex items-center gap-2">
                                 <Mail size={12} className="text-slate-400 shrink-0" />
@@ -2336,7 +2408,8 @@ export default function AdminDashboard() {
               </Tabs>
             </div>
           </TabsContent>
-        </Tabs>
-    </div>
+        </Tabs >
+      </div >
+    </div >
   );
 }
