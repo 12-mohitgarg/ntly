@@ -93,11 +93,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   key={item.name}
                   to={item.path}
                   onClick={() => isMobile && setIsSidebarOpen(false)}
-                  className={`group flex items-center justify-between gap-3 rounded-2xl px-4 py-3 transition-all duration-200 ${
-                    isActive
-                      ? 'bg-white text-slate-950 shadow-md shadow-white/5 font-bold'
-                      : 'bg-white/[0.02] text-slate-400 hover:bg-white/[0.06] hover:text-white'
-                  }`}
+                  className={`group flex items-center justify-between gap-3 rounded-2xl px-4 py-3 transition-all duration-200 ${isActive
+                    ? 'bg-white text-slate-950 shadow-md shadow-white/5 font-bold'
+                    : 'bg-white/[0.02] text-slate-400 hover:bg-white/[0.06] hover:text-white'
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <item.icon size={16} className={isActive ? 'text-blue-600' : 'text-slate-500 group-hover:text-blue-400'} />
@@ -132,7 +131,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Premium Admin Top Navbar */}
       <header className="bg-slate-950 text-white px-4 sm:px-6 lg:px-8 border-b border-white/5 shadow-xl sticky top-0 z-30 backdrop-blur-md bg-opacity-95 h-20 flex items-center">
         <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-4">
-          
+
           {/* Mobile view sidebar toggle trigger & Desktop view brand logo */}
           <div className="flex items-center gap-3">
             <button
@@ -145,7 +144,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <img
                 src="/logo.jpeg"
                 alt="Logo"
-                className="h-10 w-16 object-contain rounded-lg"
+                className="h-10 md:h-12 w-auto object-contain rounded-lg"
+                style={{ filter: 'invert(1)', mixBlendMode: 'screen' }}
               />
               <span className="hidden sm:inline-block text-sm font-black tracking-tight leading-none uppercase italic text-white font-sans">
                 Console<span className="gradient-text-cyan">Center</span>

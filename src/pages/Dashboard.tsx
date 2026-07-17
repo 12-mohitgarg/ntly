@@ -375,7 +375,7 @@ export default function Dashboard() {
       {/* Premium Dashboard Top Navbar */}
       <header className="bg-slate-950 text-white px-4 sm:px-6 lg:px-8 border-b border-white/5 shadow-xl sticky top-0 z-30 backdrop-blur-md bg-opacity-95 h-20 flex items-center">
         <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-4">
-          
+
           {/* Mobile view sidebar toggle trigger & Desktop view brand logo */}
           <div className="flex items-center gap-3">
             <button
@@ -388,7 +388,8 @@ export default function Dashboard() {
               <img
                 src="/logo.jpeg"
                 alt="Logo"
-                className="h-10 w-16 object-contain rounded-lg"
+                className="h-10 md:h-12 w-auto object-contain rounded-lg"
+                style={{ filter: 'invert(1)', mixBlendMode: 'screen' }}
               />
               <span className="hidden sm:inline-block text-sm font-black tracking-tight leading-none uppercase italic text-white">
                 Intern<span className="gradient-text-cyan">Mitra</span>
