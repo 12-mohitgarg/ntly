@@ -140,13 +140,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             >
               <Menu size={20} />
             </button>
-            <Link to="/" className="flex items-center gap-2 group">
-              <img
-                src="/logo.jpeg"
-                alt="Logo"
-                className="h-10 md:h-12 w-auto object-contain rounded-lg"
-                style={{ filter: 'invert(1)', mixBlendMode: 'screen' }}
-              />
+            <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
+              <div className="flex-shrink-0 w-8 h-8 md:w-auto md:h-auto overflow-hidden md:overflow-visible flex items-center justify-start rounded-lg">
+                <img
+                  src="/logo-new.jpeg"
+                  alt="Logo"
+                  className="h-8 md:h-12 w-auto max-w-none object-cover md:object-contain rounded-lg"
+                  style={{ filter: 'invert(1) brightness(100) contrast(100)', mixBlendMode: 'screen' }}
+                />
+              </div>
               <span className="hidden sm:inline-block text-sm font-black tracking-tight leading-none uppercase italic text-white font-sans">
                 Console<span className="gradient-text-cyan">Center</span>
               </span>

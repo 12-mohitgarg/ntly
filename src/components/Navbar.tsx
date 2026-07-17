@@ -29,16 +29,16 @@ export default function Navbar() {
       <nav className="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-md border-b border-white/5 shadow-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 md:h-24 items-center gap-3">
-            <Link to="/" className="flex items-center gap-3 group">
+            <Link to="/" className="flex items-center gap-3 group flex-shrink-0">
               <motion.div
                 whileHover={{ scale: 1.03 }}
-                className="flex items-center gap-3"
+                className="flex-shrink-0 w-8 h-8 md:w-auto md:h-auto overflow-hidden md:overflow-visible rounded-lg flex items-center justify-start"
               >
                 <img
-                  src="/logo.jpeg"
+                  src="/logo-new.jpeg"
                   alt="InternMitra Logo"
-                  className="h-12 md:h-16 w-auto object-contain rounded-lg"
-                  style={{ filter: 'invert(1)', mixBlendMode: 'screen' }}
+                  className="h-8 md:h-14 w-auto max-w-none object-cover md:object-contain rounded-lg"
+                  style={{ filter: 'invert(1) brightness(100) contrast(100)', mixBlendMode: 'screen' }}
                 />
               </motion.div>
             </Link>
