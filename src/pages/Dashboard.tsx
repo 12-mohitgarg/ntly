@@ -390,7 +390,6 @@ export default function Dashboard() {
                   src="/logo-new.jpeg"
                   alt="Logo"
                   className="h-8 md:h-12 w-auto max-w-none object-cover md:object-contain rounded-lg"
-                  style={{ filter: 'invert(1) brightness(100) contrast(100)', mixBlendMode: 'screen' }}
                 />
               </div>
               <span className="hidden sm:inline-block text-sm font-black tracking-tight leading-none uppercase italic text-white">

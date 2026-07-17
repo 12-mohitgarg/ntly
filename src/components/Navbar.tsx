@@ -38,7 +38,6 @@ export default function Navbar() {
                   src="/logo-new.jpeg"
                   alt="InternMitra Logo"
                   className="h-8 md:h-14 w-auto max-w-none object-cover md:object-contain rounded-lg"
-                  style={{ filter: 'invert(1) brightness(100) contrast(100)', mixBlendMode: 'screen' }}
                 />
               </motion.div>
             </Link>
