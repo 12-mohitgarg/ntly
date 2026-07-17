@@ -19,6 +19,8 @@ export default function ManageDistricts() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [newDistrictName, setNewDistrictName] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     fetchDistricts();
@@ -134,7 +136,7 @@ export default function ManageDistricts() {
           </div>
         ) : (
           <div className="divide-y divide-slate-100/50">
-            {districts.map((district) => (
+            {districts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((district) => (
               <div key={district.id} className="p-4 sm:px-6 flex items-center justify-between hover:bg-blue-50/10 transition-colors">
                 {editingId === district.id ? (
                   <div className="flex items-center gap-4 flex-1">
@@ -166,6 +168,80 @@ export default function ManageDistricts() {
                 )}
               </div>
             ))}
+            {(() => {
+              const totalPages = Math.ceil(districts.length / itemsPerPage);
+              if (totalPages <= 1 && districts.length <= 10) return null;
+              const pages = [];
+              for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                  pages.push(i);
+                } else if (pages[pages.length - 1] !== '...') {
+                  pages.push('...');
+                }
+              }
+              return (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-slate-100/80 bg-slate-50/30">
+                  <div className="flex items-center gap-4 text-xs text-slate-500 font-bold">
+                    <span className="italic">
+                      Showing {districts.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, districts.length)} of {districts.length} districts
+                    </span>
+                    <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-4">
+                      <span>Show</span>
+                      <select
+                        value={itemsPerPage}
+                        onChange={(e) => {
+                          setItemsPerPage(Number(e.target.value));
+                          setCurrentPage(1);
+                        }}
+                        className="h-8 rounded-lg border border-slate-250 bg-white px-2 text-xs font-bold text-slate-700 outline-none cursor-pointer"
+                      >
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                      <span>entries</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-250 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50 transition active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                    >
+                      Prev
+                    </Button>
+                    {pages.map((p, idx) => (
+                      p === '...' ? (
+                        <span key={idx} className="px-2 text-slate-400 font-bold text-xs">...</span>
+                      ) : (
+                        <Button
+                          key={idx}
+                          type="button"
+                          onClick={() => setCurrentPage(Number(p))}
+                          className={`inline-flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold transition active:scale-[0.98] ${
+                            currentPage === p
+                              ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10'
+                              : 'border border-slate-250 bg-white text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          {p}
+                        </Button>
+                      )
+                    ))}
+                    <Button
+                      type="button"
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-250 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50 transition active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

@@ -23,7 +23,11 @@ import {
   Camera,
   Edit2,
   Bell,
-  X
+  X,
+  User,
+  Heart,
+  Briefcase,
+  TrendingUp
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -42,37 +46,37 @@ interface Degree {
   subjects: string[];
 }
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  createdAt?: string;
-  isActive?: boolean;
-}
-
 export default function Profile() {
   const { profile, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [degrees, setDegrees] = useState<Degree[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [formData, setFormData] = useState({
     fullName: profile?.fullName || '',
     contactNumber: profile?.contactNumber || '',
     internshipDomain: profile?.internshipDomain || '',
-
+    gender: profile?.gender || 'Male',
+    parentName: profile?.parentName || '',
+    
+    // Academics
     degree: profile?.degree || '',
     department: profile?.department || '',
     subject: profile?.subject || '',
     session: profile?.session || '',
     semester: profile?.semester || '',
-    universityRoll: profile?.universityRoll || ''
+    universityRoll: profile?.universityRoll || '',
+    university: profile?.university || 'Veer Kunwar Singh University',
+    college: profile?.college || 'Maharaja College, Ara',
+    
+    // Emergency Contact
+    emergencyContactName: profile?.emergencyContactName || '',
+    emergencyRelation: profile?.emergencyRelation || 'Parent',
+    emergencyContactNumber: profile?.emergencyContactNumber || ''
   });
 
   useEffect(() => {
     fetchDegrees();
-    fetchNotifications();
   }, []);
 
   useEffect(() => {
@@ -82,12 +86,19 @@ export default function Profile() {
       fullName: profile.fullName || '',
       contactNumber: profile.contactNumber || '',
       internshipDomain: profile.internshipDomain || '',
+      gender: profile.gender || 'Male',
+      parentName: profile.parentName || '',
       degree: profile.degree || '',
       department: profile.department || '',
       subject: profile.subject || '',
       session: profile.session || '',
       semester: profile.semester || '',
-      universityRoll: profile.universityRoll || ''
+      universityRoll: profile.universityRoll || '',
+      university: profile.university || 'Veer Kunwar Singh University',
+      college: profile.college || 'Maharaja College, Ara',
+      emergencyContactName: profile.emergencyContactName || '',
+      emergencyRelation: profile.emergencyRelation || 'Parent',
+      emergencyContactNumber: profile.emergencyContactNumber || ''
     });
   }, [profile]);
 
@@ -103,19 +114,6 @@ export default function Profile() {
     }
   };
 
-  const fetchNotifications = async () => {
-    try {
-      const notificationsQuery = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
-      const notificationsSnapshot = await getDocs(notificationsQuery);
-      const notificationsData = notificationsSnapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as Notification))
-        .filter(notification => notification.isActive !== false);
-      setNotifications(notificationsData);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    }
-  };
-
   const getSubjectsForDegree = (degreeName: string) => {
     const degree = degrees.find(d => d.name === degreeName);
     return degree?.subjects || [];
@@ -126,7 +124,6 @@ export default function Profile() {
     if (!user) return;
     setLoading(true);
     try {
-      const path = `users/${user.uid}`;
       await updateDoc(doc(db, 'users', user.uid), formData);
       setSuccess(true);
       setIsEditOpen(false);
@@ -138,190 +135,164 @@ export default function Profile() {
     }
   };
 
+  // Helper renderers matching reference site subcomponents n, o, d
+  const SectionPanel = ({ title, emoji, children }: { title: string; emoji: string; children: React.ReactNode }) => (
+    <div className="bg-white/80 backdrop-blur-md border border-gray-200/80 rounded-2xl p-6 md:p-8 mb-8 shadow-sm hover:shadow-md transition-all">
+      <div className="flex justify-between items-center mb-6 border-b border-gray-150 pb-3">
+        <h3 className="text-xl font-extrabold text-gray-900 flex items-center">
+          <span className="mr-2.5 text-2xl">{emoji}</span>
+          {title}
+        </h3>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {children}
+      </div>
+    </div>
+  );
+
+  const FieldCard = ({ title, value }: { title: string; value: any }) => (
+    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 hover:bg-gray-100/60 transition-colors">
+      <h4 className="text-gray-400 text-[10px] font-bold mb-1 uppercase tracking-wider">{title}</h4>
+      <p className="text-gray-900 font-bold text-sm sm:text-base break-words">{value || 'Not provided'}</p>
+    </div>
+  );
+
   return (
-    <div className="student-page max-w-5xl mx-auto">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <div className="space-y-3">
-          <span className="student-kicker">Settings</span>
-          <h1 className="student-title">
-            Account / <span className="gradient-text">Profile Settings</span>
+    <div className="space-y-8 animate-fade-in max-w-6xl mx-auto">
+      
+      {/* Upper header */}
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-2">
+          <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md inline-block">
+            Settings Workspace
+          </span>
+          <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight leading-tight">
+            Student Profile Registry
           </h1>
-          <p className="student-subtitle">Personalize your digital identity and subject selection.</p>
+          <p className="text-gray-500 font-medium text-sm">
+            Here's your complete registration, verification, and internship information.
+          </p>
         </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           {success && (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="px-6 py-3 bg-emerald-50 text-emerald-600 rounded-2xl font-black text-xs uppercase tracking-widest border border-emerald-100 shadow-xl shadow-emerald-500/10"
+              className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-xl font-bold text-xs uppercase tracking-wider"
             >
-              Changes Saved
+              Changes Saved ✓
             </motion.div>
           )}
-          <Button
-            type="button"
+          <button
             onClick={() => setIsEditOpen(true)}
-            className="student-button-primary min-h-[48px] px-6"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 text-xs font-bold text-white hover:bg-blue-700 px-6 transition active:scale-[0.98] cursor-pointer shadow-sm shadow-blue-500/10"
           >
-            <Edit2 size={16} />
+            <Edit2 size={14} />
             Edit Profile
-          </Button>
+          </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10">
-        {/* Left Column: Avatar & Summary */}
-        <div className="space-y-6 sm:space-y-8">
-          <div className="student-card p-10 text-center relative group overflow-hidden">
-            <div className="relative z-10">
-              <div className="w-32 h-32 bg-indigo-600 rounded-[2rem] mx-auto mb-6 border-8 border-white shadow-2xl flex items-center justify-center text-5xl font-black text-white relative transition-transform group-hover:rotate-6">
-                {profile?.fullName.charAt(0)}
-                <button className="absolute -bottom-3 -right-3 w-10 h-10 bg-slate-900 text-white rounded-2xl flex items-center justify-center border-4 border-white shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300">
-                  <Camera size={16} />
-                </button>
-              </div>
-              <h3 className="text-xl font-black text-slate-900 tracking-tight mb-1 uppercase italic">{profile?.fullName}</h3>
-              <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.25em] mb-6 italic">{profile?.universityRoll}</p>
+      {/* 1. Personal Information */}
+      <SectionPanel title="Personal Information" emoji="👤">
+        <FieldCard title="Full Name" value={profile?.fullName} />
+        <FieldCard title="Gender" value={profile?.gender || 'Male'} />
+        <FieldCard title="Parent / Guardian Name" value={profile?.parentName} />
+        <FieldCard title="Contact Number" value={profile?.contactNumber} />
+        <FieldCard title="Email Address" value={profile?.email} />
+      </SectionPanel>
 
-              <div className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[9px] font-black uppercase tracking-widest inline-block border border-indigo-100 shadow-xl shadow-indigo-500/5 italic">
-                {profile?.isPaid ? 'Verified Industry Scholar' : 'Baseline Account'}
-              </div>
-            </div>
-            <div className="absolute top-0 left-0 w-24 h-24 bg-slate-50 rounded-full -translate-x-1/2 -translate-y-1/2" />
-          </div>
+      {/* 2. Academic Information */}
+      <SectionPanel title="Academic Information" emoji="📚">
+        <FieldCard title="University" value={profile?.university || 'Veer Kunwar Singh University'} />
+        <FieldCard title="College" value={profile?.college || 'Maharaja College, Ara'} />
+        <FieldCard title="Degree" value={profile?.degree} />
+        <FieldCard title="Department" value={profile?.department} />
+        <FieldCard title="Session" value={profile?.session} />
+        <FieldCard title="University Roll Number" value={profile?.universityRoll} />
+        <FieldCard title="Class / Semester" value={profile?.semester} />
+      </SectionPanel>
 
-          <div className="student-panel p-8 space-y-6 relative overflow-hidden group">
-            <div className="flex items-center gap-4 relative z-10">
-              <div className="w-10 h-10 bg-white/10 border border-white/5 rounded-2xl flex items-center justify-center text-indigo-400 shadow-inner group-hover:scale-110 transition-transform">
-                <ShieldCheck size={20} />
-              </div>
-              <div>
-                <p className="text-[9px] text-slate-500 font-black uppercase tracking-wider leading-none mb-1">Authorization</p>
-                <p className="text-xs font-black tracking-wider uppercase italic">Fully Verified</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 relative z-10">
-              <div className="w-10 h-10 bg-white/10 border border-white/5 rounded-2xl flex items-center justify-center text-emerald-400 shadow-inner group-hover:scale-110 transition-transform">
-                <CreditCard size={20} />
-              </div>
-              <div>
-                <p className="text-[9px] text-slate-500 font-black uppercase tracking-wider leading-none mb-1">Escrow Balance</p>
-                <p className="text-xs font-black tracking-wider uppercase italic text-emerald-400">₹1000.00 IN</p>
-              </div>
-            </div>
-            <div className="absolute -bottom-10 -right-10 w-36 h-36 bg-indigo-600/5 blur-2xl rounded-full" />
-          </div>
-        </div>
+      {/* 3. Emergency Contact */}
+      <SectionPanel title="Emergency Contact" emoji="❤️">
+        <FieldCard title="Contact Name" value={profile?.emergencyContactName} />
+        <FieldCard title="Relation" value={profile?.emergencyRelation} />
+        <FieldCard title="Emergency Number" value={profile?.emergencyContactNumber} />
+      </SectionPanel>
 
-        {/* Right Column: Profile Details */}
-        <div className="md:col-span-2 space-y-8">
-          <div className="student-card p-6 sm:p-10">
-            <div className="flex items-center justify-between gap-4 mb-8">
-              <h4 className="text-xl font-black text-slate-900 flex items-center gap-3 uppercase italic">
-                <div className="w-9 h-9 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 shadow-inner">
-                  <UserCircle size={18} className="text-indigo-600" />
-                </div>
-                Personal Details
-              </h4>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
-                ['Full Legal Name', profile?.fullName || '-'],
-                ['Personal Contact', profile?.contactNumber || '-'],
-                ['Email Address', profile?.email || '-'],
-                ['Industry Domain', profile?.internshipDomain || '-']
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-2xl bg-slate-50/50 p-4 sm:p-5 border border-slate-100">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1.5">{label}</p>
-                  <p className="text-sm font-black text-slate-900 break-words">{value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* 4. Internship Details */}
+      <SectionPanel title="Internship Details" emoji="💼">
+        <FieldCard title="Organization Name" value="OPTIMARK VENTURES PRIVATE LIMITED" />
+        <FieldCard title="Organization CIN" value="U62020BR2023PTC064893" />
+        <FieldCard title="Organization Contact" value="7544090878" />
+        <FieldCard title="Internship Registration No." value="045310" />
+        <FieldCard title="Internship Topic" value={profile?.internshipDomain} />
+        <FieldCard title="Internship Duration" value="120 Hours" />
+      </SectionPanel>
 
-          <div className="student-card p-6 sm:p-10 relative overflow-hidden group">
-            <div className="relative z-10">
-              <h4 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3 uppercase italic">
-                <div className="w-9 h-9 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 shadow-inner group-hover:bg-indigo-50 transition-colors">
-                  <BookMarked size={18} className="text-slate-400 group-hover:text-indigo-600" />
-                </div>
-                Academic Registry
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  ['University', profile?.university || '-'],
-                  ['College', profile?.college || '-'],
-                  ['Degree', profile?.degree || '-'],
-                  ['Department', profile?.department || '-'],
-                  ['Subject', profile?.subject || '-'],
-                  ['Session', profile?.session || '-'],
-                  ['University Roll Number', profile?.universityRoll || '-'],
-                  ['Semester', profile?.semester || '-']
-                ].map(([label, value]) => (
-                  <div key={label} className="rounded-2xl bg-slate-50/50 p-4 sm:p-5 border border-slate-100">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1.5">{label}</p>
-                    <p className="text-sm font-black text-slate-900 break-words">{value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="absolute top-0 right-0 w-48 h-48 bg-slate-50 rounded-full translate-x-1/2 -translate-y-1/2 -z-0" />
-          </div>
-        </div>
-      </div>
+      {/* 5. Registration & Progress */}
+      <SectionPanel title="Registration & Progress" emoji="📈">
+        <FieldCard title="Registration Status" value={profile?.fullName ? 'Completed' : 'Pending'} />
+        <FieldCard title="Payment Status" value={profile?.hasPaid ? 'Paid ✅' : 'Pending ❌'} />
+        <FieldCard title="Certificate Status" value={(profile?.progress || 0) >= 100 ? 'Issued 🏆' : 'Not Yet 📄'} />
+      </SectionPanel>
 
+      {/* Edit Dialog Form */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl p-6 bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black text-slate-900 uppercase italic">Edit Profile</DialogTitle>
-            <DialogDescription>Update your profile information and save the changes.</DialogDescription>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl p-6 bg-white rounded-2xl shadow-xl">
+          <DialogHeader className="pb-4 border-b border-gray-150">
+            <DialogTitle className="text-2xl font-black text-slate-900 uppercase tracking-tight">Edit Profile Registry</DialogTitle>
+            <DialogDescription className="text-gray-500 font-medium">Update your profile parameters to keep documents accurate.</DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleUpdate} className="space-y-6">
+          <form onSubmit={handleUpdate} className="space-y-6 pt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              
+              {/* Personal */}
               <div className="space-y-2">
-                <Label className="student-label">Full Legal Name</Label>
+                <Label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Full Legal Name</Label>
                 <Input
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  className="student-input h-12 px-4"
+                  className="h-12 rounded-xl border border-gray-200 px-4 focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="student-label">Personal Contact</Label>
-                <Input
-                  value={formData.contactNumber}
-                  onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
-                  className="student-input h-12 px-4"
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label className="student-label">Email Address</Label>
-                <div className="relative">
-                  <Input
-                    disabled
-                    value={profile?.email || ''}
-                    className="student-input h-12 pl-12 text-slate-400 bg-slate-50"
-                  />
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                </div>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label className="student-label">Chosen Industry Domain</Label>
+                <Label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Gender</Label>
                 <select
-                  value={formData.internshipDomain}
-                  onChange={(e) => setFormData({ ...formData, internshipDomain: e.target.value })}
-                  className="student-input h-12 px-4"
+                  value={formData.gender}
+                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                  className="w-full h-12 rounded-xl border border-gray-200 px-4 focus:ring-2 focus:ring-blue-500/20 text-sm font-semibold bg-white"
                 >
-                  {INTERNSHIP_DOMAINS.map(d => <option key={d} value={d}>{d}</option>)}
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
               <div className="space-y-2">
-                <Label className="student-label">Degree</Label>
+                <Label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Parent / Guardian Name</Label>
+                <Input
+                  value={formData.parentName}
+                  onChange={(e) => setFormData({ ...formData, parentName: e.target.value })}
+                  className="h-12 rounded-xl border border-gray-200 px-4"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Contact Number</Label>
+                <Input
+                  value={formData.contactNumber}
+                  onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+                  className="h-12 rounded-xl border border-gray-200 px-4"
+                />
+              </div>
+
+              {/* Academics */}
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Degree</Label>
                 <select
                   value={formData.degree}
                   onChange={(e) => setFormData({ ...formData, degree: e.target.value })}
-                  className="student-input h-12 px-4"
+                  className="w-full h-12 rounded-xl border border-gray-200 px-4 bg-white text-sm"
                 >
                   <option value="">Select Degree</option>
                   {DEGREES.map((d) => (
@@ -330,11 +301,11 @@ export default function Profile() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label className="student-label">Department</Label>
+                <Label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Department</Label>
                 <select
                   value={formData.department}
                   onChange={(e) => setFormData({ ...formData, department: e.target.value, subject: '' })}
-                  className="student-input h-12 px-4"
+                  className="w-full h-12 rounded-xl border border-gray-200 px-4 bg-white text-sm"
                 >
                   <option value="">Select Department</option>
                   {degrees.map((d) => (
@@ -343,11 +314,11 @@ export default function Profile() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label className="student-label">Subject</Label>
+                <Label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Subject</Label>
                 <select
                   value={formData.subject}
                   onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  className="student-input h-12 px-4"
+                  className="w-full h-12 rounded-xl border border-gray-200 px-4 bg-white text-sm"
                 >
                   <option value="">Select Subject</option>
                   {formData.department &&
@@ -357,11 +328,11 @@ export default function Profile() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label className="student-label">Session</Label>
+                <Label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Session</Label>
                 <select
                   value={formData.session}
                   onChange={(e) => setFormData({ ...formData, session: e.target.value })}
-                  className="student-input h-12 px-4"
+                  className="w-full h-12 rounded-xl border border-gray-200 px-4 bg-white text-sm"
                 >
                   <option value="">Select Session</option>
                   {SESSIONS.map((s) => (
@@ -370,20 +341,19 @@ export default function Profile() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label className="student-label">University Roll Number</Label>
+                <Label className="text-xs font-bold text-gray-500 uppercase tracking-wider">University Roll Number</Label>
                 <Input
                   value={formData.universityRoll}
                   onChange={(e) => setFormData({ ...formData, universityRoll: e.target.value })}
-                  placeholder="Enter Roll Number"
-                  className="student-input h-12 px-4"
+                  className="h-12 rounded-xl border border-gray-200 px-4"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="student-label">Semester</Label>
+                <Label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Semester</Label>
                 <select
                   value={formData.semester}
                   onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
-                  className="student-input h-12 px-4"
+                  className="w-full h-12 rounded-xl border border-gray-200 px-4 bg-white text-sm"
                 >
                   <option value="">Select Semester</option>
                   {SEMESTERS.map((s) => (
@@ -391,26 +361,53 @@ export default function Profile() {
                   ))}
                 </select>
               </div>
+
+              {/* Emergency */}
+              <div className="space-y-2 md:col-span-2 border-t border-gray-150 pt-4 mt-2">
+                <h4 className="text-sm font-bold text-gray-900 mb-2">Emergency Contact Information</h4>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Emergency Contact Name</Label>
+                <Input
+                  value={formData.emergencyContactName}
+                  onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
+                  className="h-12 rounded-xl border border-gray-200 px-4"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Relation</Label>
+                <Input
+                  value={formData.emergencyRelation}
+                  onChange={(e) => setFormData({ ...formData, emergencyRelation: e.target.value })}
+                  className="h-12 rounded-xl border border-gray-200 px-4"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Emergency Contact Number</Label>
+                <Input
+                  value={formData.emergencyContactNumber}
+                  onChange={(e) => setFormData({ ...formData, emergencyContactNumber: e.target.value })}
+                  className="h-12 rounded-xl border border-gray-200 px-4"
+                />
+              </div>
+
             </div>
 
-            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
-              <Button
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-gray-150">
+              <button
                 type="button"
-                variant="outline"
                 onClick={() => setIsEditOpen(false)}
-                className="student-button-soft h-12 px-6"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-gray-250 bg-white px-6 text-xs font-bold text-gray-700 hover:bg-gray-50 transition active:scale-[0.98]"
               >
-                <X size={16} />
                 Cancel
-              </Button>
-              <Button
+              </button>
+              <button
                 type="submit"
                 disabled={loading}
-                className="student-button-primary h-12 px-7"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-7 text-xs font-bold text-white hover:bg-blue-700 transition active:scale-[0.98] disabled:opacity-50"
               >
-                <Save size={16} />
                 {loading ? 'Saving...' : 'Save Changes'}
-              </Button>
+              </button>
             </div>
           </form>
         </DialogContent>

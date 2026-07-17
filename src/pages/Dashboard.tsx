@@ -16,12 +16,15 @@ import {
   Sparkles,
   Bell,
   Menu,
-  X
+  X,
+  BarChart2,
+  LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, auth } from '../lib/firebase';
 import { collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { jsPDF } from 'jspdf';
+import MainDashboard from './dashboard/MainDashboard';
 import OfferLetter from './dashboard/OfferLetter';
 import LMS from './dashboard/LMS';
 import Assignments from './dashboard/Assignments';
@@ -263,195 +266,110 @@ export default function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const menuItems = [
-    { name: 'Offer Letter', path: '/dashboard', icon: Download },
-    { name: 'Learning', path: '/dashboard/lms', icon: Video },
-    { name: 'Internship Report', path: '/dashboard/assignments', icon: FileCheck },
+    { name: 'Dashboard', path: '/dashboard', icon: BarChart2 },
+    { name: 'Course', path: '/dashboard/lms', icon: GraduationCap },
+    { name: 'Assignments', path: '/dashboard/assignments', icon: FileCheck },
     { name: 'Certifications', path: '/dashboard/certs', icon: Award },
-    { name: 'Assignment Reports', path: '/dashboard/reports', icon: FileText },
+    { name: 'Reports', path: '/dashboard/reports', icon: FileText },
     { name: 'Profile', path: '/dashboard/profile', icon: UserCircle },
-    { name: 'Notifications', path: '/dashboard/notifications', icon: Bell },
   ];
 
-  const renderSidebarContent = (isMobile: boolean = false) => (
-    <div className="flex h-full flex-col justify-between">
-      <div className="flex flex-col">
-        {/* User Card */}
-        <div className="mb-6 rounded-3xl border border-white/10 bg-white/[0.04] p-5">
-          <div className="mb-4 flex items-center gap-4">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-blue-600 text-xl font-black text-white shadow-md shadow-blue-500/10">
-              {profile?.fullName?.charAt(0) || 'S'}
-            </div>
-            <div className="min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-widest text-blue-400">Student Area</p>
-              <h4 className="truncate text-sm font-bold text-white mt-0.5">{profile?.fullName || 'Learner'}</h4>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-[10px] font-semibold">
-            <div className="rounded-xl bg-white/[0.04] p-2.5">
-              <p className="text-slate-400">Domain</p>
-              <p className="mt-0.5 truncate font-bold text-white">{profile?.internshipDomain || 'Not selected'}</p>
-            </div>
-            <div className="rounded-xl bg-white/[0.04] p-2.5">
-              <p className="text-slate-400">Progress</p>
-              <p className="mt-0.5 font-bold text-emerald-400">{learningProgress}%</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Menu Links */}
-        <div className="flex-1">
-          <div className="mb-3 flex items-center gap-2 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-            <GraduationCap size={12} />
-            Study Menu
-          </div>
-          <nav className="space-y-1.5">
-            {menuItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  onClick={() => isMobile && setIsSidebarOpen(false)}
-                  className={`group flex items-center justify-between gap-3 rounded-2xl px-4 py-3 transition-all duration-200 ${isActive
-                    ? 'bg-white text-slate-950 shadow-md shadow-white/5'
-                    : 'bg-white/[0.02] text-slate-400 hover:bg-white/[0.06] hover:text-white'
-                    }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <item.icon size={16} className={isActive ? 'text-blue-600' : 'text-slate-500 group-hover:text-blue-400'} />
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider">{item.name}</span>
-                  </div>
-                  {isActive && <ChevronRight size={12} className="text-slate-400" />}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-      </div>
-
-      {/* Footer controls inside sidebar */}
-      <div className="mt-8 pt-4 border-t border-white/5 space-y-4">
-        <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] p-4">
-          <div className="mb-3 flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-blue-300">
-            <span>Progress bar</span>
-            <span>{learningProgress}%</span>
-          </div>
-
-          <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-slate-900 shadow-inner">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${learningProgress}%` }}
-              className="h-full rounded-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 shadow-sm"
-            />
-          </div>
-
-          <button
-            onClick={() => {
-              downloadPaymentSlip();
-              if (isMobile) setIsSidebarOpen(false);
-            }}
-            className="mb-2.5 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-[10px] font-black uppercase tracking-widest text-white shadow-md shadow-blue-600/10 transition hover:bg-blue-500 active:scale-[0.98]"
-          >
-            <Receipt size={12} />
-            Payment Slip
-          </button>
-
-          <button
-            onClick={() => {
-              if (isMobile) setIsSidebarOpen(false);
-            }}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-white/10"
-          >
-            <Sparkles size={12} />
-            Resume Track
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  const isLinkActive = (path: string) => {
+    if (path === '/dashboard') {
+      return location.pathname === '/dashboard';
+    }
+    return location.pathname.startsWith(path);
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 flex flex-col relative">
-      {/* Premium Dashboard Top Navbar */}
-      <header className="bg-slate-950 text-white px-4 sm:px-6 lg:px-8 border-b border-white/5 shadow-xl sticky top-0 z-30 backdrop-blur-md bg-opacity-95 h-20 flex items-center">
+    <div className="min-h-screen bg-gray-50 flex flex-col relative text-gray-800">
+      
+      {/* Top Header Navbar */}
+      <header className="bg-white border-b border-gray-200/80 shadow-sm sticky top-0 z-30 h-20 flex items-center px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-4">
 
-          {/* Mobile view sidebar toggle trigger & Desktop view brand logo */}
+          {/* Logo & Mobile trigger */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white active:scale-95 transition-all cursor-pointer"
+              className="lg:hidden h-10 w-10 rounded-xl bg-gray-50 border border-gray-200/80 flex items-center justify-center text-gray-600 active:scale-95 transition cursor-pointer"
             >
-              <Menu size={20} />
+              <Menu size={18} />
             </button>
-            <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
+            <Link to="/dashboard" className="flex items-center gap-2.5 group flex-shrink-0">
               <div className="flex-shrink-0 w-8 h-8 md:w-auto md:h-auto overflow-hidden md:overflow-visible flex items-center justify-start rounded-lg">
                 <img
                   src="/logo-new.jpeg"
                   alt="Logo"
-                  className="h-8 md:h-12 w-auto max-w-none object-cover md:object-contain rounded-lg"
+                  className="h-8 md:h-11 w-auto max-w-none object-contain rounded-lg"
                 />
               </div>
-              <span className="hidden sm:inline-block text-sm font-black tracking-tight leading-none uppercase italic text-white">
-                Intern<span className="gradient-text-cyan">Mitra</span>
+              <span className="hidden sm:inline-block text-sm font-black tracking-wider leading-none uppercase italic text-slate-900">
+                Intern<span className="text-blue-600">Mitra</span>
               </span>
             </Link>
           </div>
 
-          {/* Desktop Navigation Links (Home, About, Features, Contact) */}
-          <div className="hidden lg:flex items-center gap-8">
-            <Link to="/" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-colors">
-              Home
-            </Link>
-            <Link to="/about" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-colors">
-              About
-            </Link>
-            <Link to="/features" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-colors">
-              Features
-            </Link>
-            <Link to="/contact" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-colors">
-              Contact
-            </Link>
-          </div>
+          {/* Desktop Central Navigation Links */}
+          <nav className="hidden lg:flex items-center space-x-8">
+            {menuItems.map((item) => {
+              const active = isLinkActive(item.path);
+              return (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  className={`font-semibold transition-all duration-300 relative group flex items-center space-x-2 py-2 ${
+                    active ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'
+                  }`}
+                >
+                  <item.icon size={16} className={active ? 'text-blue-600' : 'text-gray-400 group-hover:text-blue-600'} />
+                  <span className="text-sm font-semibold">{item.name}</span>
+                  <span className={`absolute -bottom-1 left-0 h-0.5 bg-gradient-to-r from-blue-600 to-violet-600 transition-all duration-300 group-hover:w-full ${
+                    active ? 'w-full' : 'w-0'
+                  }`} />
+                </Link>
+              );
+            })}
+          </nav>
 
-          {/* User Profile / Status / Logout triggers */}
+          {/* Right Profile & Menu Dropdown */}
           <div className="flex items-center gap-4">
-            {/* Desktop only profile info */}
             <div className="hidden sm:flex flex-col text-right">
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 leading-none">Student Area</p>
-              <h4 className="text-xs font-bold text-white mt-1 max-w-[150px] truncate leading-none">
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 leading-none">Student Workspace</p>
+              <h4 className="text-xs font-extrabold text-gray-900 mt-1 max-w-[140px] truncate leading-none">
                 {profile?.fullName || 'Learner'}
               </h4>
             </div>
 
-            {/* Mobile Dropdown Menu button */}
             <div className="relative group">
               <button
-                className="h-10 px-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-xs font-black uppercase tracking-wider gap-1.5 active:scale-95 transition-all text-white cursor-pointer"
+                className="h-10 px-4 rounded-xl bg-gray-50 border border-gray-200/80 flex items-center justify-center text-[10px] font-black uppercase tracking-widest gap-1.5 active:scale-95 transition-all text-gray-700 hover:bg-gray-100 cursor-pointer"
               >
                 Menu
               </button>
-              {/* Dropdown overlay */}
-              <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-slate-900 border border-white/5 shadow-2xl p-2 hidden group-hover:block hover:block z-50">
-                <Link to="/" className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest text-slate-300 hover:bg-white/5 hover:text-white">
-                  Home
+              
+              <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-white border border-gray-200 shadow-xl p-2 hidden group-hover:block hover:block z-50">
+                <Link to="/dashboard" className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50">
+                  Dashboard
                 </Link>
-                <Link to="/about" className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest text-slate-300 hover:bg-white/5 hover:text-white">
-                  About
+                <Link to="/dashboard/profile" className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50">
+                  Profile
                 </Link>
-                <Link to="/features" className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest text-slate-300 hover:bg-white/5 hover:text-white">
-                  Features
-                </Link>
-                <Link to="/contact" className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest text-slate-300 hover:bg-white/5 hover:text-white">
-                  Contact
-                </Link>
-                <div className="h-px bg-white/5 my-1" />
+                {paymentRecord && (
+                  <button
+                    onClick={downloadPaymentSlip}
+                    className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50 text-left cursor-pointer"
+                  >
+                    Payment Slip
+                  </button>
+                )}
+                <div className="h-px bg-gray-150 my-1" />
                 <button
                   onClick={async () => {
                     await signOut(auth);
                     navigate('/login');
                   }}
-                  className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 text-left w-full cursor-pointer"
+                  className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 text-left cursor-pointer"
                 >
                   Logout
                 </button>
@@ -461,58 +379,101 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Main Layout Area */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(circle_at_20%_20%,rgba(37,99,235,0.08),transparent_32%),radial-gradient(circle_at_85%_8%,rgba(6,182,212,0.06),transparent_30%)]" />
-
-        {/* Desktop Sidebar (below top bar) */}
-        <aside className="relative z-20 hidden lg:flex w-80 shrink-0 border-r border-slate-200/50 bg-slate-950/98 text-white shadow-2xl p-6 h-[calc(100vh-80px)] sticky top-20">
-          {renderSidebarContent(false)}
-        </aside>
-
-        {/* Mobile Slide Drawer */}
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        
+        {/* Mobile Sidebar Side-drawer */}
         <AnimatePresence>
           {isSidebarOpen && (
             <div className="fixed inset-0 z-50 lg:hidden">
-              {/* Backdrop overlay */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setIsSidebarOpen(false)}
-                className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
+                className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm"
               />
-              {/* Drawer layout */}
               <motion.aside
                 initial={{ x: '-100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '-100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="fixed left-0 top-0 bottom-0 z-50 w-76 bg-slate-950 text-white p-6 border-r border-white/10 flex flex-col justify-between"
+                className="fixed left-0 top-0 bottom-0 z-50 w-72 bg-white text-gray-800 p-6 border-r border-gray-200 flex flex-col justify-between"
               >
-                <div className="flex items-center justify-between mb-6 pb-2 border-b border-white/5">
-                  <span className="text-xs font-black uppercase tracking-widest text-blue-400">Workspace Menu</span>
-                  <button
-                    onClick={() => setIsSidebarOpen(false)}
-                    className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
-                  >
-                    <X size={18} />
-                  </button>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between pb-4 border-b border-gray-150">
+                    <span className="text-sm font-extrabold uppercase tracking-widest text-blue-600">Student Workspace</span>
+                    <button
+                      onClick={() => setIsSidebarOpen(false)}
+                      className="p-1.5 text-gray-400 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-bold text-gray-450 uppercase tracking-wider px-2">Navigation Menu</h3>
+                    <nav className="space-y-1">
+                      {menuItems.map((item) => {
+                        const active = isLinkActive(item.path);
+                        return (
+                          <Link
+                            key={item.name}
+                            to={item.path}
+                            onClick={() => setIsSidebarOpen(false)}
+                            className={`flex items-center justify-between py-3.5 px-4 rounded-xl transition-all duration-200 border ${
+                              active
+                                ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 border-blue-200 shadow-sm font-semibold'
+                                : 'text-gray-700 border-transparent hover:bg-gray-50 hover:border-gray-200'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-3.5">
+                              <item.icon size={18} className={active ? 'text-blue-600' : 'text-gray-400'} />
+                              <span className="text-sm font-medium">{item.name}</span>
+                            </div>
+                            {active && <ChevronRight size={14} className="text-blue-500" />}
+                          </Link>
+                        );
+                      })}
+                    </nav>
+                  </div>
                 </div>
-                <div className="flex-1 overflow-y-auto pr-1">
-                  {renderSidebarContent(true)}
+
+                {/* Mobile Drawer Footer Actions */}
+                <div className="pt-4 border-t border-gray-150 space-y-3">
+                  <div className="flex items-center gap-3 px-2">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                      {profile?.fullName?.charAt(0) || 'S'}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-gray-900 truncate">{profile?.fullName || 'Learner'}</p>
+                      <p className="text-[10px] text-gray-500 truncate">{profile?.internshipDomain}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setIsSidebarOpen(false);
+                      await signOut(auth);
+                      navigate('/login');
+                    }}
+                    className="w-full inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 text-xs font-bold transition"
+                  >
+                    <LogOut size={14} />
+                    Logout
+                  </button>
                 </div>
               </motion.aside>
             </div>
           )}
         </AnimatePresence>
 
-        {/* Content Area */}
-        <main className="relative z-10 w-full flex-1 overflow-y-auto overflow-x-hidden px-4 py-8 sm:px-6 lg:px-8 lg:py-8 xl:px-10">
+        {/* Subpage Container */}
+        <main className="relative z-10 w-full flex-1 overflow-y-auto overflow-x-hidden py-10 px-4 sm:px-6 lg:px-8 xl:px-10">
           <div className="mx-auto h-full max-w-6xl">
             <Routes>
-              <Route index element={<OfferLetter />} />
-              <Route path="lms" element={<LMS />} />
+              <Route index element={<MainDashboard />} />
+              <Route path="offer-letter" element={<OfferLetter />} />
+              <Route path="lms/*" element={<LMS />} />
               <Route path="assignments" element={<Assignments />} />
               <Route path="certs" element={<Certifications />} />
               <Route path="reports" element={<Reports />} />

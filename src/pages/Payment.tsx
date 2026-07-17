@@ -5,7 +5,7 @@ import { db } from '../lib/firebase';
 import { doc, updateDoc, setDoc, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { Button } from '../components/ui/button';
 import { motion } from 'motion/react';
-import { CreditCard, ShieldCheck, CheckCircle2, IndianRupee } from 'lucide-react';
+import { CreditCard, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -39,7 +39,6 @@ export default function Payment() {
       const collegesData = collegesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as College));
       setColleges(collegesData);
 
-      // Get price for user's selected college
       if (profile?.college) {
         const userCollege = collegesData.find(c => c.name === profile.college);
         setAmount(userCollege?.price || 1000);
@@ -77,8 +76,7 @@ export default function Payment() {
         handler: async function (response: any) {
           console.log('Payment received:', response.razorpay_payment_id);
           try {
-            // Update Firestore directly after successful payment
-             if (!response.razorpay_payment_id ) {
+             if (!response.razorpay_payment_id) {
               throw new Error('Missing Razorpay payment/order id');
             }
             await updateDoc(doc(db, 'users', user.uid), {
@@ -127,82 +125,72 @@ export default function Payment() {
 
   if (success) {
     return (
-      <div className="h-[calc(100vh-80px)] flex items-center justify-center bg-slate-50 p-6">
+      <div className="h-[calc(100vh-80px)] flex items-center justify-center bg-[#f8fafc] p-6">
         <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
+          initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="max-w-md w-full bg-slate-900 p-12 lg:p-16 rounded-[4rem] shadow-2xl text-center relative overflow-hidden group"
+          className="max-w-md w-full bg-[#0c1329] p-10 sm:p-12 rounded-[2.25rem] shadow-2xl text-center relative overflow-hidden group border border-slate-800"
         >
-          <div className="relative z-10">
-            <div className="w-28 h-28 bg-blue-600 text-white rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 border-8 border-slate-800 shadow-2xl shadow-blue-600/30 transition-transform group-hover:rotate-12">
-              <CheckCircle2 size={56} />
+          <div className="relative z-10 space-y-6">
+            <div className="w-20 h-20 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto border-4 border-slate-800 shadow-xl shadow-blue-500/10 transition-transform group-hover:rotate-6">
+              <CheckCircle2 size={36} />
             </div>
-            <h2 className="text-4xl font-black text-white mb-6 tracking-tighter uppercase italic">Authorization Complete</h2>
-            <p className="text-slate-400 mb-12 leading-relaxed text-lg italic font-bold">Registration protocols synchronized. Your industrial journey begins now.</p>
-            <Button onClick={() => navigate('/dashboard')} className="w-full h-20 bg-white hover:bg-blue-600 hover:text-white text-slate-900 text-xs uppercase tracking-[0.2em] font-black rounded-2xl shadow-xl transition-all duration-500">
-              Enter Operations Center
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight uppercase">Payment Complete</h2>
+            <p className="text-slate-400 leading-relaxed text-xs">Registration credentials synchronized. Your industry training program begins now.</p>
+            <Button onClick={() => navigate('/dashboard')} className="w-full h-12 bg-white hover:bg-blue-600 hover:text-white text-slate-900 text-xs uppercase tracking-widest font-black rounded-xl shadow-md cursor-pointer transition-all duration-300">
+              Enter Operations Dashboard
             </Button>
           </div>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute top-0 right-0 w-48 h-48 bg-blue-600/10 rounded-full blur-[80px] translate-x-1/2 -translate-y-1/2 pointer-events-none" />
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-80px)] flex items-center justify-center bg-slate-100 p-6">
+    <div className="h-[calc(100vh-80px)] flex items-center justify-center bg-slate-50 p-6">
       <motion.div
-        initial={{ y: 20, opacity: 0 }}
+        initial={{ y: 15, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="max-w-md w-full bg-white p-12 lg:p-16 rounded-[4rem] shadow-2xl border border-slate-100 relative overflow-hidden"
+        className="max-w-md w-full bg-white p-8 sm:p-12 rounded-[2.25rem] shadow-soft border border-slate-150/60 relative overflow-hidden"
       >
-        <div className="relative z-10">
-          <div className="flex items-center gap-6 mb-12">
-            <div className="p-5 bg-blue-50 text-blue-600 rounded-[1.5rem] border border-blue-100 shadow-xl shadow-blue-600/5">
-              <CreditCard size={36} />
+        <div className="relative z-10 space-y-6">
+          <div className="flex items-center gap-4 border-b border-slate-100 pb-5">
+            <div className="p-3.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-100 shadow-sm">
+              <CreditCard size={24} />
             </div>
             <div>
-              <h3 className="text-[10px] text-blue-600 font-black uppercase tracking-[0.4em] mb-1 italic">Protocol 04</h3>
-              <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">Financial Guard.</h2>
+              <span className="text-[9px] text-blue-600 font-black uppercase tracking-[0.25em] block leading-none">Step 04</span>
+              <h2 className="text-xl font-extrabold text-slate-800 tracking-tight uppercase leading-none mt-1">Enrollment Payment</h2>
             </div>
           </div>
 
-          <div className="bg-slate-50 p-8 rounded-[2.5rem] mb-12 border border-slate-100 shadow-inner">
-            <div className="flex justify-between items-center mb-6">
-              <span className="text-slate-400 font-black uppercase tracking-widest text-[10px] italic">Registry Point</span>
-              <span className="text-slate-900 font-black italic tracking-tighter">IM-2026-ACTIVE</span>
+          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 shadow-inner space-y-4">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">Reference</span>
+              <span className="text-slate-850 font-black tracking-tight">IM-2026-ACTIVE</span>
             </div>
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 text-slate-900 italic">
-
-              <span className="tracking-tighter text-2xl sm:text-3xl font-black break-words">
-                COMMIT FEE
-              </span>
-
-              <div className="flex items-center gap-2 sm:gap-3 text-slate-500 font-bold italic text-sm sm:text-lg flex-wrap">
-                {/* <IndianRupee size={18} className="flex-shrink-0" /> */}
-
-                <span className="break-words">
-                  Registration Fee: ₹{amount}
-                </span>
-              </div>
-
+            <div className="flex justify-between items-center text-slate-900 font-extrabold">
+              <span className="text-slate-800 font-black text-sm uppercase">Commitment Fee</span>
+              <span className="text-lg text-slate-900 font-black">₹{amount}</span>
             </div>
           </div>
 
-          <div className="space-y-8">
-            <div className="flex items-start gap-4">
-              <div className="mt-1 flex-shrink-0 bg-blue-50 text-blue-600 rounded-full p-1.5 shadow-sm border border-blue-100"><ShieldCheck size={18} /></div>
-              <p className="text-xs text-slate-400 font-bold italic leading-relaxed">Secure transaction via <span className="text-slate-900 font-black uppercase tracking-tighter">Razorpay</span> encrypted tunnel. High-integrity processing.</p>
+          <div className="space-y-6">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 bg-blue-50 text-blue-600 rounded-full p-1 border border-blue-100"><ShieldCheck size={14} /></div>
+              <p className="text-xs text-slate-400 font-semibold leading-relaxed">
+                Secure transaction via <span className="text-slate-700 font-extrabold uppercase tracking-tight">Razorpay</span> encrypted tunnel.
+              </p>
             </div>
-            <Button onClick={handlePayment} disabled={loading} className="w-full h-20 bg-blue-600 hover:bg-slate-900 text-white text-xs uppercase tracking-[0.2em] font-black rounded-2xl shadow-2xl shadow-blue-600/20 transition-all duration-500 hover:scale-[1.02]">
-              {loading ? 'Initializing Tunnel...' : `Finalize Commit (₹${amount})`}
+            <Button onClick={handlePayment} disabled={loading} className="w-full h-12 bg-blue-600 hover:bg-slate-900 hover:scale-[1.01] text-white text-xs uppercase tracking-widest font-black rounded-xl shadow-md shadow-blue-500/10 cursor-pointer transition-all duration-300">
+              {loading ? 'Initializing Tunnel...' : `Pay Registration Fee (₹${amount})`}
             </Button>
-            <div className="text-center text-[10px] text-slate-300 font-black uppercase tracking-widest italic">All-inclusive. Zero Shadow Costs.</div>
+            <div className="text-center text-[9px] text-slate-400 font-black uppercase tracking-widest">All-inclusive. Zero Shadow Costs.</div>
           </div>
         </div>
-        <div className="absolute top-0 right-0 w-48 h-48 bg-slate-50 rounded-full translate-x-12 -translate-y-12 -z-0" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full translate-x-1/2 -translate-y-1/2 blur-xl pointer-events-none" />
       </motion.div>
     </div>
-
   );
 }

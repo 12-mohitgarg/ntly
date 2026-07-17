@@ -156,6 +156,130 @@ export default function AdminDashboard() {
   const [savingAssignment, setSavingAssignment] = useState(false);
   const [backupLoading, setBackupLoading] = useState(false);
 
+  // Pagination states
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersPerPage, setUsersPerPage] = useState(10);
+
+  const [assignmentsPage, setAssignmentsPage] = useState(1);
+  const [assignmentsPerPage, setAssignmentsPerPage] = useState(10);
+
+  const [testSubmissionsPage, setTestSubmissionsPage] = useState(1);
+  const [testSubmissionsPerPage, setTestSubmissionsPerPage] = useState(10);
+
+  const [reportsPage, setReportsPage] = useState(1);
+  const [reportsPerPage, setReportsPerPage] = useState(10);
+
+  const [teachersPage, setTeachersPage] = useState(1);
+  const [teachersPerPage, setTeachersPerPage] = useState(10);
+
+  // Reset pages when filters change
+  useEffect(() => {
+    setUsersPage(1);
+  }, [collegeFilter, domainFilter]);
+
+  useEffect(() => {
+    setAssignmentsPage(1);
+  }, [collegeFilter, domainFilter]);
+
+  useEffect(() => {
+    setTestSubmissionsPage(1);
+  }, [testCourseFilter]);
+
+  const PaginationControls = ({
+    currentPage,
+    totalItems,
+    itemsPerPage,
+    onPageChange,
+    onItemsPerPageChange,
+    label
+  }: {
+    currentPage: number;
+    totalItems: number;
+    itemsPerPage: number;
+    onPageChange: (page: number) => void;
+    onItemsPerPageChange?: (size: number) => void;
+    label: string;
+  }) => {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    if (totalPages <= 0) return null; // Keep visible even if 1 page to allow page size selection if totalItems > 10, wait! Let's check:
+    // Actually, if totalPages <= 1 and totalItems <= 10, we can still hide it, but if totalItems > 10, they can choose to show 10!
+    // So let's render it if totalItems > 10, or if totalPages > 1!
+    if (totalPages <= 1 && totalItems <= 10) return null;
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
+    const pages = [];
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== '...') {
+        pages.push('...');
+      }
+    }
+
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-slate-100/80 bg-slate-50/30">
+        <div className="flex items-center gap-4 text-xs text-slate-500 font-bold">
+          <span className="italic">
+            Showing {totalItems === 0 ? 0 : startIndex + 1} to {endIndex} of {totalItems} {label}
+          </span>
+          {onItemsPerPageChange && (
+            <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-4">
+              <span>Show</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
+                className="h-8 rounded-lg border border-slate-250 bg-white px-2 text-xs font-bold text-slate-700 outline-none cursor-pointer"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span>entries</span>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Button
+            type="button"
+            disabled={currentPage === 1}
+            onClick={() => onPageChange(currentPage - 1)}
+            className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-250 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50 transition active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+          >
+            Prev
+          </Button>
+          {pages.map((p, idx) => (
+            p === '...' ? (
+              <span key={idx} className="px-2 text-slate-405 font-bold text-xs">...</span>
+            ) : (
+              <Button
+                key={idx}
+                type="button"
+                onClick={() => onPageChange(Number(p))}
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold transition active:scale-[0.98] ${
+                  currentPage === p
+                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10'
+                    : 'border border-slate-250 bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {p}
+              </Button>
+            )
+          ))}
+          <Button
+            type="button"
+            disabled={currentPage === totalPages || totalPages === 0}
+            onClick={() => onPageChange(currentPage + 1)}
+            className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-250 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50 transition active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+          >
+            Next
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   useEffect(() => {
     if (!user) {
       navigate('/login');
@@ -1170,72 +1294,7 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Header */}
-      <header className="bg-slate-900 text-white p-6 shadow-lg">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
-              <Users size={24} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tighter">Admin Dashboard</h1>
-              <p className="text-slate-400 text-sm font-bold">{adminProfile?.email}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link to="/admin-dashboard">
-              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
-                <LayoutDashboard size={18} />
-                Dashboard
-              </Button>
-            </Link>
-            <Link to="/admin/districts">
-              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
-                <MapPin size={18} />
-                Districts
-              </Button>
-            </Link>
-            <Link to="/admin/colleges">
-              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
-                <GraduationCap size={18} />
-                Colleges
-              </Button>
-            </Link>
-            <Link to="/admin/courses">
-              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
-                <BookOpen size={18} />
-                Courses
-              </Button>
-            </Link>
-            <Link to="/admin/universities">
-              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
-                <Building2 size={18} />
-                Universities
-              </Button>
-            </Link>
-            <Link to="/admin/subjects">
-              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
-                <List size={18} />
-                Subjects
-              </Button>
-            </Link>
-            <Link to="/admin/daily-videos">
-              <Button variant="ghost" className="text-white hover:bg-white/10 flex items-center gap-2">
-                <Youtube size={18} />
-                Daily Videos
-              </Button>
-            </Link>
-            <Button
-              onClick={handleLogout}
-              variant="ghost"
-              className="text-white hover:bg-white/10 flex items-center gap-2"
-            >
-              <LogOut size={18} />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
+      {/* Redundant header removed - AdminLayout header controls navigation */}
 
       {/* Content */}
       <div className="max-w-7xl mx-auto p-8">
@@ -1261,14 +1320,14 @@ export default function AdminDashboard() {
               <Upload size={14} />
               Assignments
             </TabsTrigger>
-            {/* <TabsTrigger value="test-reports" className="px-6 py-2 font-black">
-              <ClipboardList size={16} />
+            <TabsTrigger value="test-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+              <ClipboardList size={14} />
               Test Reports
-            </TabsTrigger> */}
-            {/* <TabsTrigger value="college-export" className="px-6 py-2 font-black">
-              <Download size={16} />
+            </TabsTrigger>
+            <TabsTrigger value="college-export" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+              <Download size={14} />
               College Export
-            </TabsTrigger> */}
+            </TabsTrigger>
           </TabsList >
 
           <TabsContent value="dashboard" className="space-y-8 mt-4">
@@ -1497,7 +1556,7 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredUsers.map((user) => (
+                      {filteredUsers.slice((usersPage - 1) * usersPerPage, usersPage * usersPerPage).map((user) => (
                         <tr key={user.uid} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
                           <td className="p-4">
                             <div className="font-black text-slate-900">{user.fullName}</div>
@@ -1574,6 +1633,17 @@ export default function AdminDashboard() {
                       ))}
                     </tbody>
                   </table>
+                  <PaginationControls
+                    currentPage={usersPage}
+                    totalItems={filteredUsers.length}
+                    itemsPerPage={usersPerPage}
+                    onPageChange={setUsersPage}
+                    onItemsPerPageChange={(size) => {
+                      setUsersPerPage(size);
+                      setUsersPage(1);
+                    }}
+                    label="students"
+                  />
                 </div>
               )}
             </div>
@@ -1756,7 +1826,7 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {visibleStudentReports.map((report) => {
+                          {visibleStudentReports.slice((assignmentsPage - 1) * assignmentsPerPage, assignmentsPage * assignmentsPerPage).map((report) => {
                             const student = getStudentProfile(report.userId);
 
                             return (
@@ -1794,6 +1864,17 @@ export default function AdminDashboard() {
                           })}
                         </tbody>
                       </table>
+                      <PaginationControls
+                        currentPage={assignmentsPage}
+                        totalItems={visibleStudentReports.length}
+                        itemsPerPage={assignmentsPerPage}
+                        onPageChange={setAssignmentsPage}
+                        onItemsPerPageChange={(size) => {
+                          setAssignmentsPerPage(size);
+                          setAssignmentsPage(1);
+                        }}
+                        label="uploads"
+                      />
                     </div>
                   </div>
                 )}
@@ -1902,7 +1983,7 @@ export default function AdminDashboard() {
                               </tr>
                             </thead>
                             <tbody>
-                              {visibleTestSubmissions.map((sub) => {
+                               {visibleTestSubmissions.slice((testSubmissionsPage - 1) * testSubmissionsPerPage, testSubmissionsPage * testSubmissionsPerPage).map((sub) => {
                                 const student = getStudentProfile(sub.userId);
                                 const isPassed = sub.scorePercentage >= 33;
 
@@ -1954,6 +2035,17 @@ export default function AdminDashboard() {
                               })}
                             </tbody>
                           </table>
+                          <PaginationControls
+                            currentPage={testSubmissionsPage}
+                            totalItems={visibleTestSubmissions.length}
+                            itemsPerPage={testSubmissionsPerPage}
+                            onPageChange={setTestSubmissionsPage}
+                            onItemsPerPageChange={(size) => {
+                              setTestSubmissionsPerPage(size);
+                              setTestSubmissionsPage(1);
+                            }}
+                            label="submissions"
+                          />
                         </div>
                       )}
                     </div>
@@ -2169,7 +2261,7 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {courseReports.map((report) => (
+                        {courseReports.slice((reportsPage - 1) * reportsPerPage, reportsPage * reportsPerPage).map((report) => (
                           <tr key={report.id} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
                             <td className="p-4">
                               <div className="font-black text-slate-900">{report.title}</div>
@@ -2208,6 +2300,17 @@ export default function AdminDashboard() {
                         ))}
                       </tbody>
                     </table>
+                    <PaginationControls
+                      currentPage={reportsPage}
+                      totalItems={courseReports.length}
+                      itemsPerPage={reportsPerPage}
+                      onPageChange={setReportsPage}
+                      onItemsPerPageChange={(size) => {
+                        setReportsPerPage(size);
+                        setReportsPage(1);
+                      }}
+                      label="reports"
+                    />
                   </div>
                 </div>
               )}
@@ -2321,7 +2424,7 @@ export default function AdminDashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            {teachers.map((teacher) => (
+                            {teachers.slice((teachersPage - 1) * teachersPerPage, teachersPage * teachersPerPage).map((teacher) => (
                               <tr key={teacher.uid} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
                                 <td className="p-4">
                                   <div className="font-black text-slate-900">{teacher.fullName}</div>
@@ -2362,7 +2465,7 @@ export default function AdminDashboard() {
 
                       {/* Mobile Card List View */}
                       <div className="lg:hidden divide-y divide-slate-100/50">
-                        {teachers.map((teacher) => (
+                        {teachers.slice((teachersPage - 1) * teachersPerPage, teachersPage * teachersPerPage).map((teacher) => (
                           <div key={teacher.uid} className="p-4 space-y-3">
                             <div className="flex justify-between items-start gap-2">
                               <div>
@@ -2402,6 +2505,17 @@ export default function AdminDashboard() {
                           </div>
                         ))}
                       </div>
+                      <PaginationControls
+                        currentPage={teachersPage}
+                        totalItems={teachers.length}
+                        itemsPerPage={teachersPerPage}
+                        onPageChange={setTeachersPage}
+                        onItemsPerPageChange={(size) => {
+                          setTeachersPerPage(size);
+                          setTeachersPage(1);
+                        }}
+                        label="teachers"
+                      />
                     </div>
                   )}
                 </TabsContent>
