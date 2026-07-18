@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 
 export default function Navbar() {
-  const { user, profile, isAdmin } = useAuth();
+  const { user, isAdmin, isEmitra } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -32,12 +32,12 @@ export default function Navbar() {
             <Link to="/" className="flex items-center gap-3 group flex-shrink-0">
               <motion.div
                 whileHover={{ scale: 1.02 }}
-                className="flex-shrink-0 w-8 h-8 md:w-auto md:h-auto overflow-hidden md:overflow-visible rounded-lg flex items-center justify-start"
+                className="flex-shrink-0 h-12 w-auto max-w-[150px] overflow-visible rounded-lg flex items-center justify-start"
               >
                 <img
                   src="/logo-new.jpeg"
                   alt="InternMitra Logo"
-                  className="h-9 md:h-14 w-auto max-w-none object-contain rounded-xl shadow-sm border border-slate-100"
+                  className="h-11 md:h-14 w-auto max-w-full object-contain rounded-xl shadow-sm border border-slate-100"
                 />
               </motion.div>
             </Link>
@@ -62,6 +62,13 @@ export default function Navbar() {
                         <span>Admin Panel</span>
                       </Button>
                     </Link>
+                  ) : isEmitra ? (
+                    <Link to="/emitra-dashboard">
+                      <Button className="bg-slate-900 hover:bg-slate-800 text-white rounded-2xl px-6 h-11 text-xs font-black uppercase tracking-widest shadow-sm cursor-pointer transition-all duration-300">
+                        <User size={16} />
+                        <span>Cyber cafe Panel</span>
+                      </Button>
+                    </Link>
                   ) : (
                     <Link to="/dashboard">
                       <Button className="bg-blue-600 hover:bg-blue-500 hover:scale-[1.01] text-white rounded-2xl px-6 h-11 text-xs font-black uppercase tracking-widest shadow-md shadow-blue-500/10 cursor-pointer transition-all duration-300">
@@ -84,6 +91,11 @@ export default function Navbar() {
                   <Link to="/register">
                     <Button className="bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-2xl px-7 h-11 font-black uppercase text-xs tracking-widest shadow-md shadow-orange-500/10 hover:shadow-lg hover:shadow-orange-500/20 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer">
                       Join Now
+                    </Button>
+                  </Link>
+                  <Link to="/emitra-register" className="hidden lg:inline-flex">
+                    <Button variant="outline" className="border-slate-200 text-slate-700 font-extrabold uppercase text-xs tracking-widest hover:bg-slate-50 rounded-2xl px-5 h-11 transition-all duration-300 cursor-pointer">
+                      Cyber cafe
                     </Button>
                   </Link>
                 </div>
@@ -183,6 +195,10 @@ export default function Navbar() {
                     <Link to="/admin-dashboard" onClick={() => setIsOpen(false)} className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 text-xs font-black uppercase tracking-widest text-white shadow-md hover:bg-slate-800 transition-all text-center">
                       <User size={16} /> Admin Dashboard
                     </Link>
+                  ) : isEmitra ? (
+                    <Link to="/emitra-dashboard" onClick={() => setIsOpen(false)} className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 text-xs font-black uppercase tracking-widest text-white shadow-md hover:bg-slate-800 transition-all text-center">
+                      <User size={16} /> Cyber cafe Dashboard
+                    </Link>
                   ) : (
                     <Link to="/dashboard" onClick={() => setIsOpen(false)} className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 text-xs font-black uppercase tracking-widest text-white shadow-md hover:bg-blue-500 transition-all text-center">
                       <User size={16} /> Dashboard
@@ -205,6 +221,9 @@ export default function Navbar() {
                   </Link>
                   <Link to="/register" onClick={() => setIsOpen(false)} className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-xs font-black uppercase tracking-widest text-white shadow-md hover:opacity-95 transition-all text-center">
                     Join Now
+                  </Link>
+                  <Link to="/emitra-register" onClick={() => setIsOpen(false)} className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-blue-200 text-xs font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50 transition-all text-center">
+                    Cyber cafe Register
                   </Link>
                 </>
               )}

@@ -30,6 +30,8 @@ interface UserProfile {
   internshipDomain: string;
   isPaid: boolean;
   registrationDate: string;
+  createdByEmitraId?: string | null;
+  createdByEmitraName?: string | null;
 }
 
 interface Payment {
@@ -49,6 +51,18 @@ interface TeacherProfile {
   course?: string;
   createdAt?: string;
   isActive: boolean;
+}
+
+interface EmitraProfile {
+  uid: string;
+  centerName: string;
+  ownerName: string;
+  email: string;
+  contactNumber: string;
+  address: string;
+  commissionPercentage: number;
+  isActive: boolean;
+  createdAt?: string;
 }
 
 interface Notification {
@@ -103,6 +117,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [teachers, setTeachers] = useState<TeacherProfile[]>([]);
+  const [emitras, setEmitras] = useState<EmitraProfile[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [courseReports, setCourseReports] = useState<CourseReport[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -151,6 +166,7 @@ export default function AdminDashboard() {
   const [reportFileInputKey, setReportFileInputKey] = useState(0);
   const [assignmentFileInputKey, setAssignmentFileInputKey] = useState(0);
   const [savingTeacher, setSavingTeacher] = useState(false);
+  const [savingEmitraId, setSavingEmitraId] = useState<string | null>(null);
   const [savingNotification, setSavingNotification] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
   const [savingAssignment, setSavingAssignment] = useState(false);
@@ -291,84 +307,97 @@ export default function AdminDashboard() {
 
   const fetchData = async () => {
     try {
-      // Fetch users
       const usersRef = collection(db, 'users');
       const usersQuery = query(usersRef, orderBy('registrationDate', 'desc'));
-      const usersSnapshot = await getDocs(usersQuery);
+      const paymentsRef = collection(db, 'payments');
+      const teachersQuery = query(collection(db, 'admins'), where('role', '==', 'teacher'));
+      const notificationsQuery = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
+      const reportsQuery = query(collection(db, 'courseReports'), orderBy('uploadedAt', 'desc'));
+      const assignmentsQuery = query(collection(db, 'assignments'), orderBy('createdAt', 'desc'));
+
+      const [
+        usersSnapshot,
+        paymentsSnapshot,
+        teachersSnapshot,
+        emitrasSnapshot,
+        notificationsSnapshot,
+        reportsSnapshot,
+        assignmentsSnapshot,
+        studentReportsResult,
+        fallbackReportsResult,
+        testSubmissionsResult,
+        courseTestsResult
+      ] = await Promise.all([
+        getDocs(usersQuery),
+        getDocs(paymentsRef),
+        getDocs(teachersQuery),
+        getDocs(collection(db, 'emitras')),
+        getDocs(notificationsQuery),
+        getDocs(reportsQuery),
+        getDocs(assignmentsQuery),
+        getDocs(query(collection(db, 'studentReports'), orderBy('uploadedAt', 'desc'))).catch((error) => {
+          console.error('Error fetching studentReports:', error);
+          return null;
+        }),
+        getDocs(query(collection(db, 'submissions'), where('type', '==', 'studentReport'))).catch((error) => {
+          console.error('Error fetching fallback submissions:', error);
+          return null;
+        }),
+        getDocs(collection(db, 'testSubmissions')).catch((error) => {
+          console.error('Error fetching testSubmissions:', error);
+          return null;
+        }),
+        getDocs(collection(db, 'courseTests')).catch((error) => {
+          console.error('Error fetching courseTests:', error);
+          return null;
+        })
+      ]);
+
       const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
       setUsers(usersData);
 
-      // Fetch payments
-      const paymentsRef = collection(db, 'payments');
-      const paymentsSnapshot = await getDocs(paymentsRef);
       const paymentsData = paymentsSnapshot.docs.map(doc => doc.data() as Payment);
       setPayments(paymentsData);
 
-      // Fetch teachers
-      const teachersQuery = query(collection(db, 'admins'), where('role', '==', 'teacher'));
-      const teachersSnapshot = await getDocs(teachersQuery);
       const teachersData = teachersSnapshot.docs
         .map(doc => ({ uid: doc.id, ...doc.data() } as TeacherProfile))
         .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       setTeachers(teachersData);
 
-      // Fetch notifications
-      const notificationsQuery = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
-      const notificationsSnapshot = await getDocs(notificationsQuery);
+      const emitrasData = emitrasSnapshot.docs
+        .map(doc => ({ uid: doc.id, ...doc.data() } as EmitraProfile))
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      setEmitras(emitrasData);
+
       const notificationsData = notificationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
       setNotifications(notificationsData);
 
-      // Fetch course reports
-      const reportsQuery = query(collection(db, 'courseReports'), orderBy('uploadedAt', 'desc'));
-      const reportsSnapshot = await getDocs(reportsQuery);
       const reportsData = reportsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CourseReport));
       setCourseReports(reportsData);
 
-      // Fetch assignments created by admin/teachers.
-      const assignmentsQuery = query(collection(db, 'assignments'), orderBy('createdAt', 'desc'));
-      const assignmentsSnapshot = await getDocs(assignmentsQuery);
       const assignmentsData = assignmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Assignment));
       setAssignments(assignmentsData);
 
-      // Fetch student uploaded assignments/reports from both the new and legacy submission collections.
       const studentReportsData: StudentReport[] = [];
-
-      await getDocs(query(collection(db, 'studentReports'), orderBy('uploadedAt', 'desc')))
-        .then((snapshot) => {
-          studentReportsData.push(...snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentReport)));
-        })
-        .catch((error) => {
-          console.error('Error fetching studentReports:', error);
-        });
-
-      await getDocs(query(collection(db, 'submissions'), where('type', '==', 'studentReport')))
-        .then((snapshot) => {
-          studentReportsData.push(...snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentReport)));
-        })
-        .catch((error) => {
-          console.error('Error fetching fallback submissions:', error);
-        });
+      if (studentReportsResult) {
+        studentReportsData.push(...studentReportsResult.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentReport)));
+      }
+      if (fallbackReportsResult) {
+        studentReportsData.push(...fallbackReportsResult.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentReport)));
+      }
 
       setStudentReports(
         studentReportsData.sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || ''))
       );
 
-      // Fetch test submissions
-      try {
-        const testSubmissionsSnapshot = await getDocs(collection(db, 'testSubmissions'));
-        const testSubmissionsData = testSubmissionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      if (testSubmissionsResult) {
+        const testSubmissionsData = testSubmissionsResult.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
         setTestSubmissions(testSubmissionsData);
-      } catch (error) {
-        console.error('Error fetching testSubmissions:', error);
       }
 
-      // Fetch course tests
-      try {
-        const courseTestsSnapshot = await getDocs(collection(db, 'courseTests'));
-        const courseTestsData = courseTestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      if (courseTestsResult) {
+        const courseTestsData = courseTestsResult.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
         setCourseTests(courseTestsData);
-      } catch (error) {
-        console.error('Error fetching courseTests:', error);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -458,6 +487,31 @@ export default function AdminDashboard() {
       alert(error?.message || 'Error adding teacher');
     } finally {
       setSavingTeacher(false);
+    }
+  };
+
+  const handleUpdateEmitraPercentage = async (emitraId: string, percentage: number) => {
+    if (Number.isNaN(percentage) || percentage < 0 || percentage > 100) {
+      alert('Percentage must be between 0 and 100');
+      return;
+    }
+
+    setSavingEmitraId(emitraId);
+    try {
+      await updateDoc(doc(db, 'emitras', emitraId), {
+        commissionPercentage: percentage
+      });
+      setEmitras((prev) =>
+        prev.map((emitra) =>
+          emitra.uid === emitraId ? { ...emitra, commissionPercentage: percentage } : emitra
+        )
+      );
+      alert('Cyber cafe percentage updated');
+    } catch (error: any) {
+      console.error('Error updating Cyber cafe percentage:', error);
+      alert(error?.message || 'Error updating Cyber cafe percentage');
+    } finally {
+      setSavingEmitraId(null);
     }
   };
 
@@ -690,9 +744,14 @@ export default function AdminDashboard() {
 
         let amount = 1000;
 
+        let createdByEmitraId = null;
+        let createdByEmitraName = null;
+
         if (userDocSnap.exists()) {
 
           const userData = userDocSnap.data();
+          createdByEmitraId = userData.createdByEmitraId || null;
+          createdByEmitraName = userData.createdByEmitraName || null;
 
           // college find
           const collegesQuery = await getDocs(
@@ -713,6 +772,8 @@ export default function AdminDashboard() {
           collection(db, 'payments'),
           {
             userId: userId,
+            createdByEmitraId,
+            createdByEmitraName,
             razorpayOrderId: `manual_order_${Date.now()}`,
             razorpayPaymentId: `manual_pay_${Date.now()}`,
             amount: amount,
@@ -932,6 +993,17 @@ export default function AdminDashboard() {
   const successfulUsersCount = successfulUsers.length;
   const pendingUsersCount = users.length - successfulUsersCount;
   const totalAmount = payments.filter(p => p.status === 'success').reduce((sum, p) => sum + (p.amount || 0), 0);
+  const emitraStudentsCount = users.filter((student) => student.createdByEmitraId).length;
+
+  const getEmitraStudents = (emitraId: string) =>
+    users.filter((student) => student.createdByEmitraId === emitraId);
+
+  const getEmitraPaymentTotal = (emitraId: string) => {
+    const studentIds = new Set(getEmitraStudents(emitraId).map((student) => student.uid));
+    return payments
+      .filter((payment) => payment.status === 'success' && studentIds.has(payment.userId))
+      .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+  };
 
   // Get payment status for a user
   const getUserPaymentStatus = (userId: string) => {
@@ -1308,6 +1380,10 @@ export default function AdminDashboard() {
               <UserPlus size={14} />
               Teachers
             </TabsTrigger>
+            <TabsTrigger value="emitras" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+              <Building2 size={14} />
+              Cyber cafe
+            </TabsTrigger>
             <TabsTrigger value="notifications" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
               <Bell size={14} />
               Notifications
@@ -1539,7 +1615,7 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 <div className="overflow-x-auto w-full">
-                  <table className="w-full min-w-[1000px] table-auto">
+                  <table className="w-full min-w-[1100px] table-auto">
                     <thead className="bg-slate-50/50">
                       <tr>
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Name</th>
@@ -1550,6 +1626,7 @@ export default function AdminDashboard() {
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Domain</th>
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Payment Status</th>
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Registered</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Source</th>
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">
                           Action
                         </th>
@@ -1598,6 +1675,20 @@ export default function AdminDashboard() {
                               month: 'short',
                               year: 'numeric'
                             })}
+                          </td>
+                          <td className="p-4">
+                            {user.createdByEmitraId ? (
+                              <div>
+                                <span className="inline-flex px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-black uppercase tracking-wider ring-1 ring-indigo-100">
+                                  Cyber cafe
+                                </span>
+                                <div className="mt-1 text-xs text-slate-500 font-bold">{user.createdByEmitraName || user.createdByEmitraId}</div>
+                              </div>
+                            ) : (
+                              <span className="inline-flex px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-black uppercase tracking-wider">
+                                Direct
+                              </span>
+                            )}
                           </td>
                           <td className="p-4">
                             <div className="flex flex-wrap gap-2">
@@ -2311,6 +2402,128 @@ export default function AdminDashboard() {
                       }}
                       label="reports"
                     />
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="emitras">
+            <div className="student-card p-4 sm:p-6 bg-white/80">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="student-icon bg-indigo-50 text-indigo-600 ring-indigo-100">
+                    <Building2 size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900 gradient-text">Cyber cafe Management</h2>
+                    <p className="text-slate-500 text-sm font-semibold">View Cyber cafes, their students, and adjust commission percentage.</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-indigo-100/80 w-fit">
+                    {emitras.length} Cyber cafes
+                  </span>
+                  <span className="bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-emerald-100/80 w-fit">
+                    {emitraStudentsCount} Students
+                  </span>
+                </div>
+              </div>
+
+              {emitras.length === 0 ? (
+                <div className="border border-dashed border-slate-200 rounded-2xl p-12 text-center">
+                  <Building2 size={48} className="text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-500 font-bold">No Cyber cafes registered yet</p>
+                </div>
+              ) : (
+                <div className="student-card overflow-hidden bg-white/50 border-slate-100/50">
+                  <div className="overflow-x-auto w-full">
+                    <table className="w-full min-w-[1100px] table-auto">
+                      <thead className="bg-slate-50/50">
+                        <tr>
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Cyber cafe</th>
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Owner</th>
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Contact</th>
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Students</th>
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Paid Amount</th>
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Percentage</th>
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Commission</th>
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {emitras.map((emitra) => {
+                          const emitraStudents = getEmitraStudents(emitra.uid);
+                          const emitraPaidTotal = getEmitraPaymentTotal(emitra.uid);
+                          const commission = Math.round(emitraPaidTotal * ((emitra.commissionPercentage || 0) / 100));
+
+                          return (
+                            <tr key={emitra.uid} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
+                              <td className="p-4">
+                                <div className="font-black text-slate-900">{emitra.centerName}</div>
+                                <div className="text-xs text-slate-400 font-semibold">{emitra.uid}</div>
+                                <div className="mt-1 text-xs text-slate-500 font-semibold max-w-xs truncate">{emitra.address}</div>
+                              </td>
+                              <td className="p-4 text-slate-700 font-bold text-sm">{emitra.ownerName}</td>
+                              <td className="p-4">
+                                <div className="flex items-center gap-2 text-slate-600 text-sm font-semibold">
+                                  <Mail size={14} className="text-slate-400" />
+                                  {emitra.email}
+                                </div>
+                                <div className="mt-1 flex items-center gap-2 text-slate-600 text-sm font-semibold">
+                                  <Phone size={14} className="text-slate-400" />
+                                  {emitra.contactNumber}
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <div className="font-black text-slate-900">{emitraStudents.length}</div>
+                                <div className="text-xs text-slate-400 font-bold">
+                                  {emitraStudents.filter(isUserSuccessful).length} paid
+                                </div>
+                              </td>
+                              <td className="p-4 text-slate-900 font-black">₹{emitraPaidTotal.toLocaleString('en-IN')}</td>
+                              <td className="p-4">
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    value={emitra.commissionPercentage ?? 0}
+                                    onChange={(event) => {
+                                      const value = Number(event.target.value);
+                                      setEmitras((prev) =>
+                                        prev.map((item) =>
+                                          item.uid === emitra.uid ? { ...item, commissionPercentage: value } : item
+                                        )
+                                      );
+                                    }}
+                                    className="h-10 w-24 rounded-xl font-black"
+                                  />
+                                  <Button
+                                    type="button"
+                                    disabled={savingEmitraId === emitra.uid}
+                                    onClick={() => handleUpdateEmitraPercentage(emitra.uid, Number(emitra.commissionPercentage || 0))}
+                                    className="h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider"
+                                  >
+                                    {savingEmitraId === emitra.uid ? 'Saving' : 'Save'}
+                                  </Button>
+                                </div>
+                              </td>
+                              <td className="p-4 text-emerald-700 font-black">₹{commission.toLocaleString('en-IN')}</td>
+                              <td className="p-4">
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${emitra.isActive
+                                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80'
+                                  : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
+                                  }`}>
+                                  {emitra.isActive ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+                                  {emitra.isActive ? 'Active' : 'Inactive'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}

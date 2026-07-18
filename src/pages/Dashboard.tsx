@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
 import { signOut } from 'firebase/auth';
@@ -22,16 +22,17 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, auth } from '../lib/firebase';
-import { collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, query, updateDoc, where } from 'firebase/firestore';
 import { jsPDF } from 'jspdf';
-import MainDashboard from './dashboard/MainDashboard';
-import OfferLetter from './dashboard/OfferLetter';
-import LMS from './dashboard/LMS';
-import Assignments from './dashboard/Assignments';
-import Profile from './dashboard/Profile';
-import Certifications from './dashboard/Certifications';
-import Notifications from './dashboard/Notifications';
-import Reports from './dashboard/Reports';
+
+const MainDashboard = lazy(() => import('./dashboard/MainDashboard'));
+const OfferLetter = lazy(() => import('./dashboard/OfferLetter'));
+const LMS = lazy(() => import('./dashboard/LMS'));
+const Assignments = lazy(() => import('./dashboard/Assignments'));
+const Profile = lazy(() => import('./dashboard/Profile'));
+const Certifications = lazy(() => import('./dashboard/Certifications'));
+const Notifications = lazy(() => import('./dashboard/Notifications'));
+const Reports = lazy(() => import('./dashboard/Reports'));
 
 export default function Dashboard() {
   const { user, profile } = useAuth();
@@ -39,11 +40,31 @@ export default function Dashboard() {
   const location = useLocation();
   const [paymentRecord, setPaymentRecord] = useState<any>(null);
   const [learningProgress, setLearningProgress] = useState(0);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isProfileMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!profileMenuRef.current?.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [isProfileMenuOpen]);
 
   useEffect(() => {
     if (!user) return;
     const fetchPayment = async () => {
-      const q = query(collection(db, 'payments'), where('userId', '==', user.uid));
+      const q = query(collection(db, 'payments'), where('userId', '==', user.uid), limit(1));
       const snap = await getDocs(q);
       if (!snap.empty) setPaymentRecord({ id: snap.docs[0].id, ...snap.docs[0].data() });
     };
@@ -74,10 +95,18 @@ export default function Dashboard() {
         return;
       }
 
-      const completedDays = new Set<string>();
       const progressRef = doc(db, 'userVideoProgress', `${user.uid}-${course}`);
-      const progressSnapshot = await getDoc(progressRef);
+      const attendanceQuery = query(
+        collection(db, 'attendance'),
+        where('userId', '==', user.uid),
+        where('course', '==', course)
+      );
+      const [progressSnapshot, attendanceSnapshot] = await Promise.all([
+        getDoc(progressRef),
+        getDocs(attendanceQuery)
+      ]);
 
+      const completedDays = new Set<string>();
       if (progressSnapshot.exists()) {
         const completedVideos = progressSnapshot.data().completedVideos || {};
         Object.entries(completedVideos).forEach(([day, completed]) => {
@@ -88,12 +117,6 @@ export default function Dashboard() {
         });
       }
 
-      const attendanceQuery = query(
-        collection(db, 'attendance'),
-        where('userId', '==', user.uid),
-        where('course', '==', course)
-      );
-      const attendanceSnapshot = await getDocs(attendanceQuery);
       attendanceSnapshot.docs.forEach((attendanceDoc) => {
         const normalizedDay = String(attendanceDoc.data().day || '').trim();
         if (uploadedDays.has(normalizedDay)) {
@@ -341,23 +364,30 @@ export default function Dashboard() {
               </h4>
             </div>
 
-            <div className="relative group">
+            <div ref={profileMenuRef} className="relative">
               <button
+                type="button"
+                onClick={() => setIsProfileMenuOpen((open) => !open)}
+                aria-expanded={isProfileMenuOpen}
                 className="h-10 px-4 rounded-xl bg-gray-50 border border-gray-200/80 flex items-center justify-center text-[10px] font-black uppercase tracking-widest gap-1.5 active:scale-95 transition-all text-gray-700 hover:bg-gray-100 cursor-pointer"
               >
                 Menu
               </button>
               
-              <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-white border border-gray-200 shadow-xl p-2 hidden group-hover:block hover:block z-50">
-                <Link to="/dashboard" className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50">
+              {isProfileMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-white border border-gray-200 shadow-xl p-2 z-50">
+                <Link onClick={() => setIsProfileMenuOpen(false)} to="/dashboard" className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50">
                   Dashboard
                 </Link>
-                <Link to="/dashboard/profile" className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50">
+                <Link onClick={() => setIsProfileMenuOpen(false)} to="/dashboard/profile" className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50">
                   Profile
                 </Link>
                 {paymentRecord && (
                   <button
-                    onClick={downloadPaymentSlip}
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      downloadPaymentSlip();
+                    }}
                     className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50 text-left cursor-pointer"
                   >
                     Payment Slip
@@ -366,6 +396,7 @@ export default function Dashboard() {
                 <div className="h-px bg-gray-150 my-1" />
                 <button
                   onClick={async () => {
+                    setIsProfileMenuOpen(false);
                     await signOut(auth);
                     navigate('/login');
                   }}
@@ -374,6 +405,7 @@ export default function Dashboard() {
                   Logout
                 </button>
               </div>
+              )}
             </div>
           </div>
         </div>
@@ -470,16 +502,18 @@ export default function Dashboard() {
         {/* Subpage Container */}
         <main className="relative z-10 w-full flex-1 overflow-y-auto overflow-x-hidden py-10 px-4 sm:px-6 lg:px-8 xl:px-10">
           <div className="mx-auto h-full max-w-6xl">
-            <Routes>
-              <Route index element={<MainDashboard />} />
-              <Route path="offer-letter" element={<OfferLetter />} />
-              <Route path="lms/*" element={<LMS />} />
-              <Route path="assignments" element={<Assignments />} />
-              <Route path="certs" element={<Certifications />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="notifications" element={<Notifications />} />
-            </Routes>
+            <Suspense fallback={<div className="student-card p-8 text-center font-black text-slate-500">Loading...</div>}>
+              <Routes>
+                <Route index element={<MainDashboard />} />
+                <Route path="offer-letter" element={<OfferLetter />} />
+                <Route path="lms/*" element={<LMS />} />
+                <Route path="assignments" element={<Assignments />} />
+                <Route path="certs" element={<Certifications />} />
+                <Route path="reports" element={<Reports />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="notifications" element={<Notifications />} />
+              </Routes>
+            </Suspense>
           </div>
         </main>
       </div>

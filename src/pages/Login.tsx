@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { auth, db } from '../lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -8,8 +8,10 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, Lock, Mail, AlertCircle, Handshake, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../components/AuthContext';
 
 export default function Login() {
+  const { user, profile, isAdmin, isEmitra, adminProfile, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -17,6 +19,24 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showNotice, setShowNotice] = useState(true); // EzyIntern style important notice modal
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+
+    if (isAdmin) {
+      navigate(adminProfile?.role === 'teacher' ? '/admin/daily-videos' : '/admin-dashboard', { replace: true });
+      return;
+    }
+
+    if (isEmitra) {
+      navigate('/emitra-dashboard', { replace: true });
+      return;
+    }
+
+    if (profile) {
+      navigate(profile.isPaid ? '/dashboard' : '/payment', { replace: true });
+    }
+  }, [user, profile, isAdmin, isEmitra, adminProfile?.role, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,21 +46,42 @@ export default function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      
-      if (userDoc.exists()) {
-        navigate('/dashboard');
-      } else {
-        if (user.email === 'admin@internmitra.com') {
-          navigate('/admin-dashboard');
-          return;
-        }
+      const safeGetDoc = (collectionName: string) =>
+        getDoc(doc(db, collectionName, user.uid)).catch((error) => {
+          console.warn(`${collectionName} lookup failed:`, error);
+          return null;
+        });
 
-        const adminDoc = await getDoc(doc(db, 'admins', user.uid));
-        const adminData = adminDoc.exists() ? adminDoc.data() : null;
-
-        navigate(adminData?.role === 'teacher' ? '/admin/daily-videos' : '/admin-dashboard');
+      if (user.email === 'admin@internmitra.com') {
+        navigate('/admin-dashboard', { replace: true });
+        return;
       }
+
+      const [adminDoc, emitraDoc, userDoc] = await Promise.all([
+        safeGetDoc('admins'),
+        safeGetDoc('emitras'),
+        safeGetDoc('users')
+      ]);
+
+      const adminData = adminDoc?.exists() ? adminDoc.data() : null;
+
+      if (adminDoc?.exists()) {
+        navigate(adminData?.role === 'teacher' ? '/admin/daily-videos' : '/admin-dashboard', { replace: true });
+        return;
+      }
+
+      if (emitraDoc?.exists()) {
+        navigate('/emitra-dashboard', { replace: true });
+        return;
+      }
+
+      if (userDoc?.exists()) {
+        const userData = userDoc.data();
+        navigate(userData?.isPaid ? '/dashboard' : '/payment', { replace: true });
+        return;
+      }
+
+      setError('Login successful, but no student/admin/teacher/Cyber cafe profile was found for this account.');
     } catch (err: any) {
       setError("Invalid credentials. Please try again.");
     } finally {
@@ -178,6 +219,9 @@ export default function Login() {
           <div className="mt-8 pt-5 border-t border-slate-100 w-full text-center">
              <p className="text-slate-400 text-sm font-semibold">
                Don't have an account? <Link to="/register" className="text-blue-600 font-extrabold hover:underline underline-offset-4 decoration-2">Register here</Link>
+             </p>
+             <p className="mt-2 text-slate-400 text-xs font-semibold">
+               Cyber cafe? <Link to="/emitra-register" className="text-blue-600 font-extrabold hover:underline underline-offset-4 decoration-2">Register Cyber cafe</Link>
              </p>
           </div>
 

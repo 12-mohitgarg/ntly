@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../lib/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, getAuth, signOut } from 'firebase/auth';
 import { doc, setDoc, collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { initializeApp, getApp, getApps } from 'firebase/app';
 import { handleFirestoreError, OperationType } from '../lib/firebase';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { useAuth } from '../components/AuthContext';
+import firebaseConfig from '../../firebase-applet-config.json';
 import {
   DEGREES,
   GENDERS,
@@ -45,7 +48,21 @@ interface Degree {
   subjects: string[];
 }
 
-export default function Register() {
+interface RegisterProps {
+  mode?: 'public' | 'emitraStudent';
+}
+
+let registrationConfigCache: {
+  districts: District[];
+  colleges: College[];
+  universities: University[];
+  courses: Course[];
+  degrees: Degree[];
+} | null = null;
+
+export default function Register({ mode = 'public' }: RegisterProps) {
+  const { user: currentUser, emitraProfile } = useAuth();
+  const isEmitraStudentMode = mode === 'emitraStudent';
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -94,34 +111,57 @@ export default function Register() {
 
   const fetchData = async () => {
     try {
-      // Fetch districts
+      if (registrationConfigCache) {
+        setDistricts(registrationConfigCache.districts);
+        setColleges(registrationConfigCache.colleges);
+        setUniversities(registrationConfigCache.universities);
+        setCourses(registrationConfigCache.courses);
+        setDegrees(registrationConfigCache.degrees);
+        setDataLoading(false);
+        return;
+      }
+
       const districtsRef = collection(db, 'districts');
       const districtsQuery = query(districtsRef, orderBy('name'));
-      const districtsSnapshot = await getDocs(districtsQuery);
-      setDistricts(districtsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as District)));
 
-      // Fetch universities
       const universitiesRef = collection(db, 'universities');
       const universitiesQuery = query(universitiesRef, orderBy('name'));
-      const universitiesSnapshot = await getDocs(universitiesQuery);
-      setUniversities(universitiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as University)));
 
-      // Fetch courses
       const coursesRef = collection(db, 'courses');
       const coursesQuery = query(coursesRef, orderBy('name'));
-      const coursesSnapshot = await getDocs(coursesQuery);
-      setCourses(coursesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course)));
 
-      // Fetch colleges
       const collegesRef = collection(db, 'colleges');
-      const collegesSnapshot = await getDocs(collegesRef);
-      setColleges(collegesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as College)));
 
-      // Fetch degrees with subjects
       const degreesRef = collection(db, 'degrees');
       const degreesQuery = query(degreesRef, orderBy('name'));
-      const degreesSnapshot = await getDocs(degreesQuery);
-      setDegrees(degreesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Degree)));
+
+      const [
+        districtsSnapshot,
+        universitiesSnapshot,
+        coursesSnapshot,
+        collegesSnapshot,
+        degreesSnapshot
+      ] = await Promise.all([
+        getDocs(districtsQuery),
+        getDocs(universitiesQuery),
+        getDocs(coursesQuery),
+        getDocs(collegesRef),
+        getDocs(degreesQuery)
+      ]);
+
+      registrationConfigCache = {
+        districts: districtsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as District)),
+        colleges: collegesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as College)),
+        universities: universitiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as University)),
+        courses: coursesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course)),
+        degrees: degreesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Degree))
+      };
+
+      setDistricts(registrationConfigCache.districts);
+      setColleges(registrationConfigCache.colleges);
+      setUniversities(registrationConfigCache.universities);
+      setCourses(registrationConfigCache.courses);
+      setDegrees(registrationConfigCache.degrees);
 
       setDataLoading(false);
     } catch (error) {
@@ -178,7 +218,13 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const studentAuth = isEmitraStudentMode
+        ? getAuth(getApps().some(app => app.name === 'emitra-student-create-app')
+          ? getApp('emitra-student-create-app')
+          : initializeApp(firebaseConfig, 'emitra-student-create-app'))
+        : auth;
+
+      const userCredential = await createUserWithEmailAndPassword(studentAuth, formData.email, formData.password);
       const user = userCredential.user;
 
       const path = `users/${user.uid}`;
@@ -200,6 +246,8 @@ export default function Register() {
           semester: formData.semester,
           universityRoll: formData.universityRoll,
           internshipDomain: formData.internshipDomain,
+          createdByEmitraId: isEmitraStudentMode ? currentUser?.uid || '' : null,
+          createdByEmitraName: isEmitraStudentMode ? emitraProfile?.centerName || '' : null,
           isPaid: false,
           registrationDate: new Date().toISOString(),
           learningHours: 0,
@@ -209,7 +257,12 @@ export default function Register() {
         handleFirestoreError(firestoreErr, OperationType.WRITE, path);
       }
 
-      navigate('/payment');
+      if (isEmitraStudentMode) {
+        await signOut(studentAuth).catch(() => undefined);
+        navigate(`/emitra/payment/${user.uid}`);
+      } else {
+        navigate('/payment');
+      }
     } catch (err: any) {
       if (err.code === 'auth/email-already-in-use') {
         setError("This email is already registered. Please use a different email.");
@@ -256,7 +309,11 @@ export default function Register() {
             
             <div className="space-y-3">
               <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase">Join the Future</h2>
-              <p className="text-slate-400 leading-relaxed font-semibold text-xs">Complete your registration to access premium internship domains and industry certifications.</p>
+              <p className="text-slate-400 leading-relaxed font-semibold text-xs">
+                {isEmitraStudentMode
+                  ? 'Register a student under your Cyber cafe. The student will continue through the same payment and dashboard flow.'
+                  : 'Complete your registration to access premium internship domains and industry certifications.'}
+              </p>
             </div>
 
             {/* Stepper Timeline */}
@@ -515,7 +572,7 @@ export default function Register() {
                   disabled={loading} 
                   className="h-12 px-8 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black uppercase tracking-widest text-xs shadow-md shadow-orange-500/10 hover:shadow-lg hover:shadow-orange-500/20 hover:scale-[1.01] transition-all cursor-pointer"
                 >
-                  {loading ? 'Processing...' : 'Complete Register'} <ArrowRight className="ml-1.5 h-4 w-4 inline" />
+                  {loading ? 'Processing...' : isEmitraStudentMode ? 'Register Student' : 'Complete Register'} <ArrowRight className="ml-1.5 h-4 w-4 inline" />
                 </Button>
               )}
             </div>

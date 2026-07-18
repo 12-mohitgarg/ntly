@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../components/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
-import { doc, updateDoc, setDoc, collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { doc, updateDoc, setDoc, collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { Button } from '../components/ui/button';
 import { motion } from 'motion/react';
 import { CreditCard, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { emailOfferLetter } from '../lib/offerLetterPdf';
 
 declare global {
   interface Window {
@@ -25,35 +26,30 @@ export default function Payment() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [colleges, setColleges] = useState<College[]>([]);
   const [amount, setAmount] = useState(1000);
 
   useEffect(() => {
-    fetchColleges();
-  }, []);
+    if (profile?.college) {
+      fetchColleges();
+    }
+  }, [profile?.college]);
 
   const fetchColleges = async () => {
     try {
-      const collegesRef = collection(db, 'colleges');
-      const collegesSnapshot = await getDocs(collegesRef);
-      const collegesData = collegesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as College));
-      setColleges(collegesData);
-
       if (profile?.college) {
-        const userCollege = collegesData.find(c => c.name === profile.college);
+        const collegesQuery = query(
+          collection(db, 'colleges'),
+          where('name', '==', profile.college),
+          limit(1)
+        );
+        const collegesSnapshot = await getDocs(collegesQuery);
+        const userCollege = collegesSnapshot.docs[0]?.data() as College | undefined;
         setAmount(userCollege?.price || 1000);
       }
     } catch (error) {
       console.error('Error fetching colleges:', error);
     }
   };
-
-  useEffect(() => {
-    if (profile?.college && colleges.length > 0) {
-      const userCollege = colleges.find(c => c.name === profile.college);
-      setAmount(userCollege?.price || 1000);
-    }
-  }, [profile, colleges]);
 
   const handlePayment = async () => {
     if (!user) return;
@@ -84,12 +80,26 @@ export default function Payment() {
             });
             await setDoc(doc(db, 'payments', response.razorpay_payment_id), {
               userId: user.uid,
+              createdByEmitraId: profile?.createdByEmitraId || null,
+              createdByEmitraName: profile?.createdByEmitraName || null,
               razorpayOrderId: response.razorpay_order_id || '',
               razorpayPaymentId: response.razorpay_payment_id,
               amount: amount,
               status: 'success',
               timestamp: new Date().toISOString()
             });
+
+            // Send email in background without blocking the UI
+            emailOfferLetter(user.uid, profile || {})
+              .then(() => {
+                updateDoc(doc(db, 'users', user.uid), {
+                  offerLetterEmailSentAt: new Date().toISOString()
+                }).catch(err => console.error('Error updating sent time:', err));
+              })
+              .catch((emailError) => {
+                console.error('Offer letter email failed:', emailError);
+              });
+
             setSuccess(true);
           } catch (err) {
             console.error('Firestore update error:', err);

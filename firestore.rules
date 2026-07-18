@@ -24,8 +24,18 @@ service cloud.firestore {
         get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true &&
         get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'teacher';
     }
+    function isEmitra() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/emitras/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/emitras/$(request.auth.uid)).data.isActive == true;
+    }
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function teacherCourse() {
+      return get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.course;
     }
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
@@ -38,26 +48,29 @@ service cloud.firestore {
   // Single user read
   allow get: if isValidId(userId) &&
               isSignedIn() &&
-              (request.auth.uid == userId || isAdmin());
+              (request.auth.uid == userId || isAdmin() || (isEmitra() && resource.data.createdByEmitraId == request.auth.uid));
 
   // Query/search allow for certificate verification
   allow list: if isSignedIn();
 
   // Create own profile
   allow create: if isSignedIn() &&
-                 request.auth.uid == userId;
+                 (request.auth.uid == userId ||
+                  (isEmitra() && request.resource.data.createdByEmitraId == request.auth.uid));
 
   // Update own profile or admin
   allow update: if isSignedIn() &&
-                 (request.auth.uid == userId || isAdmin());
+                 (request.auth.uid == userId || isAdmin() || (isEmitra() && resource.data.createdByEmitraId == request.auth.uid));
 }
 
     match /payments/{paymentId} {
       // Admins manage the verification queue
       allow read, write: if isAdmin();
+      allow get, list: if isEmitra() && resource.data.createdByEmitraId == request.auth.uid;
       
       // Users can create a payment record for themselves
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create: if isEmitra() && request.resource.data.createdByEmitraId == request.auth.uid;
       
       // Users can read/list their own payment records (for payment status tracking)
       allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
@@ -78,9 +91,15 @@ service cloud.firestore {
       allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
     match /admins/{adminId} {
-      allow get: if isAdmin() || (isSignedIn() && adminId == request.auth.uid);
+      allow get: if (isSignedIn() && adminId == request.auth.uid) || isAdmin();
       allow list: if isAdmin();
       allow create, update: if isAdmin();
+    }
+    match /emitras/{emitraId} {
+      allow get: if (isSignedIn() && emitraId == request.auth.uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && emitraId == request.auth.uid;
+      allow update: if isAdmin();
     }
      match /districts/{docId} {
       allow read: if true;

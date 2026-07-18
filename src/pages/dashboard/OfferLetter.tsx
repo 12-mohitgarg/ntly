@@ -12,9 +12,12 @@ import {
   User,
   Hash
 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import { db } from '../../lib/firebase';
-import { doc, getDoc, updateDoc, runTransaction, increment } from 'firebase/firestore';
+import {
+  createOfferLetterPdf,
+  getOrCreateOfferLetterNumber,
+  loadImageAsDataUrl,
+  offerLetterFileName
+} from '../../lib/offerLetterPdf';
 
 export default function OfferLetter() {
   const { profile, user } = useAuth();
@@ -25,54 +28,14 @@ export default function OfferLetter() {
   const [offerLetterNumber, setOfferLetterNumber] = useState<string>('');
 
   useEffect(() => {
-    const loadImg = (src: string, setter: (d: string) => void) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        if (ctx) { ctx.drawImage(img, 0, 0); setter(canvas.toDataURL('image/png')); }
-      };
-      img.src = src;
-    };
-    loadImg('/ii.png', setHeaderImg);
-    loadImg('/ff.png', setFooterImg);
-    loadImg('/dded.jpeg', setWatermarkImg);
+    loadImageAsDataUrl('/ii.png').then(setHeaderImg).catch(console.error);
+    loadImageAsDataUrl('/ff.png').then(setFooterImg).catch(console.error);
+    loadImageAsDataUrl('/dded.jpeg', 'image/jpeg').then(setWatermarkImg).catch(console.error);
   }, []);
 
   const getOfferLetterNumber = async (): Promise<string> => {
     if (!user) return '10000';
-
-    // Check if user already has an offer letter number
-    const userDoc = await getDoc(doc(db, 'users', user.uid));
-    const userData = userDoc.data();
-    if (userData?.offerLetterNumber) {
-      return userData.offerLetterNumber;
-    }
-
-    // Get next sequential number using transaction
-    const counterRef = doc(db, 'counters', 'offerLetter');
-    const nextNumber = await runTransaction(db, async (transaction) => {
-      const counterDoc = await transaction.get(counterRef);
-      
-      if (!counterDoc.exists()) {
-        // Initialize counter starting from 10001
-        transaction.set(counterRef, { count: 10001, lastUpdated: new Date().toISOString() });
-        return 10001;
-      }
-
-      const currentCount = counterDoc.data().count;
-      const newCount = currentCount + 1;
-      transaction.update(counterRef, { count: newCount, lastUpdated: new Date().toISOString() });
-      
-      return newCount;
-    });
-
-    // Save the number to user's profile
-    await updateDoc(doc(db, 'users', user.uid), { offerLetterNumber: nextNumber.toString() });
-    
-    return nextNumber.toString();
+    return getOrCreateOfferLetterNumber(user.uid);
   };
 
   const generatePDF = async () => {
@@ -80,122 +43,8 @@ export default function OfferLetter() {
 
     // Get the sequential offer letter number
     const letterNumber = await getOfferLetterNumber();
-
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const W = 210, H = 297, ML = 14;
-
-    const studentName = profile?.fullName || '[Student Full Name]';
-    const rollNumber = profile?.universityRoll || '[Roll Number]';
-    const college = profile?.college || '[Name Of College]';
-    const deptSemester = `${profile?.department || 'B.A.(Pol. Sci.)'} - ${profile?.semester || '5th Semester'}`;
-    const domain = profile?.internshipDomain || '[Domain as per Subject / Interest]';
-
-    const formatDate = (iso: string | undefined) => {
-      if (!iso) return '........./........./2026';
-      const d = new Date(iso);
-      const dd = String(d.getDate()).padStart(2, '0');
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const yyyy = d.getFullYear();
-      return `${dd}/${mm}/${yyyy}`;
-    };
-    const letterDate = formatDate(profile?.registrationDate);
-
-    // ── IMAGE DIMENSIONS ──────────────────────────────────────────
-    const headerH = (252 / 998) * W; // 52.97mm
-    const footerH = (322 / 1002) * W; // 67.44mm
-
-    // ── HEADER IMAGE ──────────────────────────────────────────────
-    doc.addImage(headerImg, 'PNG', 0, 0, W, headerH);
-
-    // ── WATERMARK ─────────────────────────────────────────────────
-    if (watermarkImg) {
-      const wmSize = 90;
-      const wmX = (W - wmSize) / 2;
-      const wmY = (H - wmSize) / 2;
-      (doc as any).saveGraphicsState();
-      (doc as any).setGState((doc as any).GState({ opacity: 0.12 }));
-      doc.addImage(watermarkImg, 'JPEG', wmX, wmY, wmSize, wmSize);
-      (doc as any).restoreGraphicsState();
-    }
-
-    // ── BODY CONTENT ──────────────────────────────────────────────
-    const x = ML;
-    let y = headerH + 5;
-    doc.setFontSize(8.5); doc.setTextColor(20, 20, 20);
-
-    // Ref + Date
-    doc.setFont('Helvetica', 'normal');
-    doc.text('Letter Ref. No.: ', x, y);
-    doc.setFont('Helvetica', 'bold');
-    doc.text(`IM/2026/IOL/${letterNumber}`, x + doc.getTextWidth('Letter Ref. No.: '), y);
-    doc.setFont('Helvetica', 'normal');
-    doc.text(`Date: ${letterDate}`, W - ML, y, { align: 'right' });
-    y += 9;
-
-    // To section
-    doc.text('To,', x, y); y += 6;
-    doc.setFont('Helvetica', 'bold');
-    doc.text(profile?.fullName ? studentName : `[${studentName}]`, x, y); y += 6;
-    doc.setFont('Helvetica', 'normal');
-    const urnL = 'University Roll Number: ';
-    doc.text(urnL, x, y);
-    doc.setFont('Helvetica', 'bold');
-    doc.text(profile?.universityRoll ? rollNumber : `[${rollNumber}]`, x + doc.getTextWidth(urnL), y); y += 6;
-    doc.setFont('Helvetica', 'normal');
-    const ciL = 'College / Institution: ';
-    doc.text(ciL, x, y);
-    doc.setFont('Helvetica', 'bold');
-    doc.text(profile?.college ? college : `[${college}]`, x + doc.getTextWidth(ciL), y); y += 9;
-
-    // Dear Candidate + body paragraph
-    doc.setFont('Helvetica', 'normal');
-    doc.text('Dear Candidate,', x, y); y += 6;
-    const bodyText = `We are pleased to accept your application and formally offer you an internship at Internmitra Technologies Private Limited(InternMitra). Our internship programmes are designed in full alignment with NEP-2020, AICTE and UGC Internship Guidelines, and your university's specific internship framework.`;
-    const splitBody = doc.splitTextToSize(bodyText, W - 2 * ML);
-    doc.text(splitBody, x, y); y += splitBody.length * 4.6 + 7;
-
-    // Details header
-    doc.setFont('Helvetica', 'bold');
-    doc.text('Your internship details are as follows:', x, y); y += 7;
-
-    // Details table
-    const colC = 76, colV = 80, rH = 6.5;
-    const rows: [string, string][] = [
-      ['Name of the Student', profile?.fullName ? studentName : `[${studentName}]`],
-      ['University Roll Number', profile?.universityRoll ? rollNumber : `[${rollNumber}]`],
-      ['College / Institution', profile?.college ? college : `[${college}]`],
-      ['Department & Semester', deptSemester],
-      ['Internship Domain', profile?.internshipDomain ? domain : `[${domain}]`],
-      ['Internship Duration', '120 Hours'],
-      ['Mode of Internship', 'Online (as approved by College)'],
-      ['Internship Start Date', '01/06/2026'],
-      ['Expected End Date', '20/06/2026'],
-      ['Stipend', 'Not Applicable \u2014 Academic Programme'],
-    ];
-    rows.forEach(([label, value]) => {
-      doc.setFont('Helvetica', 'normal'); doc.setTextColor(20, 20, 20);
-      doc.text(label, x + 8, y);
-      doc.text(':', colC, y);
-      doc.setFont('Helvetica', 'bold');
-      doc.text(value, colV, y);
-      y += rH;
-    });
-    y += 5;
-
-    // Closing paragraphs
-    doc.setFont('Helvetica', 'normal');
-    const closing = `Please report to us on your start date as per the schedule above and bring this letter along with the Consent Letter issued by your College. We also request that you inform your College Internship Nodal Officer (CINO) upon receiving this acceptance letter. During the programme, you are required to maintain the minimum required attendance and complete all tasks and assignments given by your mentor.`;
-    const splitClose = doc.splitTextToSize(closing, W - 2 * ML);
-    doc.text(splitClose, x, y); y += splitClose.length * 4.6 + 5;
-
-    const lastLine = `We look forward to a meaningful and enriching internship experience and appreciate your interest in InternMitra.`;
-    const splitLast = doc.splitTextToSize(lastLine, W - 2 * ML);
-    doc.text(splitLast, x, y);
-
-    // ── FOOTER IMAGE ──────────────────────────────────────────────
-    doc.addImage(footerImg, 'PNG', 0, H - footerH, W, footerH);
-
-    doc.save(`InternMitra_Offer_Letter_${studentName.replace(/\s+/g, '_')}.pdf`);
+    const pdf = createOfferLetterPdf(profile || {}, letterNumber, { headerImg, footerImg, watermarkImg });
+    pdf.save(offerLetterFileName(profile?.fullName));
   };
 
 

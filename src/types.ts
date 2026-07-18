@@ -14,6 +14,8 @@ export interface UserProfile {
   semester: string;
   universityRoll: string;
   internshipDomain: string;
+  createdByEmitraId?: string | null;
+  createdByEmitraName?: string | null;
   isPaid: boolean;
   registrationDate: string;
   learningHours: number;
