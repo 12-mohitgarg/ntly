@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Routes, Route, useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../components/AuthContext';
 import { db } from '../../lib/firebase';
 import { collection, getDocs, query, orderBy, where, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { motion } from 'motion/react';
 import {
   PlayCircle,
   FileText,
@@ -17,7 +16,16 @@ import {
   ExternalLink,
   Info,
   Clock,
-  BookOpen
+  BookOpen,
+  Filter,
+  Search,
+  Star,
+  Lock,
+  Award,
+  ChevronDown,
+  ChevronUp,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import { generateCertificate } from './generateCertificate';
 import { AttendanceEntry } from './generateAttendanceReport';
@@ -50,6 +58,14 @@ export default function LMS() {
 
   // Payment QR Code modal state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  // Search & Filter UI States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'completed' | 'pending'>('all');
+  const [expandedModuleId, setExpandedModuleId] = useState<number | null>(1);
+  const [currentLmsPage, setCurrentLmsPage] = useState(1);
+  const [lmsPageSize, setLmsPageSize] = useState(5);
+
 
   useEffect(() => {
     fetchDailyVideos();
@@ -165,6 +181,25 @@ export default function LMS() {
     return uploadedCount === 0 ? 0 : Math.round((getCompletedVideoDays(progress, attendance).size / uploadedCount) * 100);
   };
 
+  const isAssessmentCompleted = !!testSubmission;
+  const isCertificateReady = getProgressPercentage() >= 100 && isAssessmentCompleted;
+
+  const handleDownloadMarksheet = async () => {
+    if (!testSubmission || !profile?.internshipDomain) {
+      alert('Please complete the assessment test under the Learning tab to unlock the Marksheet.');
+      return;
+    }
+    try {
+      const testRef = doc(db, 'courseTests', profile.internshipDomain);
+      const testSnap = await getDoc(testRef);
+      const questions = testSnap.exists() ? (testSnap.data().questions || []) : [];
+      await generateTestReport(profile, testSubmission, questions);
+    } catch (error) {
+      console.error(error);
+      alert('Error generating marksheet');
+    }
+  };
+
   const markVideoAsDone = async (video: any) => {
     if (!user || !profile?.internshipDomain) return;
     try {
@@ -258,60 +293,550 @@ export default function LMS() {
     }
   };
 
+  // Lecture grouping metadata
+  const getModulesData = () => {
+    const modules = [
+      {
+        id: 1,
+        indexStr: '01',
+        title: `${profile?.internshipDomain || 'Web Development'} Day 01`,
+        subtitle: 'Introduction to Web Development',
+        dayMin: 1,
+        dayMax: 5
+      },
+      {
+        id: 2,
+        indexStr: '02',
+        title: `${profile?.internshipDomain || 'Web Development'} Day 02`,
+        subtitle: 'HTML Basics',
+        dayMin: 6,
+        dayMax: 10
+      },
+      {
+        id: 3,
+        indexStr: '03',
+        title: `${profile?.internshipDomain || 'Web Development'} Day 03`,
+        subtitle: 'CSS Fundamentals',
+        dayMin: 11,
+        dayMax: 15
+      },
+      {
+        id: 4,
+        indexStr: '04',
+        title: `${profile?.internshipDomain || 'Web Development'} Day 04`,
+        subtitle: 'JavaScript Basics',
+        dayMin: 16,
+        dayMax: 20
+      }
+    ];
+
+    if (!profile?.internshipDomain?.toLowerCase().includes('web')) {
+      modules.forEach(m => {
+        m.title = `${profile?.internshipDomain || 'Course'} Module ${m.indexStr}`;
+        if (m.id === 1) m.subtitle = 'Introduction & Core Syntax';
+        if (m.id === 2) m.subtitle = 'Basic Structures & Methods';
+        if (m.id === 3) m.subtitle = 'Control Flow & Logic';
+        if (m.id === 4) m.subtitle = 'Hands-on Projects';
+      });
+    }
+
+    return modules;
+  };
+
+  // Mock durations matching screenshot or dynamic durations
+  const getLectureDuration = (day: number) => {
+    const durations = ['18:45', '22:10', '15:30', '19:20', '25:15', '21:40', '16:50', '24:30', '20:10', '17:35'];
+    return durations[(day - 1) % durations.length] || '20:00';
+  };
+
   const CourseDashboard = () => {
     const progress = getProgressPercentage();
     const isTestPaid = profile?.hasPaidExam || testSubmission;
+    const completedCount = getCompletedVideoDays().size;
+    const totalLectures = dailyVideos.length || 24;
+
+    // Calculate watch time: 51.25 minutes watch time per completed day
+    const totalMins = Math.round(completedCount * 51.25);
+    const watchHours = Math.floor(totalMins / 60);
+    const watchMins = totalMins % 60;
+
+    // Search and filter logic
+    const modules = getModulesData();
+
     return (
-      <div className="space-y-8">
-        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-700 text-white rounded-3xl p-6 md:p-10 shadow-lg relative overflow-hidden">
-          <div className="relative z-10 max-w-3xl space-y-4">
-            <span className="bg-white/20 backdrop-blur-sm text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider inline-block">{profile?.internshipDomain} Course</span>
-            <h1 className="text-3xl font-extrabold tracking-tight">Curriculum Dashboard</h1>
-            <p className="text-blue-100 text-sm">Watch daily recordings to complete the curriculum. Complete the final assessment to unlock your certificate.</p>
-            <div className="flex items-center gap-4 pt-2">
-              <div className="flex-1 max-w-xs bg-black/20 h-2 rounded-full overflow-hidden">
-                <div className="bg-cyan-400 h-full rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+      <div className="space-y-6">
+        
+        {/* 1. Course Active Dark Banner */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 border border-white/10 shadow-sm relative overflow-hidden select-none">
+          <div className="space-y-4 z-10 flex-1">
+            <span className="bg-white/20 text-white border border-white/10 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-block">
+              {profile?.internshipDomain || 'Web Development'} Course
+            </span>
+            <h2 className="text-3xl font-black tracking-tight text-white">
+              {profile?.internshipDomain || 'Web Development'}
+            </h2>
+            <p className="text-xs text-blue-100 max-w-sm leading-relaxed">
+              Learn HTML, CSS, JavaScript and build real-world projects from scratch.
+            </p>
+            
+            {/* Progress indicator */}
+            <div className="space-y-1.5 pt-2 max-w-xs">
+              <div className="flex justify-between text-[11px] font-bold">
+                <span className="text-blue-150">Overall Progress</span>
+                <span className="text-cyan-300">{progress}% Complete</span>
               </div>
-              <span className="text-xs font-bold text-cyan-200">{progress}% Attended</span>
+              <div className="w-full h-1.5 bg-blue-850 rounded-full overflow-hidden relative">
+                <div className="bg-white h-full rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+              </div>
             </div>
           </div>
+
+          {/* Banner Graphic Illustration */}
+          <div className="z-10 flex-shrink-0 flex justify-center md:justify-start">
+            <img
+              src="/course_illustration.png"
+              alt="Course illustration"
+              className="w-40 md:w-48 h-auto object-contain"
+            />
+          </div>
+
+          {/* Right Summary Grid */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/10 w-full md:w-56 text-xs flex flex-col gap-3 font-semibold text-blue-100 z-10">
+            <div className="flex justify-between items-center">
+              <span className="text-blue-200">Total Lectures</span>
+              <span className="text-white font-bold">{totalLectures}</span>
+            </div>
+            <div className="h-px bg-white/10" />
+            <div className="flex justify-between items-center">
+              <span className="text-blue-200">Duration</span>
+              <span className="text-white font-bold">20:15:30</span>
+            </div>
+            <div className="h-px bg-white/10" />
+            <div className="flex justify-between items-center">
+              <span className="text-blue-200">Level</span>
+              <span className="text-white font-bold">Beginner</span>
+            </div>
+            <div className="h-px bg-white/10" />
+            <div className="flex justify-between items-center">
+              <span className="text-blue-200">Certificate</span>
+              <span className="text-white font-bold">Yes</span>
+            </div>
+          </div>
+
+          {/* Gradient background circles */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-            <h3 className="text-lg font-extrabold uppercase text-gray-900">Live Training</h3>
-            <p className="text-gray-500 text-sm mt-2">Join our daily 4-hour live broadcasts.</p>
-            <a href="https://youtube.com" target="_blank" rel="noreferrer" className="mt-6 flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 text-xs font-bold text-white hover:bg-slate-800 transition">Join Live <ExternalLink size={14} /></a>
+
+        {/* 2. Course Metric Row Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 select-none">
+          
+          {/* Completed Lectures */}
+          <div className="bg-white rounded-3xl p-5 border border-gray-200/50 shadow-sm flex items-center gap-4 relative overflow-hidden">
+            <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center border border-green-100 flex-shrink-0">
+              <CheckCircle2 size={20} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Completed Lectures</span>
+              <h4 className="text-lg font-black text-slate-800 mt-1">
+                {completedCount} / {totalLectures}
+              </h4>
+            </div>
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-green-500 rounded-b-3xl"></div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-            <h3 className="text-lg font-extrabold uppercase text-gray-900">Recorded Lectures</h3>
-            <p className="text-gray-500 text-sm mt-2">Review all daily sessions at your own pace.</p>
-            <button onClick={() => navigate('recordings')} className="mt-6 w-full h-11 rounded-xl bg-blue-600 text-xs font-bold text-white hover:bg-blue-700 transition">Watch Recordings</button>
+
+          {/* Watch Time */}
+          <div className="bg-white rounded-3xl p-5 border border-gray-200/50 shadow-sm flex items-center gap-4 relative overflow-hidden">
+            <div className="w-12 h-12 bg-[#eff6ff] text-blue-600 rounded-2xl flex items-center justify-center border border-blue-100 flex-shrink-0">
+              <Clock size={20} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Watch Time</span>
+              <h4 className="text-lg font-black text-slate-800 mt-1">
+                {watchHours > 0 ? `${watchHours}h ${watchMins}m` : `${watchMins}m`}
+              </h4>
+            </div>
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-blue-500 rounded-b-3xl"></div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm md:col-span-2">
-             <h3 className="text-lg font-extrabold uppercase text-gray-900">Graded Assessment</h3>
-             {testSubmission ? <p className="text-green-600 font-bold mt-2">Result: {testSubmission.scorePercentage}%</p> : <p className="text-gray-500 text-sm mt-2">Unlock final assessment after 100% course completion.</p>}
-             <div className="mt-6">
-                {testSubmission ? <button onClick={() => setShowReportModal(true)} className="w-full h-11 bg-slate-900 text-white rounded-xl text-xs font-bold">Review Report</button> 
-                : progress < 100 ? <button disabled className="w-full h-11 bg-gray-100 text-gray-400 rounded-xl text-xs font-bold">Complete 100% First</button>
-                : !isTestPaid ? <button onClick={() => setShowPaymentModal(true)} className="w-full h-11 bg-orange-600 text-white rounded-xl text-xs font-bold">Unlock Test (₹248)</button>
-                : <button onClick={handleStartTest} className="w-full h-11 bg-green-600 text-white rounded-xl text-xs font-bold">Start Test</button>}
-             </div>
+
+          {/* Assignments Done */}
+          <div className="bg-white rounded-3xl p-5 border border-gray-200/50 shadow-sm flex items-center gap-4 relative overflow-hidden">
+            <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center border border-purple-100 flex-shrink-0">
+              <FileVideo size={20} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Assignments Done</span>
+              <h4 className="text-lg font-black text-slate-800 mt-1">
+                {isAssessmentCompleted ? 6 : 4} / 6
+              </h4>
+            </div>
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-purple-500 rounded-b-3xl"></div>
           </div>
+
+          {/* Quizzes Score */}
+          <div className="bg-white rounded-3xl p-5 border border-gray-200/50 shadow-sm flex items-center gap-4 relative overflow-hidden">
+            <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center border border-amber-100 flex-shrink-0">
+              <Star size={20} />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Quizzes Score</span>
+              <h4 className="text-lg font-black text-slate-800 mt-1">
+                {testSubmission ? `${testSubmission.scorePercentage}%` : '78%'}
+              </h4>
+            </div>
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-amber-500 rounded-b-3xl"></div>
+          </div>
+
         </div>
+
+        {/* 3. COURSE MODULES ACCORDION LIST */}
+        <div className="bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm">
+          
+          {/* Header Action Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 mb-6">
+            <div>
+              <h3 className="text-base font-black text-slate-900">Course Modules</h3>
+              <p className="text-xs text-slate-400 font-semibold mt-1">
+                Start learning by watching the course modules in order.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Filter Buttons */}
+              <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 text-xs font-bold text-slate-600">
+                <button
+                  onClick={() => { setFilterType('all'); setCurrentLmsPage(1); }}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    filterType === 'all' ? 'bg-white text-slate-800 shadow-sm' : 'hover:bg-slate-100/50'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => { setFilterType('completed'); setCurrentLmsPage(1); }}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    filterType === 'completed' ? 'bg-white text-slate-800 shadow-sm' : 'hover:bg-slate-100/50'
+                  }`}
+                >
+                  Completed
+                </button>
+                <button
+                  onClick={() => { setFilterType('pending'); setCurrentLmsPage(1); }}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    filterType === 'pending' ? 'bg-white text-slate-800 shadow-sm' : 'hover:bg-slate-100/50'
+                  }`}
+                >
+                  Pending
+                </button>
+              </div>
+
+              {/* Search Box */}
+              <div className="relative">
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search lectures..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentLmsPage(1); }}
+                  className="pl-9 pr-4 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold w-52 bg-white text-slate-800 outline-none focus:border-blue-500 shadow-sm transition"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Flat Lecture List Body with Pagination */}
+          <div className="space-y-3">
+            {(() => {
+              const filteredVideos = dailyVideos.filter(v => {
+                const matchesSearch = v.title?.toLowerCase().includes(searchQuery.toLowerCase());
+                const completed = hasAttendanceForDay(v.day);
+                if (filterType === 'completed') return matchesSearch && completed;
+                if (filterType === 'pending') return matchesSearch && !completed;
+                return matchesSearch;
+              });
+
+              const totalFilteredVideos = filteredVideos.length;
+              const totalLmsPages = Math.ceil(totalFilteredVideos / lmsPageSize) || 1;
+              const startIndex = (currentLmsPage - 1) * lmsPageSize;
+              const paginatedVideos = filteredVideos.slice(startIndex, startIndex + lmsPageSize);
+
+              return (
+                <>
+                  {paginatedVideos.length === 0 ? (
+                    <div className="text-center py-10 text-slate-400 font-semibold text-sm">
+                      No lectures found.
+                    </div>
+                  ) : (
+                    paginatedVideos.map((video) => {
+                      const isVideoDone = hasAttendanceForDay(video.day);
+                      const isVideoUnlocked = video.day <= currentDay;
+                      const idxStr = String(video.day).padStart(2, '0');
+                      const duration = getLectureDuration(video.day);
+
+                      return (
+                        <div
+                          key={video.id}
+                          className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-2xl border border-slate-100 hover:border-blue-100 bg-white transition hover:shadow-sm gap-4"
+                        >
+                          <div className="flex items-center gap-4">
+                            {/* Day index */}
+                            <div className="w-16 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xs flex-shrink-0">
+                              Day {idxStr}
+                            </div>
+                            
+                            {/* Play Icon Box */}
+                            <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-150 flex items-center justify-center text-slate-400">
+                              <PlayCircle size={15} />
+                            </div>
+
+                            <div>
+                              <h5 className="font-extrabold text-sm text-slate-800">{video.title}</h5>
+                              <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1.5 mt-1">
+                                <Clock size={10} />
+                                {duration}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+                            {/* Status badge */}
+                            {isVideoDone ? (
+                              <span className="bg-green-50 text-green-700 border border-green-200 text-[10px] font-black px-2.5 py-1 rounded-full uppercase leading-none">
+                                Completed
+                              </span>
+                            ) : isVideoUnlocked ? (
+                              <span className="bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-black px-2.5 py-1 rounded-full uppercase leading-none">
+                                Pending
+                              </span>
+                            ) : (
+                              <span className="bg-slate-50 text-slate-400 border border-slate-100 text-[10px] font-black px-2.5 py-1 rounded-full uppercase leading-none flex items-center gap-1">
+                                <Lock size={10} />
+                                Locked
+                              </span>
+                            )}
+
+                            {/* Action button */}
+                            {isVideoDone ? (
+                              <button
+                                onClick={() => navigate(`recordings/${video.day}`)}
+                                className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer shadow-sm"
+                              >
+                                Watch Again
+                              </button>
+                            ) : isVideoUnlocked ? (
+                              <button
+                                onClick={() => navigate(`recordings/${video.day}`)}
+                                className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer shadow-sm"
+                              >
+                                Watch Lecture
+                              </button>
+                            ) : (
+                              <button
+                                disabled
+                                className="h-9 px-4 bg-slate-100 text-slate-400 rounded-xl text-xs font-bold border border-slate-100 cursor-not-allowed"
+                              >
+                                Locked
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+
+                  {/* LMS Pagination controls */}
+                  {totalFilteredVideos > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-5 border-t border-slate-100 select-none">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setCurrentLmsPage(1)}
+                          disabled={currentLmsPage === 1}
+                          className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition active:scale-95 cursor-pointer"
+                        >
+                          <ChevronsLeft size={14} />
+                        </button>
+                        <button
+                          onClick={() => setCurrentLmsPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentLmsPage === 1}
+                          className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition active:scale-95 cursor-pointer"
+                        >
+                          <ChevronLeft size={14} />
+                        </button>
+                        {Array.from({ length: totalLmsPages }, (_, idx) => idx + 1).map((pageNum) => (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentLmsPage(pageNum)}
+                            className={`w-8 h-8 rounded-lg font-bold text-xs transition active:scale-95 cursor-pointer ${
+                              currentLmsPage === pageNum
+                                ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                                : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => setCurrentLmsPage(prev => Math.min(prev + 1, totalLmsPages))}
+                          disabled={currentLmsPage === totalLmsPages}
+                          className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition active:scale-95 cursor-pointer"
+                        >
+                          <ChevronRight size={14} />
+                        </button>
+                        <button
+                          onClick={() => setCurrentLmsPage(totalLmsPages)}
+                          disabled={currentLmsPage === totalLmsPages}
+                          className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition active:scale-95 cursor-pointer"
+                        >
+                          <ChevronsRight size={14} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400 font-semibold">Show</span>
+                        <select
+                          value={lmsPageSize}
+                          onChange={(e) => {
+                            setLmsPageSize(Number(e.target.value));
+                            setCurrentLmsPage(1);
+                          }}
+                          className="bg-white border border-slate-200 rounded-lg text-xs font-semibold px-2 py-1.5 text-slate-700 outline-none focus:border-blue-500 shadow-sm cursor-pointer"
+                        >
+                          <option value={5}>5 per page</option>
+                          <option value={10}>10 per page</option>
+                          <option value={15}>15 per page</option>
+                          <option value={20}>20 per page</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
+            {/* Quiz Row item at the end of Module list */}
+            {courseTest && (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-2xl border border-red-50 bg-[#fff5f5]/30 hover:border-red-150 transition hover:shadow-sm gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-black text-xs flex-shrink-0">
+                    Quiz
+                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-red-50 border border-red-150 flex items-center justify-center text-red-500">
+                    <ClipboardList size={15} />
+                  </div>
+                  <div>
+                    <h5 className="font-extrabold text-sm text-slate-800">Final Assessment Quiz</h5>
+                    <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1.5 mt-1">
+                      <Info size={10} />
+                      {courseTest.questions.length} Questions
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+                  {/* Status badge */}
+                  {testSubmission ? (
+                    <span className="bg-green-50 text-green-700 border border-green-200 text-[10px] font-black px-2.5 py-1 rounded-full uppercase leading-none">
+                      Attempted
+                    </span>
+                  ) : progress < 100 ? (
+                    <span className="bg-slate-50 text-slate-400 border border-slate-150 text-[10px] font-black px-2.5 py-1 rounded-full uppercase leading-none flex items-center gap-1">
+                      <Lock size={10} />
+                      Locked
+                    </span>
+                  ) : (
+                    <span className="bg-blue-50 text-blue-600 border border-blue-150 text-[10px] font-black px-2.5 py-1 rounded-full uppercase leading-none">
+                      Pending
+                    </span>
+                  )}
+
+                  {/* Action button */}
+                  {testSubmission ? (
+                    <button
+                      onClick={() => setShowReportModal(true)}
+                      className="h-9 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer shadow-sm"
+                    >
+                      View Quiz
+                    </button>
+                  ) : progress < 100 ? (
+                    <button
+                      disabled
+                      className="h-9 px-4 bg-slate-100 text-slate-400 rounded-xl text-xs font-bold border border-slate-100 cursor-not-allowed"
+                    >
+                      Locked
+                    </button>
+                  ) : !isTestPaid ? (
+                    <button
+                      onClick={() => setShowPaymentModal(true)}
+                      className="h-9 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer shadow-sm"
+                    >
+                      Unlock Quiz (₹248)
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleStartTest}
+                      className="h-9 px-4 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer shadow-sm"
+                    >
+                      Start Quiz
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+
       </div>
     );
   };
 
   const RecordingsList = () => (
-    <div className="space-y-6">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm font-bold"><ChevronLeft size={16}/> Back</button>
+    <div className="space-y-6 select-none">
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-900 transition"
+      >
+        <ChevronLeft size={16}/> Back to Dashboard
+      </button>
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {dailyVideos.map((v) => (
-          <div key={v.id} className="bg-white border rounded-2xl p-5 shadow-sm space-y-4">
-            <h3 className="font-bold text-gray-900">{v.title}</h3>
-            <button onClick={() => navigate(`recordings/${v.day}`)} className="w-full py-2 bg-blue-600 text-white rounded-xl text-xs font-bold">Watch</button>
-          </div>
-        ))}
+        {dailyVideos.map((v) => {
+          const isDone = hasAttendanceForDay(v.day);
+          const isUnlocked = v.day <= currentDay;
+          return (
+            <div key={v.id} className="bg-white border rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+              <div>
+                <h3 className="font-bold text-sm text-gray-900">Day {v.day} - {v.title}</h3>
+                <span className="text-[10px] text-slate-400 font-semibold block mt-1">Course recording</span>
+              </div>
+              
+              <div className="flex items-center justify-between gap-4 pt-2">
+                {isDone ? (
+                  <span className="text-[10px] font-bold text-green-600">Attendance Marked</span>
+                ) : !isUnlocked ? (
+                  <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Lock size={10}/> Locked</span>
+                ) : (
+                  <span className="text-[10px] font-bold text-blue-600">Pending Watch</span>
+                )}
+                
+                {isUnlocked ? (
+                  <button
+                    onClick={() => navigate(`recordings/${v.day}`)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm active:scale-95 cursor-pointer"
+                  >
+                    Watch
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    className="px-4 py-2 bg-slate-100 text-slate-400 border border-slate-100 rounded-xl text-xs font-bold cursor-not-allowed"
+                  >
+                    Locked
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -322,59 +847,235 @@ export default function LMS() {
     const [isVideoCompleted, setIsVideoCompleted] = useState(false);
     
     useEffect(() => {
-        if(video) setIsVideoCompleted(hasAttendanceForDay(video.day));
+      if(video) setIsVideoCompleted(hasAttendanceForDay(video.day));
     }, [video]);
 
     return (
       <div className="space-y-6">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm font-bold"><ChevronLeft size={16}/> Back</button>
-        <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-lg">
-             <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${video?.youtubeUrl?.split('v=')[1]}`} allowFullScreen />
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-900 transition select-none"
+        >
+          <ChevronLeft size={16}/> Back
+        </button>
+        
+        {/* Youtube player wrapper */}
+        <div className="aspect-video bg-black rounded-[2rem] overflow-hidden shadow-lg border border-slate-200">
+          <iframe
+            className="w-full h-full"
+            src={`https://www.youtube.com/embed/${video?.youtubeUrl?.split('v=')[1]}`}
+            allowFullScreen
+          />
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-200">
-           {!isVideoCompleted ? <button onClick={() => markVideoAsDone(video)} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold">Mark Attendance</button> : <p className="text-green-600 font-bold">Attendance Marked</p>}
+
+        {/* Video completion & attendance banner */}
+        <div className="bg-white p-6 rounded-3xl border border-gray-200/50 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 select-none">
+          <div>
+            <h4 className="font-black text-slate-900 text-base">{video?.title}</h4>
+            <p className="text-xs text-slate-400 mt-1 font-semibold">Web training session recording logs</p>
+          </div>
+
+          {!isVideoCompleted ? (
+            <button
+              onClick={() => markVideoAsDone(video)}
+              className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition shadow-sm active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+            >
+              <CheckCircle2 size={16} />
+              Mark Attendance
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 text-green-600 font-extrabold text-sm bg-green-50 border border-green-200 px-6 py-3 rounded-2xl">
+              <CheckCircle2 size={16} />
+              Attendance Verified
+            </div>
+          )}
         </div>
       </div>
     );
   };
 
+  // Test Taking Mode JSX
   if (takingTest && courseTest) {
+    const q = courseTest.questions[currentQuestionIndex];
+    const percentage = Math.round(((currentQuestionIndex) / courseTest.questions.length) * 100);
     return (
-        <div className="max-w-2xl mx-auto p-8 space-y-6">
-            <h2 className="text-2xl font-black">{courseTest.questions[currentQuestionIndex].questionText}</h2>
-            {courseTest.questions[currentQuestionIndex].options.map((opt: string, i: number) => (
-                <button key={i} onClick={() => handleSelectOption(courseTest.questions[currentQuestionIndex].id, i)} className="block w-full p-4 border rounded-xl font-bold">{opt}</button>
-            ))}
-            {currentQuestionIndex === courseTest.questions.length - 1 ? <button onClick={handleSubmitTest} className="w-full py-3 bg-indigo-600 text-white rounded-xl">Submit</button> : <button onClick={() => setCurrentQuestionIndex(prev => prev + 1)} className="w-full py-3 bg-slate-900 text-white rounded-xl">Next</button>}
+      <div className="max-w-2xl mx-auto p-4 md:p-8 space-y-6 select-none">
+        
+        {/* Test title & progress bar */}
+        <div className="bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm space-y-4">
+          <div className="flex justify-between items-center text-xs font-black text-slate-400 uppercase tracking-wider">
+            <span>Assessment: {profile?.internshipDomain}</span>
+            <span>Question {currentQuestionIndex + 1} of {courseTest.questions.length}</span>
+          </div>
+          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden relative">
+            <div className="bg-blue-600 h-full rounded-full transition-all duration-300" style={{ width: `${percentage}%` }} />
+          </div>
         </div>
+
+        {/* Question card */}
+        <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-200/50 shadow-sm space-y-6">
+          <h2 className="text-lg md:text-xl font-black text-slate-900 leading-snug">
+            {q.questionText}
+          </h2>
+          
+          {/* Options grid */}
+          <div className="space-y-3">
+            {q.options.map((opt: string, i: number) => {
+              const isSelected = selectedAnswers[q.id] === i;
+              return (
+                <button
+                  key={i}
+                  onClick={() => handleSelectOption(q.id, i)}
+                  className={`block w-full text-left p-4 rounded-2xl border text-sm transition-all active:scale-99 cursor-pointer font-bold ${
+                    isSelected
+                      ? 'bg-blue-50 text-blue-600 border-blue-500 shadow-sm'
+                      : 'border-slate-200 text-slate-700 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300'
+                  }`}
+                >
+                  <span className={`inline-flex w-6 h-6 rounded-full border items-center justify-center text-xs mr-3 font-extrabold ${
+                    isSelected ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 text-slate-400 bg-white'
+                  }`}>
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Question navigation footer */}
+        <div className="flex justify-between items-center gap-4">
+          <button
+            onClick={() => setCurrentQuestionIndex(prev => Math.max(prev - 1, 0))}
+            disabled={currentQuestionIndex === 0}
+            className="px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition active:scale-95 disabled:opacity-40 disabled:hover:bg-white cursor-pointer"
+          >
+            Previous
+          </button>
+
+          {currentQuestionIndex === courseTest.questions.length - 1 ? (
+            <button
+              onClick={handleSubmitTest}
+              disabled={submittingTest}
+              className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-bold transition shadow-md shadow-indigo-500/10 active:scale-95 disabled:opacity-40 cursor-pointer"
+            >
+              {submittingTest ? 'Submitting...' : 'Submit Assessment'}
+            </button>
+          ) : (
+            <button
+              onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
+              className="px-8 py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold transition shadow-sm active:scale-95 cursor-pointer"
+            >
+              Next Question
+            </button>
+          )}
+        </div>
+
+      </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-8">
+    <div className="w-full py-2">
       <Routes>
         <Route index element={<CourseDashboard />} />
         <Route path="recordings" element={<RecordingsList />} />
         <Route path="recordings/:dayNum" element={<VideoPlayerView />} />
       </Routes>
 
+      {/* Unlock exam QR Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white p-8 rounded-3xl w-full max-w-sm space-y-4">
-                <h2 className="text-xl font-black">Pay Assessment Fee</h2>
-                <p className="text-sm font-medium">Scan QR to pay ₹248 for exam access.</p>
-                <img src="/payment/shivam-qr.jpeg" alt="QR" className="w-full h-auto" />
-                <button onClick={() => setShowPaymentModal(false)} className="w-full py-3 bg-gray-200 rounded-xl font-bold">Close</button>
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white p-6 md:p-8 rounded-3xl w-full max-w-sm space-y-4 shadow-xl border border-slate-100 select-none">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h2 className="text-base font-black text-slate-900">Unlock Course Assessment</h2>
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-50 border border-slate-150 flex items-center justify-center text-slate-400 hover:text-slate-600 transition cursor-pointer"
+              >
+                <X size={14} />
+              </button>
             </div>
+            
+            <p className="text-xs font-semibold text-slate-500 leading-relaxed text-center">
+              Scan QR to pay ₹248 final assessment evaluation fee and unlock the graded test.
+            </p>
+            
+            <div className="rounded-2xl border border-slate-100 p-2 bg-slate-50/50 flex justify-center">
+              <img src="/payment/shivam-qr.jpeg" alt="Payment QR" className="w-48 h-auto object-contain rounded-xl shadow-sm" />
+            </div>
+            
+            <button
+              onClick={() => setShowPaymentModal(false)}
+              className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-wider transition active:scale-95 cursor-pointer"
+            >
+              Close Window
+            </button>
+          </div>
         </div>
       )}
 
+      {/* Assessment report/score card modal */}
       {showReportModal && testSubmission && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-white p-8 rounded-3xl w-full max-w-lg space-y-4">
-                <h2 className="text-xl font-black">Your Score: {testSubmission.scorePercentage}%</h2>
-                <button onClick={() => setShowReportModal(false)} className="w-full py-3 bg-slate-900 text-white rounded-xl">Close</button>
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white p-6 md:p-8 rounded-3xl w-full max-w-sm space-y-6 shadow-xl border border-slate-100 text-center select-none">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3 text-left">
+              <h2 className="text-base font-black text-slate-900">Assessment Report</h2>
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-50 border border-slate-150 flex items-center justify-center text-slate-400 hover:text-slate-600 transition cursor-pointer"
+              >
+                <X size={14} />
+              </button>
             </div>
+            
+            <div className="space-y-2">
+              <div className="w-16 h-16 rounded-full bg-green-50 border border-green-200 text-green-600 flex items-center justify-center text-2xl font-bold mx-auto shadow-sm">
+                🎓
+              </div>
+              <h3 className="text-xl font-black text-slate-800">
+                You Scored: {testSubmission.scorePercentage}%
+              </h3>
+              <p className="text-xs text-slate-500 font-semibold px-2">
+                Great job completing the course evaluation! Your graded marksheet is now available for download.
+              </p>
+            </div>
+
+            <div className="bg-slate-50/50 p-4 border border-slate-100 rounded-2xl text-left space-y-2 text-xs font-bold text-slate-600">
+              <div className="flex justify-between">
+                <span>Correct Answers</span>
+                <span className="text-green-600">{testSubmission.correctCount}</span>
+              </div>
+              <div className="h-px bg-slate-100" />
+              <div className="flex justify-between">
+                <span>Incorrect Answers</span>
+                <span className="text-red-500">{testSubmission.wrongCount}</span>
+              </div>
+              <div className="h-px bg-slate-100" />
+              <div className="flex justify-between">
+                <span>Evaluation Date</span>
+                <span className="text-slate-800">
+                  {new Date(testSubmission.submittedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleDownloadMarksheet}
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition active:scale-95 cursor-pointer shadow-sm"
+              >
+                Download Marksheet (PDF)
+              </button>
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="w-full py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-wider transition active:scale-95 cursor-pointer"
+              >
+                Close Report
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

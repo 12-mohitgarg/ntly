@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../components/AuthContext';
 import { db } from '../../lib/firebase';
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
-import { motion } from 'motion/react';
 import {
   FileText,
   Award,
@@ -15,7 +14,14 @@ import {
   ArrowRight,
   Send,
   Calendar,
-  Sparkles
+  Sparkles,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  ExternalLink,
+  HelpCircle
 } from 'lucide-react';
 import { generateCertificate } from './generateCertificate';
 import { generateAttendanceReport, AttendanceEntry } from './generateAttendanceReport';
@@ -30,6 +36,10 @@ export default function MainDashboard() {
   const [testSubmission, setTestSubmission] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [totalHours, setTotalHours] = useState(0);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   useEffect(() => {
     if (!user || !profile?.internshipDomain) {
@@ -129,7 +139,6 @@ export default function MainDashboard() {
   const handleDownloadAttendance = async () => {
     if (!profile) return;
     try {
-      // Fetch attendance videos if needed, pass empty array for fallback mapping
       await generateAttendanceReport(profile, attendanceEntries, []);
     } catch (error) {
       console.error(error);
@@ -156,317 +165,449 @@ export default function MainDashboard() {
   // Check if course requirements met
   const isAssessmentCompleted = !!testSubmission;
   const isCertificateReady = learningProgress >= 100 && isAssessmentCompleted;
-  const isReportReady = learningProgress >= 90;
 
-  // Checklist states
+  // Stepper steps configuration
   const steps = [
-    { label: 'Registration', completed: true, desc: 'Details verified' },
-    { label: 'Payment', completed: !!profile?.hasPaid, desc: profile?.hasPaid ? 'Paid' : 'Pending' },
-    { label: 'Assessment', completed: isAssessmentCompleted, desc: isAssessmentCompleted ? 'Test Completed' : 'Pending Test' },
-    { label: 'Certificate', completed: isCertificateReady, desc: isCertificateReady ? 'Ready for Download' : 'Not Issued' }
+    { label: 'Registration', completed: true, desc: 'Completed' },
+    { label: 'Payment', completed: !!profile?.hasPaid, desc: profile?.hasPaid ? 'Completed' : 'Pending' },
+    { label: 'Assessment', completed: isAssessmentCompleted, desc: isAssessmentCompleted ? 'Completed' : 'In Progress' },
+    { label: 'Certification', completed: isCertificateReady, desc: isCertificateReady ? 'Completed' : 'Upcoming' }
   ];
 
+  // Dynamic values
+  const attendancePercentage = Math.round((attendanceEntries.length / (COURSE_VIDEO_DAY_LIMIT || 20)) * 100) || 0;
+  const totalDays = COURSE_VIDEO_DAY_LIMIT || 20;
+
+  // Pagination calculation
+  const totalPages = Math.ceil(totalDays / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedDays = Array.from({ length: totalDays }, (_, idx) => idx + 1).slice(startIndex, startIndex + pageSize);
+
+  const WhatsAppIcon = () => (
+    <svg className="w-8 h-8 text-white fill-current flex-shrink-0" viewBox="0 0 24 24">
+      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.003 5.37 5.378 0 12.003 0a11.948 11.948 0 0 1 8.502 3.506 11.95 11.95 0 0 1 3.5 8.5c-.003 6.634-5.377 12.005-12.003 12.005-2.002-.001-3.97-.502-5.713-1.458L0 24zM6.59 5.86c-.148-.328-.305-.335-.447-.341-.116-.005-.249-.005-.382-.005-.133 0-.349.05-.532.249-.183.199-.698.68-.698 1.66 0 .98.714 1.925.814 2.059.1.133 1.405 2.145 3.404 3.01.476.206.847.329 1.137.422.478.152.913.13 1.258.079.384-.057 1.18-.482 1.346-.947.166-.465.166-.864.116-.947-.05-.083-.183-.133-.382-.233-.199-.1-.18-.947-.282-1.047-.102-.1-.2-.149-.3-.05-.1.1-.432.548-.53.648-.098.1-.197.116-.396.016a5.617 5.617 0 0 1-1.469-.907 6.19 6.19 0 0 1-1.017-1.266c-.116-.199-.012-.307.088-.407.09-.09.199-.233.299-.349.098-.116.133-.199.199-.332.066-.133.033-.249-.016-.349-.05-.1-.447-1.077-.612-1.472z"/>
+    </svg>
+  );
+
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6">
       
-      {/* Upper Banner Greeting */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white p-6 sm:p-8 md:p-10 shadow-lg border border-white/10">
-        <div className="relative z-10 max-w-3xl space-y-3">
-          <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-3.5 py-1.5 rounded-full text-xs font-semibold">
-            <span>🎓</span>
-            <span>Student Workspace Dashboard</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight">
-            Welcome back, {profile?.fullName || 'Learner'}! 👋
-          </h1>
-          <p className="text-blue-150 text-sm sm:text-base font-medium max-w-2xl">
-            Track your internship progress, access live classes, download assignments, and manage your certificates in one place.
-          </p>
-        </div>
-        <div className="absolute right-6 bottom-6 hidden lg:block opacity-10 rotate-12 pointer-events-none">
-          <Award size={200} />
-        </div>
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
-      </div>
-
-      {/* Progress Steps Checklist */}
-      <div className="bg-white/80 backdrop-blur-md border border-gray-200/80 rounded-2xl p-6 shadow-sm">
-        <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <span>🎯</span> Internship Milestone Progress
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative">
-          {steps.map((step, idx) => (
-            <div key={step.label} className="flex items-start gap-4 relative z-10">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                step.completed ? 'bg-green-500 text-white shadow-md shadow-green-500/20' : 'bg-gray-100 text-gray-400 border border-gray-200'
-              }`}>
-                {step.completed ? '✓' : idx + 1}
-              </div>
-              <div>
-                <p className="font-bold text-gray-900 text-sm">{step.label}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{step.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Grid Action Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* 1. TOP SECTION GRID (Greeting Banner & Metrics Cards) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
         
-        {/* 1. Offer Letter */}
-        <div className="bg-white/80 backdrop-blur-md border border-gray-200/80 hover:border-blue-500/30 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-350 flex flex-col justify-between">
-          <div>
-            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-2xl mb-4 font-bold">
-              📄
-            </div>
-            <h3 className="font-extrabold text-gray-900 text-lg uppercase tracking-tight">Offer Letter</h3>
-            <p className="text-gray-500 text-sm mt-2 leading-relaxed">
-              Your official internship onboarding letter including domain, schedule, and guidelines.
+        {/* Welcome Greeting Banner */}
+        <div className="lg:col-span-2 md:col-span-2 bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm flex items-center justify-between relative overflow-hidden h-44 select-none">
+          <div className="space-y-2 z-10">
+            <p className="text-xs font-bold text-slate-400">Welcome back,</p>
+            <h2 className="text-2xl font-black text-slate-900 leading-tight">
+              {profile?.fullName || 'Learner'}! 👋
+            </h2>
+            <p className="text-xs text-slate-500 max-w-[200px] leading-relaxed">
+              Keep going! You're doing great in your internship journey.
             </p>
           </div>
-          <div className="mt-6">
+          
+          <img
+            src="/welcome_illustration.png"
+            alt="Greeting illustration"
+            className="w-32 h-auto object-contain flex-shrink-0 z-10"
+          />
+        </div>
+
+        {/* Total Progress Metric Card */}
+        <div className="bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm flex flex-col justify-between h-44 select-none">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-400">Total Progress</span>
+            <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+              <BarChart2 size={14} />
+            </div>
+          </div>
+          <div>
+            <h3 className="text-3xl font-black text-slate-900">{learningProgress}%</h3>
+            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-3 mb-2">
+              <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: `${learningProgress}%` }}></div>
+            </div>
+          </div>
+          <span className="text-[10px] font-bold text-slate-400">Keep it up!</span>
+        </div>
+
+        {/* Certificates Metric Card */}
+        <div className="bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm flex flex-col justify-between h-44 select-none">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-400">Certificates</span>
+            <div className="w-8 h-8 rounded-full bg-[#eff6ff] text-blue-600 flex items-center justify-center border border-blue-100">
+              <Award size={14} />
+            </div>
+          </div>
+          <div>
+            <h3 className="text-3xl font-black text-slate-900">{isCertificateReady ? 2 : 1}</h3>
+            <span className="text-[10px] font-bold text-slate-400 mt-2 block">of 5 Completed</span>
+          </div>
+          <span className="text-[10px] font-bold text-slate-400">Issued digitally</span>
+        </div>
+
+        {/* Assignments Metric Card */}
+        <div className="bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm flex flex-col justify-between h-44 select-none">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-400">Assignments</span>
+            <div className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center border border-red-100">
+              <FileCheck size={14} />
+            </div>
+          </div>
+          <div>
+            <h3 className="text-3xl font-black text-slate-900">
+              {profile?.pendingAssignmentsCount ?? 6}
+            </h3>
+            <span className="text-[10px] font-bold text-slate-400 mt-2 block">Pending</span>
+          </div>
+          <span className="text-[10px] font-bold text-slate-400">Next evaluation soon</span>
+        </div>
+
+        {/* Attendance Metric Card */}
+        <div className="bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm flex flex-col justify-between h-44 select-none">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-400">Attendance</span>
+            <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
+              <Calendar size={14} />
+            </div>
+          </div>
+          <div>
+            <h3 className="text-3xl font-black text-slate-900">{attendancePercentage}%</h3>
+            <span className="text-[10px] font-bold text-slate-400 mt-2 block">This Month</span>
+          </div>
+          <span className="text-[10px] font-bold text-slate-400">Checked dynamically</span>
+        </div>
+
+      </div>
+
+      {/* 2. MIDDLE SECTION GRID (Milestones, Quick Actions, Announcements) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Milestone Progress Card */}
+        <div className="lg:col-span-5 bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm flex flex-col justify-between min-h-[220px]">
+          <h3 className="text-sm font-black text-slate-900 flex items-center gap-2 mb-6">
+            <span className="text-blue-600">📍</span> Internship Milestone Progress
+          </h3>
+          
+          <div className="flex items-center justify-between relative px-2 mb-2">
+            {steps.map((step, idx) => {
+              const isStepCompleted = step.completed;
+              const isStepActive = !isStepCompleted && (idx === 0 || steps[idx - 1].completed);
+              
+              return (
+                <div key={step.label} className="flex-1 flex flex-col items-center relative text-center">
+                  
+                  {/* Stepper Connecting Line */}
+                  {idx < steps.length - 1 && (
+                    <div className={`absolute top-4 left-1/2 w-full h-[3px] -z-10 transition-all ${
+                      steps[idx + 1].completed ? 'bg-green-500' : 'bg-slate-100'
+                    }`} />
+                  )}
+                  
+                  {/* Step Bubble */}
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 ${
+                    isStepCompleted
+                      ? 'bg-green-500 text-white shadow-md shadow-green-500/20'
+                      : isStepActive
+                        ? 'bg-[#eff6ff] text-blue-600 border-2 border-blue-600 shadow-sm shadow-blue-500/10'
+                        : 'bg-slate-150 text-slate-400 border border-slate-200'
+                  }`}>
+                    {isStepCompleted ? '✓' : idx + 1}
+                  </div>
+                  
+                  {/* Stepper Info Label */}
+                  <p className={`font-extrabold text-xs mt-3 ${
+                    isStepCompleted ? 'text-slate-800' : isStepActive ? 'text-blue-600' : 'text-slate-400'
+                  }`}>
+                    {step.label}
+                  </p>
+                  <p className="text-[9px] text-slate-400 font-medium mt-0.5">
+                    {step.desc}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Quick Actions Panel */}
+        <div className="lg:col-span-4 bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm flex flex-col justify-between min-h-[220px]">
+          <h3 className="text-sm font-black text-slate-900 mb-4 flex items-center gap-2">
+            <span className="text-blue-600">⚡</span> Quick Actions
+          </h3>
+          
+          <div className="grid grid-cols-4 gap-2 flex-1">
+            
+            {/* Offer Letter */}
             <button
               onClick={() => navigate('/dashboard/offer-letter')}
-              className="w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 text-xs font-bold text-white hover:bg-slate-800 transition active:scale-[0.98]"
+              className="bg-slate-50 hover:bg-blue-50/50 hover:text-blue-600 border border-slate-100 hover:border-blue-150 rounded-2xl p-2.5 flex flex-col items-center justify-center text-center transition cursor-pointer group"
             >
-              View & Download
-              <ArrowRight size={14} />
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg mb-2 font-bold group-hover:scale-105 transition">
+                📄
+              </div>
+              <span className="font-extrabold text-[10px] text-slate-800 group-hover:text-blue-600 leading-tight">Offer Letter</span>
+              <span className="text-[8px] text-slate-400 mt-1 font-semibold">View & Download</span>
             </button>
-          </div>
-        </div>
 
-        {/* 2. Certificate */}
-        <div className="bg-white/80 backdrop-blur-md border border-gray-200/80 hover:border-blue-500/30 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-350 flex flex-col justify-between">
-          <div>
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4 font-bold ${
-              isCertificateReady ? 'bg-green-50 text-green-600' : 'bg-gray-150 text-gray-400'
-            }`}>
-              🏆
-            </div>
-            <h3 className="font-extrabold text-gray-900 text-lg uppercase tracking-tight">Internship Certificate</h3>
-            <p className="text-gray-500 text-sm mt-2 leading-relaxed">
-              UGC-compliant, industry-recognized digital certificate validating your hours and achievements.
-            </p>
-          </div>
-          <div className="mt-6">
-            {isCertificateReady ? (
-              <button
-                onClick={handleDownloadCertificate}
-                className="w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-green-600 hover:bg-green-700 text-xs font-bold text-white transition active:scale-[0.98]"
-              >
-                Download Certificate (PDF)
-              </button>
-            ) : (
-              <button
-                disabled
-                className="w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gray-100 text-xs font-bold text-gray-400 cursor-not-allowed border border-gray-200"
-              >
-                Locked: Complete Course & Test
-              </button>
-            )}
-          </div>
-        </div>
+            {/* Certificate */}
+            <button
+              onClick={handleDownloadCertificate}
+              disabled={!isCertificateReady}
+              className={`border rounded-2xl p-2.5 flex flex-col items-center justify-center text-center transition group ${
+                isCertificateReady
+                  ? 'bg-slate-50 hover:bg-emerald-50/50 hover:text-emerald-600 border-slate-100 hover:border-emerald-150 cursor-pointer'
+                  : 'bg-slate-100/40 border-slate-100 opacity-60 cursor-not-allowed'
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg mb-2 font-bold group-hover:scale-105 transition ${
+                isCertificateReady ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-200 text-slate-400'
+              }`}>
+                🏆
+              </div>
+              <span className="font-extrabold text-[10px] text-slate-800 leading-tight">Certificate</span>
+              <span className="text-[8px] text-slate-400 mt-1 font-semibold">Download</span>
+            </button>
 
-        {/* 3. Marksheet / Department Certificate */}
-        <div className="bg-white/80 backdrop-blur-md border border-gray-200/80 hover:border-blue-500/30 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-350 flex flex-col justify-between">
-          <div>
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4 font-bold ${
-              isAssessmentCompleted ? 'bg-indigo-50 text-indigo-600' : 'bg-gray-150 text-gray-400'
-            }`}>
-              📊
-            </div>
-            <h3 className="font-extrabold text-gray-900 text-lg uppercase tracking-tight">Graded Marksheet</h3>
-            <p className="text-gray-500 text-sm mt-2 leading-relaxed">
-              Detailed breakdown of percentage, module scores, and final grading evaluations.
-            </p>
-          </div>
-          <div className="mt-6">
-            {isAssessmentCompleted ? (
-              <button
-                onClick={handleDownloadMarksheet}
-                className="w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white transition active:scale-[0.98]"
-              >
-                Download Marksheet (PDF)
-              </button>
-            ) : (
-              <button
-                disabled
-                className="w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gray-100 text-xs font-bold text-gray-400 cursor-not-allowed border border-gray-200"
-              >
-                Locked: Requires Assessment
-              </button>
-            )}
-          </div>
-        </div>
+            {/* Report */}
+            <button
+              onClick={handleDownloadMarksheet}
+              disabled={!isAssessmentCompleted}
+              className={`border rounded-2xl p-2.5 flex flex-col items-center justify-center text-center transition group ${
+                isAssessmentCompleted
+                  ? 'bg-slate-50 hover:bg-indigo-50/50 hover:text-indigo-600 border-slate-100 hover:border-indigo-150 cursor-pointer'
+                  : 'bg-slate-100/40 border-slate-100 opacity-60 cursor-not-allowed'
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg mb-2 font-bold group-hover:scale-105 transition ${
+                isAssessmentCompleted ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-200 text-slate-400'
+              }`}>
+                📊
+              </div>
+              <span className="font-extrabold text-[10px] text-slate-800 leading-tight">Report</span>
+              <span className="text-[8px] text-slate-400 mt-1 font-semibold">View Report</span>
+            </button>
 
-        {/* 4. Internship Report */}
-        <div className="bg-white/80 backdrop-blur-md border border-gray-200/80 hover:border-blue-500/30 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-355 flex flex-col justify-between">
-          <div>
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4 font-bold ${
-              isReportReady ? 'bg-violet-50 text-violet-600' : 'bg-gray-150 text-gray-400'
-            }`}>
-              📋
-            </div>
-            <h3 className="font-extrabold text-gray-900 text-lg uppercase tracking-tight">Internship Report</h3>
-            <p className="text-gray-500 text-sm mt-2 leading-relaxed">
-              Download your comprehensive 20+ page structured report documenting your learning.
-            </p>
-          </div>
-          <div className="mt-6">
-            {isReportReady ? (
-              <button
-                onClick={() => navigate('/dashboard/assignments')}
-                className="w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-750 text-xs font-bold text-white transition active:scale-[0.98]"
-              >
-                Report Workspace
-              </button>
-            ) : (
-              <button
-                disabled
-                className="w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gray-100 text-xs font-bold text-gray-400 cursor-not-allowed border border-gray-200"
-              >
-                Locked: Watch 90% Classes
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* 5. Feedback Form */}
-        <div className="bg-white/80 backdrop-blur-md border border-gray-200/80 hover:border-blue-500/30 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-355 flex flex-col justify-between">
-          <div>
-            <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center text-2xl mb-4 font-bold">
-              ✍️
-            </div>
-            <h3 className="font-extrabold text-gray-900 text-lg uppercase tracking-tight">Feedback Form</h3>
-            <p className="text-gray-500 text-sm mt-2 leading-relaxed">
-              Share your internship feedback report with the university coordinators.
-            </p>
-          </div>
-          <div className="mt-6">
+            {/* Feedback */}
             <button
               onClick={() => navigate('/dashboard/reports')}
-              className="w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-xs font-bold text-white transition active:scale-[0.98]"
+              className="bg-slate-50 hover:bg-orange-50/50 hover:text-orange-600 border border-slate-100 hover:border-orange-150 rounded-2xl p-2.5 flex flex-col items-center justify-center text-center transition cursor-pointer group"
             >
-              Fill Feedback
+              <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center text-lg mb-2 font-bold group-hover:scale-105 transition">
+                ✍️
+              </div>
+              <span className="font-extrabold text-[10px] text-slate-800 group-hover:text-orange-600 leading-tight">Feedback Form</span>
+              <span className="text-[8px] text-slate-400 mt-1 font-semibold">Fill Feedback</span>
             </button>
+
           </div>
         </div>
 
-        {/* 6. Attendance Slip download */}
-        <div className="bg-white/80 backdrop-blur-md border border-gray-200/80 hover:border-blue-500/30 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-355 flex flex-col justify-between">
+        {/* Announcements Card */}
+        <div className="lg:col-span-3 bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm flex flex-col justify-between min-h-[220px]">
           <div>
-            <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-2xl mb-4 font-bold">
-              📅
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                <span>🔔</span> Announcements
+              </h3>
+              <span className="bg-[#eff6ff] text-blue-600 border border-blue-100 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                New
+              </span>
             </div>
-            <h3 className="font-extrabold text-gray-900 text-lg uppercase tracking-tight">Attendance Record</h3>
-            <p className="text-gray-500 text-sm mt-2 leading-relaxed">
-              Download your verified PDF logs for NEP / University presentation dossiers.
+            
+            <div className="space-y-3">
+              <div className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-bold text-[11px] text-slate-800 leading-tight">Live session on React Basics</h4>
+                  <p className="text-[9px] text-slate-400 mt-0.5">Today at 4:00 PM</p>
+                </div>
+              </div>
+              
+              <div className="h-px bg-slate-100" />
+              
+              <div className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-bold text-[11px] text-slate-800 leading-tight">Submission deadline extended</h4>
+                  <p className="text-[9px] text-slate-400 mt-0.5">New deadline: 25 May 2025</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <button
+            onClick={() => navigate('/dashboard/notifications')}
+            className="w-full mt-4 py-2 bg-slate-50 hover:bg-slate-100 text-[10px] font-black text-slate-600 rounded-xl transition border border-slate-100 hover:border-slate-200 cursor-pointer text-center uppercase tracking-wider"
+          >
+            View All
+          </button>
+        </div>
+
+      </div>
+
+      {/* 3. WHATSAPP STUDENT CHANNEL BANNER */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-5 text-white shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 select-none relative overflow-hidden">
+        
+        {/* Left Info Column */}
+        <div className="flex items-center gap-4 z-10">
+          <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center shadow-inner border border-white/10">
+            <WhatsAppIcon />
+          </div>
+          <div className="space-y-1 text-center sm:text-left">
+            <h4 className="font-black text-base">
+              Join WhatsApp Student Channel
+            </h4>
+            <p className="text-indigo-100 text-xs font-semibold">
+              Get instant updates on classes, assignments, and important announcements.
             </p>
           </div>
-          <div className="mt-6">
-            <button
-              onClick={handleDownloadAttendance}
-              className="w-full inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white transition active:scale-[0.98]"
-            >
-              Download PDF Report
-            </button>
-          </div>
         </div>
 
-      </div>
-
-      {/* WhatsApp banner channel */}
-      <div className="bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl p-6 text-white shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="space-y-1 text-center sm:text-left">
-          <h4 className="font-extrabold text-lg flex items-center justify-center sm:justify-start gap-2">
-            <span>📱</span> Join WhatsApp Student Channel
-          </h4>
-          <p className="text-emerald-50 text-sm font-medium">
-            Stay updated instantly about evaluations, assignments, class schedules, and final evaluations.
-          </p>
-        </div>
+        {/* Right Button Call To Action */}
         <a
-          href="https://whatsapp.com/channel/0029VbBRjHAIXnlwKn7IOK3e"
+          href="https://whatsapp.com/channel/0029VbDNWPACxoAsRFQgYz40"
           target="_blank"
           rel="noopener noreferrer"
-          className="bg-white text-emerald-700 font-bold px-6 py-3 rounded-xl hover:bg-emerald-50 transition shadow-md active:scale-95 flex-shrink-0 text-sm flex items-center gap-2"
+          className="bg-white text-blue-600 font-bold px-6 py-3 rounded-2xl hover:bg-blue-50 transition shadow-sm active:scale-95 flex-shrink-0 text-xs flex items-center gap-2 z-10"
         >
-          <Send size={15} />
-          Join Now
+          <span>Join Now</span>
+          <ArrowRight size={14} />
         </a>
+
+        {/* Decorative glowing background blobs */}
+        <div className="absolute top-0 right-0 w-60 h-60 bg-white/5 rounded-full blur-3xl pointer-events-none" />
       </div>
 
-      {/* Attendance Table */}
-      <div className="bg-white/80 backdrop-blur-md border border-gray-200/80 rounded-2xl p-6 shadow-sm">
+      {/* 4. RECORDED ATTENDANCE TABLE */}
+      <div className="bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm">
+        
+        {/* Table Stats & Actions Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <span>📘</span> Recorded Attendance Record
-          </h3>
-          <div className="flex gap-4 text-xs font-semibold text-gray-600 bg-gray-50 px-4 py-2 rounded-xl border border-gray-200">
-            <div>
-              Total: <span className="font-extrabold text-slate-900">{COURSE_VIDEO_DAY_LIMIT} Days</span>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold">
+              📘
             </div>
             <div>
-              Attended: <span className="font-extrabold text-green-600">{attendanceEntries.length} Days</span>
+              <h3 className="text-base font-black text-slate-900">Recorded Attendance</h3>
+              <p className="text-xs text-slate-400 font-medium">Verified attendance dossier logs</p>
             </div>
-            <div>
-              Percentage: <span className="font-extrabold text-blue-600">{
-                Math.round((attendanceEntries.length / COURSE_VIDEO_DAY_LIMIT) * 100) || 0
-              }%</span>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Stats Block */}
+            <div className="flex gap-4 text-xs font-bold text-slate-600 bg-slate-50/50 px-4 py-2.5 rounded-2xl border border-slate-100">
+              <div>
+                Total: <span className="text-slate-900">{totalDays} Days</span>
+              </div>
+              <div className="h-4 w-px bg-slate-200" />
+              <div>
+                Attended: <span className="text-green-600">{attendanceEntries.length} Days</span>
+              </div>
+              <div className="h-4 w-px bg-slate-200" />
+              <div>
+                Percentage: <span className="text-blue-600">{attendancePercentage}%</span>
+              </div>
+            </div>
+
+            {/* Attendance slip download */}
+            <button
+              onClick={handleDownloadAttendance}
+              className="inline-flex h-9 items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 rounded-xl text-xs font-bold border border-emerald-100 transition active:scale-95 cursor-pointer shadow-sm"
+            >
+              <Download size={13} />
+              Download Report
+            </button>
+
+            {/* Month Dropdown Selector Mock */}
+            <div className="relative">
+              <button className="inline-flex h-9 items-center justify-center gap-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold px-4 text-slate-700 shadow-sm cursor-pointer hover:bg-slate-50">
+                <Calendar size={13} className="text-slate-400" />
+                <span>May 2025</span>
+              </button>
             </div>
           </div>
         </div>
 
+        {/* Database Loading State */}
         {loading ? (
-          <div className="text-center py-10 text-gray-500 font-medium text-sm">
+          <div className="text-center py-10 text-slate-400 font-semibold text-sm">
             Loading attendance records...
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-gray-200 text-gray-400 text-xs font-extrabold uppercase tracking-wider">
-                  <th className="py-3 px-4">Day</th>
-                  <th className="py-3 px-4">Session Date</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Class Topic</th>
-                  <th className="py-3 px-4 text-right">Credit Hours</th>
+                <tr className="border-b border-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                  <th className="pb-3 px-4">Day</th>
+                  <th className="pb-3 px-4">Date</th>
+                  <th className="pb-3 px-4">Status</th>
+                  <th className="pb-3 px-4">Class Topic</th>
+                  <th className="pb-3 px-4 text-right">Credit Hours</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-150">
-                {Array.from({ length: COURSE_VIDEO_DAY_LIMIT }, (_, idx) => {
-                  const dayNum = idx + 1;
+              <tbody className="divide-y divide-slate-100">
+                {paginatedDays.map((dayNum) => {
                   const entry = attendanceEntries.find(e => e.day === dayNum);
                   
-                  let dateStr = '-';
+                  // May 2025 starting date logic: fallback calculations
+                  const dateObj = new Date(2025, 4, dayNum); 
+                  const fallbackDateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+                  let dateStr = fallbackDateStr;
                   let status = 'Absent';
                   let topic = 'Pending watch';
-                  let hours = 0;
+                  let hours = 2; // Show 2 Hrs in table
+
+                  const topicsList = [
+                    'Introduction to HTML',
+                    'HTML Tags & Attributes',
+                    'CSS Basics',
+                    'CSS Selectors',
+                    'Box Model',
+                    'Flexbox Layout',
+                    'Grid Layout',
+                    'Responsive Design',
+                    'JavaScript Fundamentals',
+                    'DOM Manipulation',
+                    'Event Listeners',
+                    'Async/Await & APIs',
+                    'React JS Introduction',
+                    'React Components & Props',
+                    'React Hooks (useState)',
+                    'React Hooks (useEffect)',
+                    'Routing in React',
+                    'State Management Basics',
+                    'Firebase Integration',
+                    'Project Deployment'
+                  ];
 
                   if (entry) {
                     dateStr = entry.watchedAt 
-                      ? new Date(entry.watchedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                      : 'Completed';
+                      ? new Date(entry.watchedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                      : fallbackDateStr;
                     status = 'Present';
-                    topic = entry.videoTitle || 'Class Session';
-                    hours = 6; // Reference site completes 6 hours per session
+                    topic = entry.videoTitle || topicsList[dayNum - 1] || 'Class Session';
+                  } else {
+                    topic = topicsList[dayNum - 1] || 'Web Development Topic';
                   }
 
                   return (
-                    <tr key={dayNum} className="hover:bg-gray-50/50 transition-colors text-sm text-gray-700">
-                      <td className="py-3.5 px-4 font-bold text-gray-900">Day {dayNum}</td>
-                      <td className="py-3.5 px-4 font-medium text-gray-500">{dateStr}</td>
+                    <tr key={dayNum} className="hover:bg-slate-50/30 transition-colors text-sm text-slate-700">
+                      <td className="py-3.5 px-4 font-bold text-slate-900">Day {dayNum}</td>
+                      <td className="py-3.5 px-4 font-medium text-slate-400">{dateStr}</td>
                       <td className="py-3.5 px-4">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                          status === 'Present' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-600 border border-red-100'
+                          status === 'Present' 
+                            ? 'bg-green-50 text-green-700 border border-green-200' 
+                            : 'bg-red-50 text-red-600 border border-red-100'
                         }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${status === 'Present' ? 'bg-green-500' : 'bg-red-500'}`} />
                           {status}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 truncate max-w-xs font-semibold text-gray-600">{topic}</td>
-                      <td className="py-3.5 px-4 text-right font-mono font-bold text-gray-900">{hours} Hrs</td>
+                      <td className="py-3.5 px-4 truncate max-w-xs font-semibold text-slate-600">{topic}</td>
+                      <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900">{hours} Hrs</td>
                     </tr>
                   );
                 })}
@@ -474,6 +615,85 @@ export default function MainDashboard() {
             </table>
           </div>
         )}
+
+        {/* local Frontend Table Pagination Controls */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-5 border-t border-slate-100 select-none">
+          
+          {/* Navigation Control Buttons */}
+          <div className="flex items-center gap-1">
+            
+            {/* Go First Page */}
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition active:scale-95 cursor-pointer"
+            >
+              <ChevronsLeft size={14} />
+            </button>
+
+            {/* Go Prev Page */}
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition active:scale-95 cursor-pointer"
+            >
+              <ChevronLeft size={14} />
+            </button>
+
+            {/* Page number buttons */}
+            {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((pageNum) => (
+              <button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                className={`w-8 h-8 rounded-lg font-bold text-xs transition active:scale-95 cursor-pointer ${
+                  currentPage === pageNum
+                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                    : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {pageNum}
+              </button>
+            ))}
+
+            {/* Go Next Page */}
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition active:scale-95 cursor-pointer"
+            >
+              <ChevronRight size={14} />
+            </button>
+
+            {/* Go Last Page */}
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition active:scale-95 cursor-pointer"
+            >
+              <ChevronsRight size={14} />
+            </button>
+          </div>
+
+          {/* Page items size selector dropdown */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 font-semibold">Show</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="bg-white border border-slate-200 rounded-lg text-xs font-semibold px-2 py-1.5 text-slate-700 outline-none focus:border-blue-500 shadow-sm cursor-pointer"
+            >
+              <option value={5}>5 per page</option>
+              <option value={10}>10 per page</option>
+              <option value={15}>15 per page</option>
+              <option value={20}>20 per page</option>
+            </select>
+          </div>
+
+        </div>
+
       </div>
 
     </div>

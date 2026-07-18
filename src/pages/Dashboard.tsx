@@ -19,7 +19,13 @@ import {
   Menu,
   X,
   BarChart2,
-  LogOut
+  LogOut,
+  Home,
+  MessageSquare,
+  Folder,
+  HelpCircle,
+  Headphones,
+  SlidersHorizontal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, auth } from '../lib/firebase';
@@ -32,8 +38,17 @@ const LMS = lazy(() => import('./dashboard/LMS'));
 const Assignments = lazy(() => import('./dashboard/Assignments'));
 const Profile = lazy(() => import('./dashboard/Profile'));
 const Certifications = lazy(() => import('./dashboard/Certifications'));
-const Notifications = lazy(() => import('./dashboard/Notifications'));
 const Reports = lazy(() => import('./dashboard/Reports'));
+const Messages = lazy(() => import('./dashboard/Messages'));
+const Support = lazy(() => import('./dashboard/Support'));
+
+const PlaceholderPage = ({ title }: { title: string }) => (
+  <div className="bg-white/80 backdrop-blur-md rounded-3xl p-8 border border-gray-200/80 shadow-sm min-h-[400px] flex flex-col items-center justify-center text-center">
+    <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-3xl mb-4">🚀</div>
+    <h2 className="text-2xl font-bold text-gray-900 mb-2">{title} Page</h2>
+    <p className="text-gray-500 max-w-sm">We are working hard to bring this feature to you. Please check back later!</p>
+  </div>
+);
 
 export default function Dashboard() {
   const { user, profile } = useAuth();
@@ -43,6 +58,35 @@ export default function Dashboard() {
   const [learningProgress, setLearningProgress] = useState(0);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+
+  const fetchUnreadCount = async () => {
+    if (!user?.uid) return;
+    try {
+      const q = query(collection(db, 'notifications'));
+      const snap = await getDocs(q);
+      const readIds = JSON.parse(localStorage.getItem('readNotificationIds') || '[]');
+      const activeNotifications = snap.docs.filter(d => d.data().isActive !== false);
+      const unread = activeNotifications.filter(d => !readIds.includes(d.id)).length;
+      setUnreadMessagesCount(unread);
+    } catch (e) {
+      console.error('Error fetching unread count in Dashboard:', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+
+    const handleStorageChange = () => {
+      fetchUnreadCount();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [user, location.pathname]);
 
   useEffect(() => {
     if (!isProfileMenuOpen) return;
@@ -283,15 +327,14 @@ export default function Dashboard() {
     doc.save(`InternMitra_Payment_Slip_${name.replace(/\s+/g, '_')}.pdf`);
   };
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
   const menuItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: BarChart2 },
+    { name: 'Dashboard', path: '/dashboard', icon: Home },
     { name: 'Course', path: '/dashboard/lms', icon: GraduationCap },
     { name: 'Assignments', path: '/dashboard/assignments', icon: FileCheck },
     { name: 'Certifications', path: '/dashboard/certs', icon: Award },
     { name: 'Reports', path: '/dashboard/reports', icon: FileText },
-    { name: 'Profile', path: '/dashboard/profile', icon: UserCircle },
+    { name: 'Messages', path: '/dashboard/messages', icon: MessageSquare, badge: unreadMessagesCount || undefined },
+    { name: 'Help & Support', path: '/dashboard/help', icon: HelpCircle },
   ];
 
   const isLinkActive = (path: string) => {
@@ -301,205 +344,239 @@ export default function Dashboard() {
     return location.pathname.startsWith(path);
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex flex-col relative text-gray-800">
-      
-      {/* Top Header Navbar */}
-      <header className="bg-white border-b border-gray-200/80 shadow-sm sticky top-0 z-30 h-20 flex items-center px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-4">
+  const getPageTitle = () => {
+    if (location.pathname.includes('/profile')) return 'Profile';
+    if (location.pathname.includes('/offer-letter')) return 'Offer Letter';
+    const activeItem = menuItems.find(item => isLinkActive(item.path));
+    return activeItem ? activeItem.name : 'Dashboard';
+  };
 
-          {/* Logo & Mobile trigger */}
-          <div className="flex items-center gap-3">
+  const sidebarContent = (isMobile = false) => (
+    <div className="flex flex-col h-full justify-between select-none">
+      <div>
+        {/* Brand Logo */}
+        <div className="flex items-center justify-center pb-4 border-b border-gray-100">
+          <Link to="/dashboard" onClick={() => isMobile && setIsSidebarOpen(false)} className="flex items-center justify-center group w-full">
+            <img
+              src="/logo-new.jpeg"
+              alt="InternMitra Logo"
+              className="h-10 w-auto object-contain rounded-xl max-w-full"
+            />
+          </Link>
+        </div>
+
+        {/* Student Mini Profile Card */}
+        <div className="mt-4 p-3 bg-slate-50/80 border border-slate-150 rounded-2xl flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs flex-shrink-0 shadow-sm shadow-blue-500/10">
+            {profile?.fullName ? profile.fullName.charAt(0).toUpperCase() : 'S'}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h5 className="text-xs font-black text-slate-800 truncate leading-none">
+              {profile?.fullName || 'Student Registry'}
+            </h5>
+            <span className="text-[9px] font-bold text-blue-600 block mt-1.5 uppercase tracking-wider truncate">
+              {profile?.internshipDomain || 'Enrolled Student'}
+            </span>
+          </div>
+        </div>
+
+        {/* Navigation Items */}
+        <nav className="mt-4 space-y-1">
+          {menuItems.map((item) => {
+            const active = isLinkActive(item.path);
+            return (
+              <Link
+                key={item.name}
+                to={item.path}
+                onClick={() => isMobile && setIsSidebarOpen(false)}
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl transition-all duration-200 group relative ${
+                  active
+                    ? 'bg-[#eff6ff] text-blue-600 font-bold'
+                    : 'text-slate-650 hover:bg-slate-50 hover:text-slate-900 font-bold'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <item.icon
+                    size={17}
+                    className={`transition-colors duration-200 ${
+                      active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
+                    }`}
+                  />
+                  <span className="text-[13.5px]">{item.name}</span>
+                </div>
+                
+                {/* Badge if present */}
+                {item.badge ? (
+                  <span className="bg-blue-600 text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center leading-none">
+                    {item.badge}
+                  </span>
+                ) : (
+                  active && <ChevronRight size={13} className="text-blue-500" />
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Footer Support Card & Illustration */}
+      <div className="mt-4 pt-3 border-t border-gray-100">
+        <div className="bg-[#eff6ff] rounded-2xl p-3.5 border border-blue-100/50 relative overflow-hidden">
+          <div className="flex items-center gap-2 text-blue-600 font-bold text-xs">
+            <HelpCircle size={15} />
+            <span>Need Help?</span>
+          </div>
+          <p className="text-[10px] text-slate-505 mt-1 mb-2.5 leading-relaxed">
+            We're here to help you in your journey.
+          </p>
+          <Link
+            to="/dashboard/help"
+            onClick={() => isMobile && setIsSidebarOpen(false)}
+            className="w-full inline-flex h-8 items-center justify-center gap-1.5 bg-white rounded-xl text-[10px] font-black text-blue-600 hover:bg-blue-50 border border-blue-200/50 shadow-sm transition active:scale-95 cursor-pointer"
+          >
+            <Headphones size={11} />
+            Contact Support
+          </Link>
+        </div>
+
+        {/* Beanbag Illustration */}
+        <div className="flex justify-center -mb-2 mt-3">
+          <img
+            src="/beanbag_guy.png"
+            alt="Support Illustration"
+            className="h-20 w-auto object-contain"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#f4f7fe] flex relative text-slate-800 font-sans antialiased overflow-hidden">
+      
+      {/* 1. Desktop Persistent Sidebar */}
+      <aside className="hidden lg:block w-72 flex-shrink-0 p-3.5">
+        <div className="bg-white h-[calc(100vh-1.75rem)] rounded-[1.75rem] border border-gray-200/50 shadow-sm p-5 flex flex-col justify-between overflow-y-auto scrollbar-none">
+          {sidebarContent(false)}
+        </div>
+      </aside>
+
+      {/* 2. Main Workspace Layout */}
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        
+        {/* Content Top Header */}
+        <header className="bg-transparent h-20 flex-shrink-0 flex items-center justify-between px-6 sm:px-8 mt-2">
+          
+          {/* Left Title & Mobile Menu Trigger */}
+          <div className="flex items-center gap-4">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden h-10 w-10 rounded-xl bg-gray-50 border border-gray-200/80 flex items-center justify-center text-gray-600 active:scale-95 transition cursor-pointer"
+              className="lg:hidden h-10 w-10 rounded-xl bg-white border border-gray-200/80 flex items-center justify-center text-gray-600 active:scale-95 transition shadow-sm cursor-pointer"
             >
               <Menu size={18} />
             </button>
-            <Link to="/dashboard" className="flex items-center gap-2.5 group flex-shrink-0">
-              <div className="flex-shrink-0 w-8 h-8 md:w-auto md:h-auto overflow-hidden md:overflow-visible flex items-center justify-start rounded-lg">
-                <img
-                  src="/logo-new.jpeg"
-                  alt="Logo"
-                  className="h-8 md:h-11 w-auto max-w-none object-contain rounded-lg"
-                />
-              </div>
-              <span className="hidden sm:inline-block text-sm font-black tracking-wider leading-none uppercase italic text-slate-900">
-                Intern<span className="text-blue-600">Mitra</span>
-              </span>
-            </Link>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              {getPageTitle()}
+            </h1>
           </div>
 
-          {/* Desktop Central Navigation Links */}
-          <nav className="hidden lg:flex items-center space-x-8">
-            {menuItems.map((item) => {
-              const active = isLinkActive(item.path);
-              return (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  className={`font-semibold transition-all duration-300 relative group flex items-center space-x-2 py-2 ${
-                    active ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'
-                  }`}
-                >
-                  <item.icon size={16} className={active ? 'text-blue-600' : 'text-gray-400 group-hover:text-blue-600'} />
-                  <span className="text-sm font-semibold">{item.name}</span>
-                  <span className={`absolute -bottom-1 left-0 h-0.5 bg-gradient-to-r from-blue-600 to-violet-600 transition-all duration-300 group-hover:w-full ${
-                    active ? 'w-full' : 'w-0'
-                  }`} />
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Right Profile & Menu Dropdown */}
+          {/* Right Header Navigation Actions */}
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex flex-col text-right">
-              <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 leading-none">Student Workspace</p>
-              <h4 className="text-xs font-extrabold text-gray-900 mt-1 max-w-[140px] truncate leading-none">
-                {profile?.fullName || 'Learner'}
-              </h4>
-            </div>
+            
+            {/* Notification Bell */}
+            <button
+              onClick={() => navigate('/dashboard/messages')}
+              className="relative h-10 w-10 bg-white hover:bg-slate-50 border border-gray-200/60 rounded-full flex items-center justify-center text-slate-600 shadow-sm transition active:scale-95 cursor-pointer"
+            >
+              <Bell size={18} />
+              {unreadMessagesCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-blue-600 text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border border-white">
+                  {unreadMessagesCount}
+                </span>
+              )}
+            </button>
 
+            {/* User Profile Info Dropdown Trigger */}
             <div ref={profileMenuRef} className="relative">
               <button
-                type="button"
                 onClick={() => setIsProfileMenuOpen((open) => !open)}
-                aria-expanded={isProfileMenuOpen}
-                className="h-10 px-4 rounded-xl bg-gray-50 border border-gray-200/80 flex items-center justify-center text-[10px] font-black uppercase tracking-widest gap-1.5 active:scale-95 transition-all text-gray-700 hover:bg-gray-100 cursor-pointer"
+                className="flex items-center gap-3 bg-white pl-3 pr-4 py-1.5 rounded-full border border-gray-200/60 hover:bg-slate-50 shadow-sm active:scale-98 transition cursor-pointer"
               >
-                Menu
+                <div className="hidden sm:flex flex-col text-right">
+                  <h4 className="text-xs font-black text-slate-900 leading-none">
+                    {profile?.fullName || 'Learner'}
+                  </h4>
+                  <p className="text-[9px] font-bold text-gray-400 mt-1 uppercase tracking-widest leading-none">
+                    Student
+                  </p>
+                </div>
+                
+                {/* User Initials Avatar */}
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                  {profile?.fullName?.charAt(0).toUpperCase() || 'S'}
+                </div>
               </button>
-              
-              {isProfileMenuOpen && (
-              <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-white border border-gray-200 shadow-xl p-2 z-50">
-                <Link onClick={() => setIsProfileMenuOpen(false)} to="/dashboard" className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50">
-                  Dashboard
-                </Link>
-                <Link onClick={() => setIsProfileMenuOpen(false)} to="/dashboard/profile" className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-gray-50">
-                  Profile
-                </Link>
-                {paymentRecord && (
-                  <button
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      downloadPaymentSlip();
-                    }}
-                    className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50 text-left cursor-pointer"
+
+              {/* Profile Dropdown Menu */}
+              <AnimatePresence>
+                {isProfileMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute right-0 mt-2 w-52 rounded-2xl bg-white border border-gray-150 shadow-lg p-2 z-50 origin-top-right"
                   >
-                    Payment Slip
-                  </button>
+                    <Link
+                      onClick={() => setIsProfileMenuOpen(false)}
+                      to="/dashboard"
+                      className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50"
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      onClick={() => setIsProfileMenuOpen(false)}
+                      to="/dashboard/profile"
+                      className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50"
+                    >
+                      Profile
+                    </Link>
+                    {paymentRecord && (
+                      <button
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          downloadPaymentSlip();
+                        }}
+                        className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50 text-left cursor-pointer"
+                      >
+                        Payment Slip
+                      </button>
+                    )}
+                    <div className="h-px bg-gray-100 my-1" />
+                    <button
+                      onClick={async () => {
+                        setIsProfileMenuOpen(false);
+                        await signOut(auth);
+                        navigate('/login');
+                      }}
+                      className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 text-left cursor-pointer"
+                    >
+                      Logout
+                    </button>
+                  </motion.div>
                 )}
-                <div className="h-px bg-gray-150 my-1" />
-                <button
-                  onClick={async () => {
-                    setIsProfileMenuOpen(false);
-                    await signOut(auth);
-                    navigate('/login');
-                  }}
-                  className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 text-left cursor-pointer"
-                >
-                  Logout
-                </button>
-              </div>
-              )}
+              </AnimatePresence>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        
-        {/* Mobile Sidebar Side-drawer */}
-        <AnimatePresence>
-          {isSidebarOpen && (
-            <div className="fixed inset-0 z-50 lg:hidden">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsSidebarOpen(false)}
-                className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm"
-              />
-              <motion.aside
-                initial={{ x: '-100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '-100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="fixed left-0 top-0 bottom-0 z-50 w-72 bg-white text-gray-800 p-6 border-r border-gray-200 flex flex-col justify-between"
-              >
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between pb-4 border-b border-gray-150">
-                    <span className="text-sm font-extrabold uppercase tracking-widest text-blue-600">Student Workspace</span>
-                    <button
-                      onClick={() => setIsSidebarOpen(false)}
-                      className="p-1.5 text-gray-400 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition cursor-pointer"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold text-gray-450 uppercase tracking-wider px-2">Navigation Menu</h3>
-                    <nav className="space-y-1">
-                      {menuItems.map((item) => {
-                        const active = isLinkActive(item.path);
-                        return (
-                          <Link
-                            key={item.name}
-                            to={item.path}
-                            onClick={() => setIsSidebarOpen(false)}
-                            className={`flex items-center justify-between py-3.5 px-4 rounded-xl transition-all duration-200 border ${
-                              active
-                                ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 border-blue-200 shadow-sm font-semibold'
-                                : 'text-gray-700 border-transparent hover:bg-gray-50 hover:border-gray-200'
-                            }`}
-                          >
-                            <div className="flex items-center space-x-3.5">
-                              <item.icon size={18} className={active ? 'text-blue-600' : 'text-gray-400'} />
-                              <span className="text-sm font-medium">{item.name}</span>
-                            </div>
-                            {active && <ChevronRight size={14} className="text-blue-500" />}
-                          </Link>
-                        );
-                      })}
-                    </nav>
-                  </div>
-                </div>
-
-                {/* Mobile Drawer Footer Actions */}
-                <div className="pt-4 border-t border-gray-150 space-y-3">
-                  <div className="flex items-center gap-3 px-2">
-                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
-                      {profile?.fullName?.charAt(0) || 'S'}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-gray-900 truncate">{profile?.fullName || 'Learner'}</p>
-                      <p className="text-[10px] text-gray-500 truncate">{profile?.internshipDomain}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      setIsSidebarOpen(false);
-                      await signOut(auth);
-                      navigate('/login');
-                    }}
-                    className="w-full inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 text-xs font-bold transition"
-                  >
-                    <LogOut size={14} />
-                    Logout
-                  </button>
-                </div>
-              </motion.aside>
-            </div>
-          )}
-        </AnimatePresence>
-
-        {/* Subpage Container */}
-        <main className="relative z-10 w-full flex-1 overflow-y-auto overflow-x-hidden py-10 px-4 sm:px-6 lg:px-8 xl:px-10">
-          <div className="mx-auto h-full max-w-6xl">
-            <Suspense fallback={<div className="student-card p-8 text-center font-black text-slate-500">Loading...</div>}>
+        {/* 3. Subpage Content Router Outlet */}
+        <main className="flex-1 overflow-y-auto px-6 sm:px-8 py-4 pb-12 scrollbar-none">
+          <div className="w-full h-full">
+            <Suspense fallback={
+              <div className="bg-white rounded-3xl p-12 text-center font-bold text-slate-400 shadow-sm border border-gray-200/50">
+                Loading Workspace...
+              </div>
+            }>
               <Routes>
                 <Route index element={<MainDashboard />} />
                 <Route path="offer-letter" element={<OfferLetter />} />
@@ -508,12 +585,40 @@ export default function Dashboard() {
                 <Route path="certs" element={<Certifications />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="profile" element={<Profile />} />
-                <Route path="notifications" element={<Notifications />} />
+                <Route path="messages" element={<Messages />} />
+                <Route path="resources" element={<PlaceholderPage title="Resources" />} />
+                <Route path="help" element={<Support />} />
               </Routes>
             </Suspense>
           </div>
         </main>
       </div>
+
+      {/* 4. Mobile Sliding Sidebar Side-drawer */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            {/* Backdrop Blur */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            {/* Drawer Panel */}
+            <motion.aside
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed left-0 top-0 bottom-0 z-50 w-72 bg-white p-6 border-r border-gray-200 flex flex-col justify-between"
+            >
+              {sidebarContent(true)}
+            </motion.aside>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

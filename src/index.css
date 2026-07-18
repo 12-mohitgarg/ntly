@@ -37,11 +37,20 @@
   --radius-3xl: 2rem;
   --radius-4xl: 2.5rem;
   --radius-5xl: 3rem;
+
+  /* Typography global scale enlargements */
+  --text-xs: 0.875rem;     /* 14px */
+  --text-sm: 1rem;         /* 16px */
+  --text-base: 1.125rem;   /* 18px */
+  --text-lg: 1.25rem;      /* 20px */
+  --text-xl: 1.375rem;     /* 22px */
+  --text-2xl: 1.625rem;    /* 26px */
+  --text-3xl: 2.125rem;    /* 34px */
 }
 
 @layer base {
   body {
-    @apply antialiased text-slate-800 bg-[#f8fafc];
+    @apply antialiased text-slate-800 bg-[#f8fafc] text-[15.5px] leading-relaxed;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   
@@ -94,7 +103,7 @@
   }
 
   .student-kicker {
-    @apply text-[10px] font-extrabold uppercase tracking-[0.24em] text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md inline-block;
+    @apply text-[12px] font-black uppercase tracking-[0.24em] text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md inline-block;
   }
 
   .student-title {
@@ -102,7 +111,7 @@
   }
 
   .student-subtitle {
-    @apply mt-3 max-w-2xl text-sm sm:text-base font-semibold leading-7 text-slate-500;
+    @apply mt-3 max-w-2xl text-[14.5px] sm:text-[16px] font-bold leading-7 text-slate-500;
   }
 
   .student-card {
@@ -134,7 +143,7 @@
   }
 
   .student-label {
-    @apply text-[10px] font-black uppercase tracking-[0.2em] text-slate-500;
+    @apply text-[12px] font-black uppercase tracking-[0.2em] text-slate-500;
   }
 
   .gradient-text {
@@ -187,4 +196,14 @@
     @apply bg-white/80 backdrop-blur-md border border-white/50;
     box-shadow: 0 8px 30px rgba(0,0,0,0.04);
   }
+}
+
+/* Scrollbar-hiding utility class */
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none !important; /* IE/Edge */
+  scrollbar-width: none !important;    /* Firefox */
 }
