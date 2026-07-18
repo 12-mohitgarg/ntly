@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
+import { loadImageAsDataUrl } from '../lib/offerLetterPdf';
 import { signOut } from 'firebase/auth';
 import {
   BookOpen,
@@ -141,7 +142,7 @@ export default function Dashboard() {
     });
   }, [user, profile?.internshipDomain, profile?.progress]);
 
-  const downloadPaymentSlip = () => {
+  const downloadPaymentSlip = async () => {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const W = 210, ML = 14, MR = 14;
 
@@ -160,128 +161,124 @@ export default function Dashboard() {
       ? new Date(paymentRecord.timestamp).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
       : 'N/A';
 
-    doc.setFillColor(30, 64, 175);
-    doc.rect(0, 0, W, 30, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.text('InternMitra', ML, 14);
-    doc.setFontSize(8);
-    doc.setFont('Helvetica', 'italic');
-    doc.text('Internmitra Technologies Private Limited', ML, 20);
-    doc.setFont('Helvetica', 'normal');
-    doc.text('www.internmitra.com  |  info@internmitra.com  |  CIN: U78300BR2025PTC081140', ML, 26);
+    try {
+      const [headerImg, footerImg] = await Promise.all([
+        loadImageAsDataUrl('/receipt_header.png', 'image/jpeg'),
+        loadImageAsDataUrl('/receipt_footer.png', 'image/jpeg')
+      ]);
 
-    doc.setFillColor(241, 245, 249);
-    doc.rect(0, 30, W, 16, 'F');
-    doc.setTextColor(30, 64, 175);
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.text('FEE PAYMENT RECEIPT', W / 2, 41, { align: 'center' });
+      // Render custom header image (1024x263 aspect ratio ~3.89, W=210 -> H=54)
+      doc.addImage(headerImg, 'JPEG', 0, 0, W, 54);
 
-    doc.setTextColor(30, 41, 59);
-    doc.setFontSize(8.5);
-    doc.setFont('Helvetica', 'normal');
-    doc.text(`Receipt No: ${paymentId}`, ML, 56);
-    doc.text(`Date: ${paidOn}`, W - MR, 56, { align: 'right' });
-
-    doc.setDrawColor(203, 213, 225);
-    doc.setLineWidth(0.3);
-    doc.line(ML, 60, W - MR, 60);
-
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(30, 64, 175);
-    doc.text('STUDENT DETAILS', ML, 68);
-    doc.setDrawColor(30, 64, 175);
-    doc.setLineWidth(0.4);
-    doc.line(ML, 70, ML + 38, 70);
-
-    const studentRows: [string, string][] = [
-      ['Full Name', name],
-      ['Email Address', email],
-      ['Contact Number', contact],
-      ['University Roll No.', roll],
-      ['College / Institution', college],
-      ['Department', dept],
-      ['Internship Domain', domain],
-    ];
-
-    let y = 78;
-    doc.setLineWidth(0.2);
-    doc.setDrawColor(226, 232, 240);
-    studentRows.forEach(([label, value], i) => {
-      if (i % 2 === 0) {
-        doc.setFillColor(248, 250, 252);
-        doc.rect(ML, y - 4, W - ML - MR, 7, 'F');
-      }
-      doc.setFont('Helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(100, 116, 139);
-      doc.text(label, ML + 2, y);
+      doc.setTextColor(30, 41, 59);
+      doc.setFontSize(8.5);
       doc.setFont('Helvetica', 'normal');
-      doc.setTextColor(15, 23, 42);
-      doc.text(value, ML + 58, y);
-      y += 7;
-    });
+      doc.text(`Receipt No: ${paymentId}`, ML, 66);
+      doc.text(`Date: ${paidOn}`, W - MR, 66, { align: 'right' });
 
-    y += 6;
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(30, 64, 175);
-    doc.text('PAYMENT DETAILS', ML, y);
-    doc.setDrawColor(30, 64, 175);
-    doc.setLineWidth(0.4);
-    doc.line(ML, y + 2, ML + 40, y + 2);
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.line(ML, 70, W - MR, 70);
 
-    y += 10;
-    const payRows: [string, string][] = [
-      ['Payment ID', paymentId],
-      ['Order ID', orderId],
-      ['Amount Paid', amount],
-      ['Payment Mode', 'Razorpay (Online)'],
-      ['Payment Status', 'SUCCESS'],
-      ['Purpose', 'Internship Registration Fee'],
-    ];
-
-    payRows.forEach(([label, value], i) => {
-      if (i % 2 === 0) {
-        doc.setFillColor(248, 250, 252);
-        doc.rect(ML, y - 4, W - ML - MR, 7, 'F');
-      }
       doc.setFont('Helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(100, 116, 139);
-      doc.text(label, ML + 2, y);
-      doc.setFont('Helvetica', label === 'Payment Status' ? 'bold' : 'normal');
-      doc.setTextColor(label === 'Payment Status' ? 22 : 15, label === 'Payment Status' ? 163 : 23, label === 'Payment Status' ? 74 : 42);
-      doc.text(value, ML + 58, y);
-      y += 7;
-    });
+      doc.setFontSize(9);
+      doc.setTextColor(30, 64, 175);
+      doc.text('STUDENT DETAILS', ML, 79);
+      doc.setDrawColor(30, 64, 175);
+      doc.setLineWidth(0.4);
+      doc.line(ML, 81, ML + 38, 81);
 
-    y += 10;
-    doc.setFillColor(240, 253, 244);
-    doc.setDrawColor(134, 239, 172);
-    doc.setLineWidth(0.4);
-    doc.roundedRect(ML, y, W - ML - MR, 14, 2, 2, 'FD');
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(22, 163, 74);
-    doc.text(`PAYMENT CONFIRMED - ${amount} received successfully.`, W / 2, y + 8, { align: 'center' });
+      const studentRows: [string, string][] = [
+        ['Full Name', name],
+        ['Email Address', email],
+        ['Contact Number', contact],
+        ['University Roll No.', roll],
+        ['College / Institution', college],
+        ['Department', dept],
+        ['Internship Domain', domain],
+      ];
 
-    y += 24;
-    doc.setTextColor(148, 163, 184);
-    doc.setFont('Helvetica', 'italic');
-    doc.setFontSize(7.5);
-    doc.text('This is a computer-generated receipt and does not require a physical signature.', W / 2, y, { align: 'center' });
-    doc.text('For queries: info@internmitra.com | 9693921517', W / 2, y + 5, { align: 'center' });
+      let y = 89;
+      doc.setLineWidth(0.2);
+      doc.setDrawColor(226, 232, 240);
+      studentRows.forEach(([label, value], i) => {
+        if (i % 2 === 0) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(ML, y - 4, W - ML - MR, 7, 'F');
+        }
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text(label, ML + 2, y);
+        doc.setFont('Helvetica', 'normal');
+        doc.setTextColor(15, 23, 42);
+        doc.text(value, ML + 58, y);
+        y += 7;
+      });
 
-    doc.setFillColor(30, 64, 175);
-    doc.rect(0, 287, W, 10, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(7);
-    doc.text('InternMitra Technologies Pvt. Ltd.  |  Kisan Colony, Khagaul, Patna  |  CIN: U78300BR2025PTC081140', W / 2, 293, { align: 'center' });
+      y += 8;
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(30, 64, 175);
+      doc.text('PAYMENT DETAILS', ML, y);
+      doc.setDrawColor(30, 64, 175);
+      doc.setLineWidth(0.4);
+      doc.line(ML, y + 2, ML + 40, y + 2);
+
+      y += 10;
+      const payRows: [string, string][] = [
+        ['Payment ID', paymentId],
+        ['Order ID', orderId],
+        ['Amount Paid', amount],
+        ['Payment Mode', 'Razorpay (Online)'],
+        ['Payment Status', 'SUCCESS'],
+        ['Purpose', 'Internship Registration Fee'],
+      ];
+
+      payRows.forEach(([label, value], i) => {
+        if (i % 2 === 0) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(ML, y - 4, W - ML - MR, 7, 'F');
+        }
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text(label, ML + 2, y);
+        doc.setFont('Helvetica', label === 'Payment Status' ? 'bold' : 'normal');
+        doc.setTextColor(label === 'Payment Status' ? 22 : 15, label === 'Payment Status' ? 163 : 23, label === 'Payment Status' ? 74 : 42);
+        doc.text(value, ML + 58, y);
+        y += 7;
+      });
+
+      y += 10;
+      doc.setFillColor(240, 253, 244);
+      doc.setDrawColor(134, 239, 172);
+      doc.setLineWidth(0.4);
+      doc.roundedRect(ML, y, W - ML - MR, 14, 2, 2, 'FD');
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(22, 163, 74);
+      doc.text(`PAYMENT CONFIRMED - ${amount} received successfully.`, W / 2, y + 8, { align: 'center' });
+
+      y += 24;
+      doc.setTextColor(148, 163, 184);
+      doc.setFont('Helvetica', 'italic');
+      doc.setFontSize(7.5);
+      doc.text('This is a computer-generated receipt and does not require a physical signature.', W / 2, y, { align: 'center' });
+      doc.text('For queries: info@internmitra.com | 9693921517', W / 2, y + 5, { align: 'center' });
+
+      // Render custom footer image (1024x62 aspect ratio ~16.45, W=210 -> H=13)
+      doc.addImage(footerImg, 'JPEG', 0, 297 - 13, W, 13);
+    } catch (err) {
+      console.error('Error loading receipt assets:', err);
+      // Fallback text header if images fail to load
+      doc.setFillColor(30, 64, 175);
+      doc.rect(0, 0, W, 30, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.text('InternMitra', ML, 14);
+    }
 
     doc.save(`InternMitra_Payment_Slip_${name.replace(/\s+/g, '_')}.pdf`);
   };

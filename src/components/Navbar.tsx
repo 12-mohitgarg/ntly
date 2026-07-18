@@ -93,11 +93,7 @@ export default function Navbar() {
                       Join Now
                     </Button>
                   </Link>
-                  <Link to="/emitra-register" className="hidden lg:inline-flex">
-                    <Button variant="outline" className="border-slate-200 text-slate-700 font-extrabold uppercase text-xs tracking-widest hover:bg-slate-50 rounded-2xl px-5 h-11 transition-all duration-300 cursor-pointer">
-                      Cyber cafe
-                    </Button>
-                  </Link>
+
                 </div>
               )}
             </div>
@@ -222,9 +218,7 @@ export default function Navbar() {
                   <Link to="/register" onClick={() => setIsOpen(false)} className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-xs font-black uppercase tracking-widest text-white shadow-md hover:opacity-95 transition-all text-center">
                     Join Now
                   </Link>
-                  <Link to="/emitra-register" onClick={() => setIsOpen(false)} className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-blue-200 text-xs font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50 transition-all text-center">
-                    Cyber cafe Register
-                  </Link>
+
                 </>
               )}
             </div>

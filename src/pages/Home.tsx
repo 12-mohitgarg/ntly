@@ -711,6 +711,7 @@ export default function Home() {
                 <li className="hover:text-blue-400 cursor-pointer transition-colors">Pricing</li>
                 <li className="hover:text-blue-400 cursor-pointer transition-colors">For Students</li>
                 <li className="hover:text-blue-400 cursor-pointer transition-colors">For Colleges</li>
+                <li><Link to="/emitra-register" className="hover:text-blue-400 transition-colors">Cyber Cafe Partner</Link></li>
               </ul>
             </div>
 
