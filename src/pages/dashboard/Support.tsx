@@ -516,10 +516,10 @@ export default function Support() {
             <div className="p-5 max-h-[60vh] overflow-y-auto space-y-4">
               {filteredFaqs.map((item, idx) => (
                 <div key={idx} className={`p-4 rounded-2xl border transition ${selectedFaq.q === item.q ? 'bg-blue-50/10 border-blue-200' : 'bg-white border-slate-100'}`}>
-                  <button onClick={() => setSelectedFaq(item)} className="w-full text-left font-black text-xs text-slate-800 hover:text-blue-600 flex justify-between items-center cursor-pointer">
+                  <button onClick={() => setSelectedFaq(item)} className="w-full text-left font-extrabold text-sm text-slate-800 hover:text-blue-600 flex justify-between items-center cursor-pointer">
                     <span>{item.q}</span>
                   </button>
-                  <p className="text-[11px] text-slate-550 mt-2.5 leading-relaxed font-semibold">
+                  <p className="text-[14px] text-slate-600 mt-2.5 leading-relaxed font-semibold">
                     {item.a}
                   </p>
                 </div>
@@ -562,10 +562,10 @@ export default function Support() {
             <div className="p-5 max-h-[60vh] overflow-y-auto space-y-5">
               {guides.map((section, idx) => (
                 <div key={idx} className="space-y-2.5">
-                  <h5 className="font-black text-xs text-slate-850">{section.title}</h5>
-                  <ul className="space-y-2 border-l border-slate-100 pl-3 ml-1.5">
+                  <h5 className="font-extrabold text-sm text-slate-850">{section.title}</h5>
+                  <ul className="space-y-2 border-l border-slate-100 pl-3 ml-1.5 text-left">
                     {section.steps.map((step, sIdx) => (
-                      <li key={sIdx} className="text-[10px] text-slate-500 font-semibold list-disc leading-relaxed">
+                      <li key={sIdx} className="text-[13.5px] text-slate-650 font-semibold list-disc leading-relaxed">
                         {step}
                       </li>
                     ))}
@@ -607,9 +607,9 @@ export default function Support() {
               </button>
             </div>
             {/* Article content */}
-            <div className="p-6 space-y-4 select-text">
-              <h4 className="font-black text-sm text-slate-800 leading-snug">{selectedTopic.title}</h4>
-              <p className="text-xs text-slate-600 font-semibold leading-relaxed whitespace-pre-line pt-2">
+            <div className="p-6 space-y-4 select-text text-left">
+              <h4 className="font-black text-base text-slate-800 leading-snug">{selectedTopic.title}</h4>
+              <p className="text-[14px] text-slate-600 font-semibold leading-relaxed whitespace-pre-line pt-2">
                 {selectedTopic.content}
               </p>
             </div>
