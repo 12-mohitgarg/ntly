@@ -163,13 +163,14 @@ export default function MainDashboard() {
   };
 
   // Check if course requirements met
+  const isPaymentCompleted = Boolean(profile?.isPaid || profile?.hasPaid);
   const isAssessmentCompleted = !!testSubmission;
   const isCertificateReady = learningProgress >= 100 && isAssessmentCompleted;
 
   // Stepper steps configuration
   const steps = [
     { label: 'Registration', completed: true, desc: 'Completed' },
-    { label: 'Payment', completed: !!profile?.hasPaid, desc: profile?.hasPaid ? 'Completed' : 'Pending' },
+    { label: 'Payment', completed: isPaymentCompleted, desc: isPaymentCompleted ? 'Completed' : 'Pending' },
     { label: 'Assessment', completed: isAssessmentCompleted, desc: isAssessmentCompleted ? 'Completed' : 'In Progress' },
     { label: 'Certification', completed: isCertificateReady, desc: isCertificateReady ? 'Completed' : 'Upcoming' }
   ];
@@ -280,7 +281,7 @@ export default function MainDashboard() {
 
       </div>
 
-      {/* 2. MIDDLE SECTION GRID (Milestones, Quick Actions, Announcements) */}
+      {/* 2. MIDDLE SECTION GRID (Milestones, Announcements) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Milestone Progress Card */}
@@ -330,81 +331,8 @@ export default function MainDashboard() {
           </div>
         </div>
 
-        {/* Quick Actions Panel */}
-        <div className="lg:col-span-4 bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm flex flex-col justify-between min-h-[220px]">
-          <h3 className="text-sm font-black text-slate-900 mb-4 flex items-center gap-2">
-            <span className="text-blue-600">⚡</span> Quick Actions
-          </h3>
-          
-          <div className="grid grid-cols-4 gap-2 flex-1">
-            
-            {/* Offer Letter */}
-            <button
-              onClick={() => navigate('/dashboard/offer-letter')}
-              className="bg-slate-50 hover:bg-blue-50/50 hover:text-blue-600 border border-slate-100 hover:border-blue-150 rounded-2xl p-2.5 flex flex-col items-center justify-center text-center transition cursor-pointer group"
-            >
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg mb-2 font-bold group-hover:scale-105 transition">
-                📄
-              </div>
-              <span className="font-extrabold text-[10px] text-slate-800 group-hover:text-blue-600 leading-tight">Offer Letter</span>
-              <span className="text-[8px] text-slate-400 mt-1 font-semibold">View & Download</span>
-            </button>
-
-            {/* Certificate */}
-            <button
-              onClick={handleDownloadCertificate}
-              disabled={!isCertificateReady}
-              className={`border rounded-2xl p-2.5 flex flex-col items-center justify-center text-center transition group ${
-                isCertificateReady
-                  ? 'bg-slate-50 hover:bg-emerald-50/50 hover:text-emerald-600 border-slate-100 hover:border-emerald-150 cursor-pointer'
-                  : 'bg-slate-100/40 border-slate-100 opacity-60 cursor-not-allowed'
-              }`}
-            >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg mb-2 font-bold group-hover:scale-105 transition ${
-                isCertificateReady ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-200 text-slate-400'
-              }`}>
-                🏆
-              </div>
-              <span className="font-extrabold text-[10px] text-slate-800 leading-tight">Certificate</span>
-              <span className="text-[8px] text-slate-400 mt-1 font-semibold">Download</span>
-            </button>
-
-            {/* Report */}
-            <button
-              onClick={handleDownloadMarksheet}
-              disabled={!isAssessmentCompleted}
-              className={`border rounded-2xl p-2.5 flex flex-col items-center justify-center text-center transition group ${
-                isAssessmentCompleted
-                  ? 'bg-slate-50 hover:bg-indigo-50/50 hover:text-indigo-600 border-slate-100 hover:border-indigo-150 cursor-pointer'
-                  : 'bg-slate-100/40 border-slate-100 opacity-60 cursor-not-allowed'
-              }`}
-            >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg mb-2 font-bold group-hover:scale-105 transition ${
-                isAssessmentCompleted ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-200 text-slate-400'
-              }`}>
-                📊
-              </div>
-              <span className="font-extrabold text-[10px] text-slate-800 leading-tight">Report</span>
-              <span className="text-[8px] text-slate-400 mt-1 font-semibold">View Report</span>
-            </button>
-
-            {/* Feedback */}
-            <button
-              onClick={() => navigate('/dashboard/reports')}
-              className="bg-slate-50 hover:bg-orange-50/50 hover:text-orange-600 border border-slate-100 hover:border-orange-150 rounded-2xl p-2.5 flex flex-col items-center justify-center text-center transition cursor-pointer group"
-            >
-              <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center text-lg mb-2 font-bold group-hover:scale-105 transition">
-                ✍️
-              </div>
-              <span className="font-extrabold text-[10px] text-slate-800 group-hover:text-orange-600 leading-tight">Feedback Form</span>
-              <span className="text-[8px] text-slate-400 mt-1 font-semibold">Fill Feedback</span>
-            </button>
-
-          </div>
-        </div>
-
         {/* Announcements Card */}
-        <div className="lg:col-span-3 bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm flex flex-col justify-between min-h-[220px]">
+        <div className="lg:col-span-7 bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm flex flex-col justify-between min-h-[220px]">
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
@@ -447,7 +375,7 @@ export default function MainDashboard() {
       </div>
 
       {/* 3. WHATSAPP STUDENT CHANNEL BANNER */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-5 text-white shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 select-none relative overflow-hidden">
+      <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-3xl p-5 text-white shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 select-none relative overflow-hidden">
         
         {/* Left Info Column */}
         <div className="flex items-center gap-4 z-10">
@@ -458,7 +386,7 @@ export default function MainDashboard() {
             <h4 className="font-black text-base">
               Join WhatsApp Student Channel
             </h4>
-            <p className="text-indigo-100 text-xs font-semibold">
+            <p className="text-green-50 text-xs font-semibold">
               Get instant updates on classes, assignments, and important announcements.
             </p>
           </div>
@@ -469,7 +397,7 @@ export default function MainDashboard() {
           href="https://whatsapp.com/channel/0029VbDNWPACxoAsRFQgYz40"
           target="_blank"
           rel="noopener noreferrer"
-          className="bg-white text-blue-600 font-bold px-6 py-3 rounded-2xl hover:bg-blue-50 transition shadow-sm active:scale-95 flex-shrink-0 text-xs flex items-center gap-2 z-10"
+          className="bg-white text-green-700 font-bold px-6 py-3 rounded-2xl hover:bg-green-50 transition shadow-sm active:scale-95 flex-shrink-0 text-xs flex items-center gap-2 z-10"
         >
           <span>Join Now</span>
           <ArrowRight size={14} />
