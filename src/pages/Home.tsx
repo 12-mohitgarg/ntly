@@ -196,7 +196,7 @@ export default function Home() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid lg:grid-cols-12 gap-12 items-center">
-            
+
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -364,7 +364,7 @@ export default function Home() {
       {/* FEATURES */}
       <section className="py-24 bg-white border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
+
           <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-600 bg-blue-50 px-3 py-1 rounded-md inline-block">Dashboard Hub</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
@@ -403,7 +403,7 @@ export default function Home() {
       {/* SIMPLE STEPS */}
       <section className="py-24 bg-slate-50/80 border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
+
           <div className="text-center max-w-2xl mx-auto mb-20 space-y-3">
             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-600 bg-blue-50 px-3 py-1 rounded-md inline-block">Workflow</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
@@ -476,7 +476,7 @@ export default function Home() {
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="absolute top-0 bottom-0 left-0 w-20 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
             <div className="absolute top-0 bottom-0 right-0 w-20 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
-            
+
             <motion.div
               className="flex gap-6 whitespace-nowrap py-3"
               animate={{ x: ["0%", "-50%"] }}
@@ -510,7 +510,7 @@ export default function Home() {
       {/* TESTIMONIALS */}
       <section className="py-24 bg-slate-50 border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
+
           <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-600 bg-blue-50 px-3 py-1 rounded-md inline-block">Feedback</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
@@ -528,13 +528,12 @@ export default function Home() {
                 <button
                   key={filter}
                   onClick={() => setActiveFilter(filter === "Students" ? "Student" : filter === "Teachers" ? "Teacher" : "All")}
-                  className={`px-6 py-2 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all duration-300 cursor-pointer ${
-                    (filter === "All" && activeFilter === "All") ||
-                    (filter === "Students" && activeFilter === "Student") ||
-                    (filter === "Teachers" && activeFilter === "Teacher")
+                  className={`px-6 py-2 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all duration-300 cursor-pointer ${(filter === "All" && activeFilter === "All") ||
+                      (filter === "Students" && activeFilter === "Student") ||
+                      (filter === "Teachers" && activeFilter === "Teacher")
                       ? "bg-slate-900 text-white shadow-sm"
                       : "text-slate-600 hover:bg-slate-50"
-                  }`}
+                    }`}
                 >
                   {filter}
                 </button>
@@ -574,11 +573,10 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <span className={`px-2.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider ${
-                    item.type === "Student"
+                  <span className={`px-2.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider ${item.type === "Student"
                       ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
                       : "bg-blue-50 text-blue-600 border border-blue-100"
-                  }`}>
+                    }`}>
                     {item.type}
                   </span>
                 </div>
@@ -592,9 +590,9 @@ export default function Home() {
       {/* MILESTONES */}
       <section className="py-24 bg-slate-900 text-white relative">
         <div className="absolute top-0 left-0 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
-        
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          
+
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-400 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-md inline-block">Milestones</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
@@ -676,7 +674,7 @@ export default function Home() {
       <footer className="bg-[#0b0e1a] text-white pt-20 pb-10 border-t border-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-5 gap-10 mb-16">
-            
+
             <div className="lg:col-span-2 space-y-6">
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-blue-600/10">
