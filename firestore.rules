@@ -192,6 +192,14 @@ match /userVideoProgress/{docId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
+
+    match /loginLogs/{logId} {
+      allow get, list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() &&
+        incoming().userId == request.auth.uid &&
+        incoming().keys().hasOnly(['userId', 'studentName', 'email', 'internshipDomain', 'loggedAt', 'loginAtIso', 'status', 'userAgent', 'platform']);
+      allow update, delete: if isAdmin();
+    }
     
     match /courseReports/{reportId} {
   allow read: if isSignedIn();

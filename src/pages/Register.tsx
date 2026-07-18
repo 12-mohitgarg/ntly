@@ -88,9 +88,10 @@ export default function Register({ mode = 'public' }: RegisterProps) {
     department: '',
     subject: '',
     session: '',
-    semester: '',
+    semester: 'Semester 5',
     universityRoll: '',
     internshipDomain: '',
+    internshipMode: 'Online',
     password: '',
     confirmPassword: '',
     terms: false
@@ -246,6 +247,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
           semester: formData.semester,
           universityRoll: formData.universityRoll,
           internshipDomain: formData.internshipDomain,
+          internshipMode: formData.internshipMode || 'Online',
           createdByEmitraId: isEmitraStudentMode ? currentUser?.uid || '' : null,
           createdByEmitraName: isEmitraStudentMode ? emitraProfile?.centerName || '' : null,
           isPaid: false,
@@ -502,6 +504,15 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                       <select name="internshipDomain" value={formData.internshipDomain} onChange={handleChange} className="w-full h-12 rounded-xl border border-slate-200/40 bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm appearance-none shadow-sm cursor-pointer">
                         <option value="">Select Domain</option>
                         {courses.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="internshipMode" className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Mode of Internship</Label>
+                      <select name="internshipMode" value={formData.internshipMode} onChange={handleChange} className="w-full h-12 rounded-xl border border-slate-200/40 bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm appearance-none shadow-sm cursor-pointer">
+                        <option value="Online">Online</option>
+                        <option value="Offline">Offline</option>
+                        <option value="Hybrid">Hybrid</option>
                       </select>
                     </div>
                   </div>

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { auth, db } from '../lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { arrayUnion, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -77,6 +77,23 @@ export default function Login() {
 
       if (userDoc?.exists()) {
         const userData = userDoc.data();
+        const loginAtIso = new Date().toISOString();
+        await updateDoc(doc(db, 'users', user.uid), {
+          loginLogs: arrayUnion({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            userId: user.uid,
+            studentName: userData.fullName || 'Student',
+            email: user.email || userData.email || '',
+            internshipDomain: userData.internshipDomain || '',
+            loginAtIso,
+            status: 'Success',
+            userAgent: navigator.userAgent,
+            platform: navigator.platform || 'Web',
+          }),
+          lastLoginAt: loginAtIso
+        }).catch((error) => {
+          console.warn('Unable to save login log:', error);
+        });
         navigate(userData?.isPaid ? '/dashboard' : '/payment', { replace: true });
         return;
       }

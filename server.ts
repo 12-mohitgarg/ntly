@@ -196,7 +196,7 @@ app.post("/api/payment/verify", (req, res) => {
 
 app.post("/api/offer-letter-email", async (req, res) => {
   try {
-    const { to, studentName, fileName, pdfBase64 } = req.body || {};
+    const { to, studentName, internshipDomain, fileName, pdfBase64 } = req.body || {};
 
     if (!to || !pdfBase64) {
       return res.status(400).json({ error: "Student email and PDF attachment are required" });
@@ -206,13 +206,16 @@ app.post("/api/offer-letter-email", async (req, res) => {
 
     sendEmail({
       to,
-      subject: "Your InternMitra Offer Letter",
+      subject: "Your InternMitra Internship Acceptance Letter",
       html: `
         <div style="font-family:Arial,sans-serif;color:#0f172a;line-height:1.6">
           <p>Dear ${studentName || "Student"},</p>
-          <p>Thank you for completing your InternMitra registration payment.</p>
-          <p>Your official internship offer letter is attached with this email.</p>
-          <p>Regards,<br/>InternMitra Team</p>
+          <p>Greetings from InternMitra!</p>
+          <p>Congratulations! You have been successfully enrolled in the ${internshipDomain || "Internship"} Internship Program.</p>
+          <p>This email serves as your official Internship Acceptance Letter and confirms your participation in the internship program.</p>
+          <p>Further details, including internship access, training schedules, assignments, and guidelines, will be shared on your registered email address.</p>
+          <p>We wish you a successful and rewarding internship journey.</p>
+          <p>Best Regards,<br/>InternMitra Team</p>
         </div>
       `,
       attachments: [
