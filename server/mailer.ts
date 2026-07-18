@@ -26,7 +26,7 @@ export async function sendEmail({
   }[];
 }) {
   const mailOptions = {
-    from: `"Vyas Finserv" <gargmohit8302@gmail.com>`,
+    from: `"Internmitra" <gargmohit8302@gmail.com>`,
     to,
     subject,
     html,

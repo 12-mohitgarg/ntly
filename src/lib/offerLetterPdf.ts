@@ -57,7 +57,7 @@ export async function getOrCreateOfferLetterNumber(userId: string) {
 
 export async function loadOfferLetterAssets() {
   const [headerImg, footerImg, watermarkImg] = await Promise.all([
-    loadImageAsDataUrl('/ii.png'),
+    loadImageAsDataUrl('/offer-letter-header.png'),
     loadImageAsDataUrl('/ff.png'),
     loadImageAsDataUrl('/dded.jpeg', 'image/jpeg').catch(() => '')
   ]);
@@ -67,7 +67,7 @@ export async function loadOfferLetterAssets() {
 
 export function createOfferLetterPdf(profile: OfferLetterProfile, letterNumber: string, assets: { headerImg: string; footerImg: string; watermarkImg?: string }) {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const W = 210, H = 297, ML = 14;
+  const W = 210, H = 297, ML = 12;
 
   const studentName = profile.fullName || '[Student Full Name]';
   const rollNumber = profile.universityRoll || '[Roll Number]';
@@ -85,58 +85,64 @@ export function createOfferLetterPdf(profile: OfferLetterProfile, letterNumber: 
   };
   const letterDate = formatDate(profile.registrationDate);
 
-  const headerH = (252 / 998) * W;
+  const headerH = (206 / 808) * W;
   const footerH = (322 / 1002) * W;
 
-  pdf.addImage(assets.headerImg, 'PNG', 0, 0, W, headerH);
+  pdf.addImage(assets.headerImg, 'PNG', -0.6, 0, W + 1.2, headerH);
 
   if (assets.watermarkImg) {
-    const wmSize = 90;
+    const wmSize = 150;
     const wmX = (W - wmSize) / 2;
-    const wmY = (H - wmSize) / 2;
+    const wmY = headerH + 24;
     (pdf as any).saveGraphicsState();
-    (pdf as any).setGState((pdf as any).GState({ opacity: 0.12 }));
+    (pdf as any).setGState((pdf as any).GState({ opacity: 0.1 }));
     pdf.addImage(assets.watermarkImg, 'JPEG', wmX, wmY, wmSize, wmSize);
     (pdf as any).restoreGraphicsState();
   }
 
   const x = ML;
-  let y = headerH + 5;
-  pdf.setFontSize(8.5);
+  let y = headerH + 3;
+  pdf.setFontSize(10);
   pdf.setTextColor(20, 20, 20);
 
-  pdf.setFont('Helvetica', 'normal');
-  pdf.text('Letter Ref. No.: ', x, y);
-  pdf.setFont('Helvetica', 'bold');
-  pdf.text(`IM/2026/IOL/${letterNumber}`, x + pdf.getTextWidth('Letter Ref. No.: '), y);
-  pdf.setFont('Helvetica', 'normal');
-  pdf.text(`Date: ${letterDate}`, W - ML, y, { align: 'right' });
-  y += 9;
+  pdf.setFont('Times', 'bold');
+  pdf.text('Letter Ref. No.:', x, y);
+  pdf.setFont('Times', 'normal');
+  pdf.text(` IM/2026/IAL/${letterNumber}`, x + pdf.getTextWidth('Letter Ref. No.:'), y);
+  pdf.setFont('Times', 'bold');
+  pdf.text('Date:', 163, y);
+  pdf.setFont('Times', 'normal');
+  pdf.text(` ${letterDate}`, 174, y);
+  y += 10;
 
+  pdf.setFont('Helvetica', 'normal');
   pdf.text('To,', x, y); y += 6;
   pdf.setFont('Helvetica', 'bold');
   pdf.text(profile.fullName ? studentName : `[${studentName}]`, x, y); y += 6;
-  pdf.setFont('Helvetica', 'normal');
-  const urnL = 'University Roll Number: ';
-  pdf.text(urnL, x, y);
   pdf.setFont('Helvetica', 'bold');
-  pdf.text(profile.universityRoll ? rollNumber : `[${rollNumber}]`, x + pdf.getTextWidth(urnL), y); y += 6;
+  const urnL = 'University Reg. Number: ';
+  pdf.text(urnL, x, y);
   pdf.setFont('Helvetica', 'normal');
+  pdf.text(profile.universityRoll ? rollNumber : `[${rollNumber}]`, 65, y); y += 6;
+  pdf.setFont('Helvetica', 'bold');
   const ciL = 'College / Institution: ';
   pdf.text(ciL, x, y);
-  pdf.setFont('Helvetica', 'bold');
-  pdf.text(profile.college ? college : `[${college}]`, x + pdf.getTextWidth(ciL), y); y += 9;
+  pdf.setFont('Helvetica', 'normal');
+  pdf.text(profile.college ? college : `[${college}]`, 65, y); y += 12;
 
   pdf.setFont('Helvetica', 'normal');
-  pdf.text('Dear Candidate,', x, y); y += 6;
+  pdf.setFontSize(9.5);
+  pdf.text('Dear Candidate,', x, y); y += 4.8;
   const bodyText = `We are pleased to accept your application and formally offer you an internship at Internmitra Technologies Private Limited(InternMitra). Our internship programmes are designed in full alignment with NEP-2020, AICTE and UGC Internship Guidelines, and your university's specific internship framework.`;
   const splitBody = pdf.splitTextToSize(bodyText, W - 2 * ML);
-  pdf.text(splitBody, x, y); y += splitBody.length * 4.6 + 7;
+  pdf.text(splitBody, x, y); y += splitBody.length * 4.3 + 9;
 
   pdf.setFont('Helvetica', 'bold');
+  pdf.setFontSize(10);
   pdf.text('Your internship details are as follows:', x, y); y += 7;
 
-  const colC = 76, colV = 80, rH = 6.5;
+  const rowX = x + 8;
+  const colC = 78, colV = 82, rH = 6;
   const rows: [string, string][] = [
     ['Name of the Student', profile.fullName ? studentName : `[${studentName}]`],
     ['University Roll Number', profile.universityRoll ? rollNumber : `[${rollNumber}]`],
@@ -144,26 +150,27 @@ export function createOfferLetterPdf(profile: OfferLetterProfile, letterNumber: 
     ['Department & Semester', deptSemester],
     ['Internship Domain', profile.internshipDomain ? domain : `[${domain}]`],
     ['Internship Duration', '120 Hours'],
-    ['Mode of Internship', 'Online (as approved by College)'],
-    ['Internship Start Date', '01/06/2026'],
-    ['Expected End Date', '20/06/2026'],
-    ['Stipend', 'Not Applicable - Academic Programme'],
+    ['Mode of Internship', '[Online/Offline/Hybrid] (as approved by College)'],
+    ['Internship Start Date', '01/08/2026'],
+    ['Expected End Date', '20/08/2026'],
   ];
   rows.forEach(([label, value]) => {
-    pdf.setFont('Helvetica', 'normal');
-    pdf.setTextColor(20, 20, 20);
-    pdf.text(label, x + 8, y);
-    pdf.text(':', colC, y);
     pdf.setFont('Helvetica', 'bold');
+    pdf.setFontSize(9.5);
+    pdf.setTextColor(20, 20, 20);
+    pdf.text(label, rowX, y);
+    pdf.text(':', colC, y);
+    pdf.setFont('Helvetica', 'normal');
     pdf.text(value, colV, y);
     y += rH;
   });
   y += 5;
 
   pdf.setFont('Helvetica', 'normal');
+  pdf.setFontSize(9.5);
   const closing = `Please report to us on your start date as per the schedule above and bring this letter along with the Consent Letter issued by your College. We also request that you inform your College Internship Nodal Officer (CINO) upon receiving this acceptance letter. During the programme, you are required to maintain the minimum required attendance and complete all tasks and assignments given by your mentor.`;
   const splitClose = pdf.splitTextToSize(closing, W - 2 * ML);
-  pdf.text(splitClose, x, y); y += splitClose.length * 4.6 + 5;
+  pdf.text(splitClose, x, y); y += splitClose.length * 4.2 + 7;
 
   const lastLine = 'We look forward to a meaningful and enriching internship experience and appreciate your interest in InternMitra.';
   const splitLast = pdf.splitTextToSize(lastLine, W - 2 * ML);

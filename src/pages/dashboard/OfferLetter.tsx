@@ -28,7 +28,7 @@ export default function OfferLetter() {
   const [offerLetterNumber, setOfferLetterNumber] = useState<string>('');
 
   useEffect(() => {
-    loadImageAsDataUrl('/ii.png').then(setHeaderImg).catch(console.error);
+    loadImageAsDataUrl('/offer-letter-header.png').then(setHeaderImg).catch(console.error);
     loadImageAsDataUrl('/ff.png').then(setFooterImg).catch(console.error);
     loadImageAsDataUrl('/dded.jpeg', 'image/jpeg').then(setWatermarkImg).catch(console.error);
   }, []);
