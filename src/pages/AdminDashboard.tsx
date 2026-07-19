@@ -111,6 +111,17 @@ interface StudentReport {
   uploadedAt?: string;
 }
 
+interface CyberCafeSummary {
+  id: string;
+  name: string;
+  totalStudents: number;
+  successfulStudents: number;
+  pendingStudents: number;
+  paidAmount: number;
+  colleges: Set<string>;
+  domains: Set<string>;
+}
+
 export default function AdminDashboard() {
   const { user, adminProfile } = useAuth();
   const navigate = useNavigate();
@@ -130,6 +141,10 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [collegeFilter, setCollegeFilter] = useState('');
   const [domainFilter, setDomainFilter] = useState('');
+  const [cyberCafeSearch, setCyberCafeSearch] = useState('');
+  const [cyberCafePaymentFilter, setCyberCafePaymentFilter] = useState('');
+  const [cyberCafeCollegeFilter, setCyberCafeCollegeFilter] = useState('');
+  const [cyberCafeDomainFilter, setCyberCafeDomainFilter] = useState('');
   const [exportCollege, setExportCollege] = useState('');
   const [passwordUser, setPasswordUser] = useState<UserProfile | null>(null);
   const [passwordForm, setPasswordForm] = useState({ password: '', confirmPassword: '' });
@@ -199,6 +214,14 @@ export default function AdminDashboard() {
   const [subUsersPerPage, setSubUsersPerPage] = useState(10);
   const isSubUser = adminProfile?.role === 'sub_user';
   const canManageAdminDashboard = !isSubUser;
+  const canOperateDashboardPayments = adminProfile?.role !== 'teacher';
+  const [activeAdminTab, setActiveAdminTab] = useState('dashboard');
+
+  useEffect(() => {
+    if (isSubUser && !['dashboard', 'cyber-cafe-summary'].includes(activeAdminTab)) {
+      setActiveAdminTab('dashboard');
+    }
+  }, [activeAdminTab, isSubUser]);
 
   // Reset pages when filters change
   useEffect(() => {
@@ -1145,7 +1168,87 @@ export default function AdminDashboard() {
   const successfulUsersCount = successfulUsers.length;
   const pendingUsersCount = users.length - successfulUsersCount;
   const totalAmount = payments.filter(p => p.status === 'success').reduce((sum, p) => sum + (p.amount || 0), 0);
+  const formatCompactRupees = (amount: number) => {
+    if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(amount >= 100000000 ? 1 : 2)} Cr`;
+    if (amount >= 100000) return `₹${(amount / 100000).toFixed(amount >= 1000000 ? 1 : 2)} L`;
+    return `₹${amount.toLocaleString('en-IN')}`;
+  };
+  const successfulPaymentsByUser = payments
+    .filter((payment) => payment.status === 'success' && payment.userId)
+    .reduce<Record<string, number>>((acc, payment) => {
+      acc[payment.userId] = (acc[payment.userId] || 0) + (payment.amount || 0);
+      return acc;
+    }, {});
   const emitraStudentsCount = users.filter((student) => student.createdByEmitraId).length;
+
+  const cyberCafeStudents = users.filter((student) => {
+    if (!student.createdByEmitraId) return false;
+
+    const paymentMatch =
+      !cyberCafePaymentFilter ||
+      (cyberCafePaymentFilter === 'success' && isUserSuccessful(student)) ||
+      (cyberCafePaymentFilter === 'pending' && !isUserSuccessful(student));
+
+    const collegeMatch =
+      !cyberCafeCollegeFilter ||
+      getGroupName(student.college) === cyberCafeCollegeFilter;
+
+    const domainMatch =
+      !cyberCafeDomainFilter ||
+      getGroupName(student.internshipDomain) === cyberCafeDomainFilter;
+
+    const searchText = [
+      student.createdByEmitraName,
+      student.createdByEmitraId,
+      student.fullName,
+      student.email,
+      student.college,
+      student.internshipDomain,
+    ].join(' ').toLowerCase();
+    const searchMatch = !cyberCafeSearch.trim() || searchText.includes(cyberCafeSearch.trim().toLowerCase());
+
+    return paymentMatch && collegeMatch && domainMatch && searchMatch;
+  });
+
+  const cyberCafeSummaryMap = cyberCafeStudents.reduce<Record<string, CyberCafeSummary>>((acc, student) => {
+    const id = student.createdByEmitraId || 'unknown';
+    if (!acc[id]) {
+      acc[id] = {
+        id,
+        name: student.createdByEmitraName || id,
+        totalStudents: 0,
+        successfulStudents: 0,
+        pendingStudents: 0,
+        paidAmount: 0,
+        colleges: new Set<string>(),
+        domains: new Set<string>(),
+      };
+    }
+
+    const successful = isUserSuccessful(student);
+    acc[id].totalStudents += 1;
+    acc[id].successfulStudents += successful ? 1 : 0;
+    acc[id].pendingStudents += successful ? 0 : 1;
+    acc[id].paidAmount += successfulPaymentsByUser[student.uid] || 0;
+    acc[id].colleges.add(getGroupName(student.college));
+    acc[id].domains.add(getGroupName(student.internshipDomain));
+
+    return acc;
+  }, {});
+
+  const cyberCafeSummary: CyberCafeSummary[] = Object.keys(cyberCafeSummaryMap)
+    .map((id) => cyberCafeSummaryMap[id])
+    .sort((a, b) => b.totalStudents - a.totalStudents || b.paidAmount - a.paidAmount);
+
+  const cyberCafeTotals = cyberCafeSummary.reduce(
+    (acc, cafe) => ({
+      totalStudents: acc.totalStudents + cafe.totalStudents,
+      successfulStudents: acc.successfulStudents + cafe.successfulStudents,
+      pendingStudents: acc.pendingStudents + cafe.pendingStudents,
+      paidAmount: acc.paidAmount + cafe.paidAmount,
+    }),
+    { totalStudents: 0, successfulStudents: 0, pendingStudents: 0, paidAmount: 0 }
+  );
 
   const getEmitraStudents = (emitraId: string) =>
     users.filter((student) => student.createdByEmitraId === emitraId);
@@ -1522,12 +1625,28 @@ export default function AdminDashboard() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto p-8">
-        <Tabs defaultValue="dashboard" className="gap-6 flex-col">
+        <Tabs
+          value={activeAdminTab}
+          onValueChange={(value) => {
+            if (isSubUser && !['dashboard', 'cyber-cafe-summary'].includes(value)) {
+              setActiveAdminTab('dashboard');
+              return;
+            }
+            setActiveAdminTab(value);
+          }}
+          className="gap-6 flex-col"
+        >
           <TabsList className="bg-white border border-slate-100 shadow-lg h-12 p-1">
             <TabsTrigger value="dashboard" className="px-6 py-2 font-black">
               <LayoutDashboard size={16} />
               Dashboard
             </TabsTrigger>
+            {canOperateDashboardPayments && (
+              <TabsTrigger value="cyber-cafe-summary" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                <Building2 size={14} />
+                Cyber Cafe Summary
+              </TabsTrigger>
+            )}
             {canManageAdminDashboard && (
               <>
                 <TabsTrigger value="teachers" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
@@ -1568,7 +1687,7 @@ export default function AdminDashboard() {
 
           <TabsContent value="dashboard" className="space-y-8 mt-4">
             {/* Stats Grid */}
-            {canManageAdminDashboard && (
+            {canOperateDashboardPayments && (
               <div className="student-card p-4 bg-white/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-black text-slate-900">Razorpay Payment Sync</h3>
@@ -1607,7 +1726,12 @@ export default function AdminDashboard() {
                   </div>
                   <span className="text-slate-500 font-black uppercase tracking-wider text-[10px]">Total Amount</span>
                 </div>
-                <p className="text-3xl sm:text-4xl font-black text-slate-900">₹{totalAmount.toLocaleString()}</p>
+                <p
+                  className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight whitespace-nowrap"
+                  title={`₹${totalAmount.toLocaleString('en-IN')}`}
+                >
+                  {formatCompactRupees(totalAmount)}
+                </p>
                 <p className="text-[10px] text-slate-400 font-bold mt-1">{successfulUsersCount} successful payments</p>
                 <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-emerald-600/5 rounded-full" />
               </div>
@@ -1634,6 +1758,160 @@ export default function AdminDashboard() {
                 <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-amber-600/5 rounded-full" />
               </div>
             </div>
+
+          </TabsContent>
+
+          <TabsContent value="cyber-cafe-summary" className="space-y-8 mt-4">
+            <div className="student-card bg-white/80 overflow-hidden">
+              <div className="p-6 border-b border-slate-100/70 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+                <div className="flex items-start gap-3">
+                  <div className="student-icon bg-indigo-50 text-indigo-600 ring-indigo-100">
+                    <Building2 size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900 gradient-text">Cyber Cafe Student Summary</h2>
+                    <p className="text-sm font-semibold text-slate-500 mt-1">
+                      Track how many students each cyber cafe has registered and how many are paid or pending.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full lg:w-auto">
+                  <div className="rounded-2xl bg-slate-50 border border-slate-100 px-4 py-3">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Students</p>
+                    <p className="mt-1 text-lg font-black text-slate-900">{cyberCafeTotals.totalStudents}</p>
+                  </div>
+                  <div className="rounded-2xl bg-emerald-50 border border-emerald-100 px-4 py-3">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Success</p>
+                    <p className="mt-1 text-lg font-black text-emerald-700">{cyberCafeTotals.successfulStudents}</p>
+                  </div>
+                  <div className="rounded-2xl bg-amber-50 border border-amber-100 px-4 py-3">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-amber-600">Pending</p>
+                    <p className="mt-1 text-lg font-black text-amber-700">{cyberCafeTotals.pendingStudents}</p>
+                  </div>
+                  <div className="rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-blue-600">Amount</p>
+                    <p className="mt-1 text-lg font-black text-blue-700 whitespace-nowrap" title={`₹${cyberCafeTotals.paidAmount.toLocaleString('en-IN')}`}>
+                      {formatCompactRupees(cyberCafeTotals.paidAmount)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-b border-slate-100/70 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div>
+                  <Label className="student-label block mb-2">Search Cyber Cafe</Label>
+                  <Input
+                    value={cyberCafeSearch}
+                    onChange={(event) => setCyberCafeSearch(event.target.value)}
+                    placeholder="Cafe, student, email..."
+                    className="student-input"
+                  />
+                </div>
+                <div>
+                  <Label className="student-label block mb-2">Payment Status</Label>
+                  <select
+                    value={cyberCafePaymentFilter}
+                    onChange={(event) => setCyberCafePaymentFilter(event.target.value)}
+                    className="student-input"
+                  >
+                    <option value="">All Students</option>
+                    <option value="success">Success Only</option>
+                    <option value="pending">Pending Only</option>
+                  </select>
+                </div>
+                <div>
+                  <Label className="student-label block mb-2">College</Label>
+                  <select
+                    value={cyberCafeCollegeFilter}
+                    onChange={(event) => setCyberCafeCollegeFilter(event.target.value)}
+                    className="student-input"
+                  >
+                    <option value="">All Colleges</option>
+                    {uniqueColleges.map((college) => (
+                      <option key={college} value={college}>{college}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label className="student-label block mb-2">Domain</Label>
+                  <select
+                    value={cyberCafeDomainFilter}
+                    onChange={(event) => setCyberCafeDomainFilter(event.target.value)}
+                    className="student-input"
+                  >
+                    <option value="">All Domains</option>
+                    {uniqueDomains.map((domain) => (
+                      <option key={domain} value={domain}>{domain}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {cyberCafeSummary.length === 0 ? (
+                <div className="p-10 text-center">
+                  <Building2 size={44} className="text-slate-300 mx-auto mb-3" />
+                  <p className="text-sm font-bold text-slate-500">No cyber cafe students found for selected filters.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[920px] table-auto">
+                    <thead className="bg-slate-50/60">
+                      <tr>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Cyber Cafe</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Students</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Success</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Pending</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Paid Amount</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Colleges</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Domains</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cyberCafeSummary.map((cafe) => (
+                        <tr key={cafe.id} className="border-b border-slate-100/60 hover:bg-indigo-50/10 transition-colors">
+                          <td className="p-4">
+                            <div className="font-black text-slate-900">{cafe.name}</div>
+                            <div className="text-xs text-slate-400 font-semibold">{cafe.id}</div>
+                          </td>
+                          <td className="p-4">
+                            <span className="inline-flex px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-black uppercase tracking-wider">
+                              {cafe.totalStudents}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 text-xs font-black uppercase tracking-wider">
+                              <CheckCircle2 size={12} />
+                              {cafe.successfulStudents}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-100 text-xs font-black uppercase tracking-wider">
+                              <Clock size={12} />
+                              {cafe.pendingStudents}
+                            </span>
+                          </td>
+                          <td className="p-4 text-slate-900 font-black" title={`₹${cafe.paidAmount.toLocaleString('en-IN')}`}>
+                            {formatCompactRupees(cafe.paidAmount)}
+                          </td>
+                          <td className="p-4 text-slate-600 text-xs font-bold max-w-[220px]">
+                            {Array.from(cafe.colleges).slice(0, 3).join(', ')}
+                            {cafe.colleges.size > 3 ? ` +${cafe.colleges.size - 3}` : ''}
+                          </td>
+                          <td className="p-4 text-slate-600 text-xs font-bold max-w-[220px]">
+                            {Array.from(cafe.domains).slice(0, 3).join(', ')}
+                            {cafe.domains.size > 3 ? ` +${cafe.domains.size - 3}` : ''}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+          </TabsContent>
+
+          <TabsContent value="dashboard" className="space-y-8 mt-4">
             {/* FILTERS */}
             <div className="grid md:grid-cols-2 gap-6 mb-8">
 
@@ -1807,7 +2085,7 @@ export default function AdminDashboard() {
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Payment Status</th>
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Registered</th>
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Source</th>
-                        {canManageAdminDashboard && (
+                        {canOperateDashboardPayments && (
                           <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">
                             Action
                           </th>
@@ -1872,7 +2150,7 @@ export default function AdminDashboard() {
                               </span>
                             )}
                           </td>
-                          {canManageAdminDashboard && (
+                          {canOperateDashboardPayments && (
                             <td className="p-4">
                               <div className="flex flex-wrap gap-2">
 

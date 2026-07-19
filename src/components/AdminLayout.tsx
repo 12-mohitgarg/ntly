@@ -152,7 +152,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
             <div className="min-w-0">
               <p className="text-[8px] font-black uppercase tracking-wider text-blue-500">
-                {isTeacher ? 'Teacher Portal' : isSubUser ? 'Dashboard Viewer' : 'Admin Area'}
+                {isTeacher ? 'Teacher Portal' : isSubUser ? 'Dashboard Operator' : 'Admin Area'}
               </p>
               <h4 className="truncate text-xs font-bold text-slate-200 mt-0.5" title={adminProfile?.email || 'Administrator'}>
                 {adminProfile?.email?.split('@')[0] || 'Admin'}
@@ -295,7 +295,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex flex-col text-right">
               <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 leading-none">
-                {isTeacher ? 'Teacher' : isSubUser ? 'Sub User' : 'Administrator'}
+                {isTeacher ? 'Teacher' : isSubUser ? 'Dashboard Operator' : 'Administrator'}
               </p>
               <h4 className="text-xs font-bold text-slate-800 mt-1 max-w-[150px] truncate leading-none">
                 {adminProfile?.email?.split('@')[0] || 'Console'}

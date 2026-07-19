@@ -1,4 +1,4 @@
-const { json, requireAdmin } = require('./utils/firebase-admin');
+const { json, requireDashboardOperator } = require('./utils/firebase-admin');
 const { reconcilePayments } = require('./utils/payment-reconcile-core');
 
 exports.handler = async (event) => {
@@ -7,7 +7,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const authResult = await requireAdmin(event);
+    const authResult = await requireDashboardOperator(event);
     if (!authResult.allowed) {
       return authResult.response;
     }

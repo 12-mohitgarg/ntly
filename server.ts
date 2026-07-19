@@ -106,6 +106,42 @@ const requireAdmin = async (req: Request, res: Response, next: NextFunction) => 
   }
 };
 
+const requireDashboardOperator = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+
+    if (!token) {
+      return res.status(401).json({ error: "Missing authorization token" });
+    }
+
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const email = String(decodedToken.email || "").toLowerCase();
+
+    if (email === "admin@internmitra.com" || email === "gargmohit8306@gmail.com") {
+      return next();
+    }
+
+    const adminDoc = await admin.firestore().collection("admins").doc(decodedToken.uid).get();
+    const adminData = adminDoc.exists ? adminDoc.data() : null;
+    const isAllowedOperator =
+      adminData?.isActive === true &&
+      ["admin", "super_admin", "sub_user"].includes(String(adminData?.role || ""));
+
+    if (!isAllowedOperator) {
+      return res.status(403).json({ error: "Only dashboard operators can perform this action" });
+    }
+
+    next();
+  } catch (error: any) {
+    console.error("Dashboard operator authorization error:", error);
+    res.status(401).json({
+      error: "Unable to verify dashboard operator session",
+      details: error?.message || "Unknown authorization error",
+    });
+  }
+};
+
 async function getDecodedToken(req: Request) {
   const authHeader = req.headers.authorization || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
@@ -190,7 +226,7 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", environment: process.env.NODE_ENV });
 });
 
-app.patch("/api/admin/users/:uid/password", requireAdmin, async (req, res) => {
+app.patch("/api/admin/users/:uid/password", requireDashboardOperator, async (req, res) => {
   try {
     const { uid } = req.params;
     const { password } = req.body;
@@ -548,7 +584,7 @@ async function getSuccessfulPaymentForOrder(razorpay: Razorpay, orderData: any) 
   );
 }
 
-app.post("/api/payment/reconcile", requireAdmin, async (req, res) => {
+app.post("/api/payment/reconcile", requireDashboardOperator, async (req, res) => {
   try {
     const decodedToken = await getDecodedToken(req);
     const { keyId, keySecret } = await getRazorpayConfig();

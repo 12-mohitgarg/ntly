@@ -52,6 +52,18 @@ service cloud.firestore {
         'hasPaid',
         'paymentStatus',
         'paymentVerifiedAt',
+        'paymentRejectedAt',
+        'razorpayOrderId',
+        'razorpayPaymentId'
+      ]);
+    }
+    function onlyPaymentProtectedFieldsChanged() {
+      return incoming().diff(existing()).affectedKeys().hasOnly([
+        'isPaid',
+        'hasPaid',
+        'paymentStatus',
+        'paymentVerifiedAt',
+        'paymentRejectedAt',
         'razorpayOrderId',
         'razorpayPaymentId'
       ]);
@@ -77,6 +89,7 @@ service cloud.firestore {
   // Update own profile or admin
   allow update: if isSignedIn() &&
                  (isAdmin() ||
+                  (isSubUser() && onlyPaymentProtectedFieldsChanged()) ||
                   (request.auth.uid == userId && !paymentProtectedFieldsChanged()) ||
                   (isEmitra() && resource.data.createdByEmitraId == request.auth.uid && !paymentProtectedFieldsChanged()));
 }
@@ -84,7 +97,7 @@ service cloud.firestore {
     match /payments/{paymentId} {
       // Admins manage the verification queue
       allow read: if isAdmin() || isSubUser();
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isSubUser();
       allow get, list: if isEmitra() && resource.data.createdByEmitraId == request.auth.uid;
 
       // Users can read their own verified payment records. Creation is server-only.
