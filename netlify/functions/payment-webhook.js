@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const Razorpay = require('razorpay');
 const { getAdminApp, json } = require('./utils/firebase-admin');
 const { getRazorpayConfig } = require('./utils/payment-config');
 
@@ -77,15 +78,32 @@ async function markPaymentSuccess(firebaseAdmin, payment, verifiedBy) {
   };
 }
 
+function getRawBody(event) {
+  const body = event.body || '';
+  return event.isBase64Encoded ? Buffer.from(body, 'base64').toString('utf8') : body;
+}
+
+async function recordWebhookEvent(firebaseAdmin, payload, status, details = {}) {
+  await firebaseAdmin.firestore().collection('paymentWebhookEvents').add({
+    event: payload?.event || 'unknown',
+    paymentId: payload?.payload?.payment?.entity?.id || null,
+    orderId: payload?.payload?.payment?.entity?.order_id || null,
+    status,
+    details,
+    receivedAt: new Date().toISOString(),
+  });
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return json(405, { error: 'Method Not Allowed' });
   }
 
   try {
-    const rawBody = event.body || '';
+    const rawBody = getRawBody(event);
     const signature = event.headers['x-razorpay-signature'] || event.headers['X-Razorpay-Signature'] || '';
-    const { webhookSecret } = await getRazorpayConfig();
+    const firebaseAdmin = getAdminApp();
+    const { keyId, keySecret, webhookSecret } = await getRazorpayConfig();
 
     if (!webhookSecret) {
       return json(500, { error: 'Razorpay webhook secret is not configured' });
@@ -98,13 +116,27 @@ exports.handler = async (event) => {
     const payload = JSON.parse(rawBody);
     const eventName = payload?.event;
 
-    if (eventName !== 'payment.captured') {
+    if (!['payment.captured', 'payment.authorized'].includes(eventName)) {
+      await recordWebhookEvent(firebaseAdmin, payload, 'ignored');
       return json(200, { status: 'ignored', event: eventName });
     }
 
-    const firebaseAdmin = getAdminApp();
-    const payment = payload?.payload?.payment?.entity;
+    let payment = payload?.payload?.payment?.entity;
+
+    if (eventName === 'payment.authorized') {
+      const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+      const orderSnap = await firebaseAdmin.firestore().collection('paymentOrders').doc(payment.order_id).get();
+
+      if (!orderSnap.exists) {
+        throw Object.assign(new Error(`Payment order ${payment.order_id} not found`), { statusCode: 404 });
+      }
+
+      const orderData = orderSnap.data();
+      payment = await razorpay.payments.capture(payment.id, Number(orderData.amountPaise), orderData.currency || 'INR');
+    }
+
     const result = await markPaymentSuccess(firebaseAdmin, payment, 'razorpay_webhook');
+    await recordWebhookEvent(firebaseAdmin, payload, 'success', result);
 
     return json(200, {
       status: 'success',
