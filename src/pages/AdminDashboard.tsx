@@ -806,6 +806,7 @@ export default function AdminDashboard() {
       const endpoints = ['/api/payment/reconcile', '/.netlify/functions/payment-reconcile'];
       let response: Response | null = null;
       let result: any = null;
+      const endpointErrors: string[] = [];
 
       for (const endpoint of endpoints) {
         response = await fetch(endpoint, {
@@ -816,7 +817,11 @@ export default function AdminDashboard() {
         });
         result = await response.json().catch(() => null);
 
-        if (response.status !== 404) break;
+        if (response.ok) break;
+
+        endpointErrors.push(
+          `${endpoint} -> ${response.status}: ${result?.message || result?.details || result?.error || 'No details'}`
+        );
       }
 
       if (!response || !response.ok) {
@@ -824,7 +829,7 @@ export default function AdminDashboard() {
           ? ` Failures: ${result.failures.map((failure: any) => `${failure.orderId}: ${failure.message}`).join('; ')}`
           : '';
         throw new Error(
-          `Sync failed (${response?.status || 'no response'}). ${result?.message || result?.details || result?.error || 'Unable to sync Razorpay payments'}${failureText}`
+          `Sync failed (${response?.status || 'no response'}). ${result?.message || result?.details || result?.error || 'Unable to sync Razorpay payments'}${failureText}${endpointErrors.length ? `\n${endpointErrors.join('\n')}` : ''}`
         );
       }
 

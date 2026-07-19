@@ -134,9 +134,16 @@ exports.handler = async (event) => {
     });
   } catch (error) {
     console.error('Payment reconcile error:', error);
-    return json(500, {
+    return json(error?.statusCode || 500, {
       status: 'error',
-      message: error?.message || 'Unable to reconcile payments',
+      message: error?.message || error?.description || 'Unable to reconcile payments',
+      details:
+        error?.error?.description ||
+        error?.error?.reason ||
+        error?.description ||
+        error?.message ||
+        'Unknown reconcile error',
+      code: error?.error?.code || error?.code || null,
     });
   }
 };

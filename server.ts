@@ -566,7 +566,14 @@ app.post("/api/payment/reconcile", requireAdmin, async (req, res) => {
     console.error("Payment reconcile error:", error);
     res.status(error?.statusCode || 500).json({
       status: "error",
-      message: error?.message || "Unable to reconcile payments",
+      message: error?.message || error?.description || "Unable to reconcile payments",
+      details:
+        error?.error?.description ||
+        error?.error?.reason ||
+        error?.description ||
+        error?.message ||
+        "Unknown reconcile error",
+      code: error?.error?.code || error?.code || null,
     });
   }
 });
