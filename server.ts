@@ -351,7 +351,7 @@ app.post("/api/payment/verify", async (req, res) => {
     if (
       payment.order_id !== razorpay_order_id ||
       Number(payment.amount) !== Number(orderData.amountPaise) ||
-      !["captured", "authorized"].includes(payment.status)
+      payment.status !== "captured"
     ) {
       return res.status(400).json({ status: "failure", message: "Payment details did not match the order" });
     }

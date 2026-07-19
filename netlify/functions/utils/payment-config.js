@@ -12,12 +12,18 @@ async function getRazorpayConfig() {
   const data = snap.exists ? snap.data() : {};
   const keyId = data?.keyId || process.env.RAZORPAY_KEY_ID || '';
   const keySecret = data?.keySecret || process.env.RAZORPAY_KEY_SECRET || '';
+  const webhookSecret = data?.webhookSecret || process.env.RAZORPAY_WEBHOOK_SECRET || '';
 
   if (!keyId || !keySecret) {
     throw new Error('Razorpay keys are not configured');
   }
 
-  return { keyId, keySecret, source: data?.keyId ? 'database' : 'environment' };
+  return {
+    keyId,
+    keySecret,
+    webhookSecret,
+    source: data?.keyId ? 'database' : 'environment'
+  };
 }
 
 module.exports = {

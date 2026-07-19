@@ -17,6 +17,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/payment/webhook"
+  to = "/.netlify/functions/payment-webhook"
+  status = 200
+
+[[redirects]]
   from = "/api/admin/users/:uid/password"
   to = "/.netlify/functions/admin-user-password?uid=:uid"
   status = 200

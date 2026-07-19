@@ -26,15 +26,17 @@ exports.handler = async (event) => {
 
       return json(200, {
         hasDatabaseConfig: Boolean(data?.keyId && data?.keySecret),
+        hasWebhookSecret: Boolean(data?.webhookSecret || process.env.RAZORPAY_WEBHOOK_SECRET),
         keyId: data?.keyId || envKeyId || '',
         keyIdMasked: maskKey(data?.keyId || envKeyId || ''),
+        webhookSecretMasked: maskKey(data?.webhookSecret || process.env.RAZORPAY_WEBHOOK_SECRET || ''),
         source: data?.keyId ? 'database' : envKeyId ? 'environment' : 'missing',
         updatedAt: data?.updatedAt || null,
         updatedBy: data?.updatedBy || null,
       });
     }
 
-    const { keyId, keySecret } = JSON.parse(event.body || '{}');
+    const { keyId, keySecret, webhookSecret } = JSON.parse(event.body || '{}');
 
     if (typeof keyId !== 'string' || !keyId.startsWith('rzp_')) {
       return json(400, { error: 'Enter a valid Razorpay key id' });
@@ -52,11 +54,16 @@ exports.handler = async (event) => {
       updatedByEmail: authResult.decodedToken.email || '',
     };
 
+    if (typeof webhookSecret === 'string' && webhookSecret.trim()) {
+      payload.webhookSecret = webhookSecret.trim();
+    }
+
     await settingsRef.set(payload, { merge: true });
 
     return json(200, {
       status: 'success',
       keyIdMasked: maskKey(payload.keyId),
+      webhookSecretMasked: maskKey(payload.webhookSecret || ''),
       updatedAt: payload.updatedAt,
       source: 'database',
     });
