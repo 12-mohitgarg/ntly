@@ -1,4 +1,5 @@
 const { sendEmail } = require('./mailer');
+const { createOfferLetterAttachment } = require('./offer-letter-pdf');
 
 function successEmailHtml(student) {
   const studentName = student?.fullName || 'Student';
@@ -36,14 +37,18 @@ async function sendPaymentSuccessEmail(firebaseAdmin, userId, paymentId) {
     return { skipped: true, reason: 'already_sent' };
   }
 
+  const attachment = await createOfferLetterAttachment(firebaseAdmin, userId, student);
+
   const result = await sendEmail({
     to,
     subject: 'Your InternMitra Internship Acceptance Letter',
     html: successEmailHtml(student),
+    attachments: [attachment],
   });
 
   await userRef.set({
     paymentSuccessEmailSentAt: new Date().toISOString(),
+    paymentSuccessEmailAttachment: attachment.filename,
     paymentSuccessEmailProvider: result.provider || 'smtp',
     paymentSuccessEmailId: result.messageId || null,
     paymentSuccessEmailForPaymentId: paymentId || null,

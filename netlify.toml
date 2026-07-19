@@ -5,6 +5,7 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "nft"
+  included_files = ["public/offer-letter-header.png", "public/ff.png", "public/dded.jpeg"]
 
 [functions."payment-reconcile-scheduled"]
   schedule = "*/5 * * * *"
