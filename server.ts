@@ -351,7 +351,19 @@ app.post("/api/payment/verify", async (req, res) => {
     }
 
     const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
-    const payment = await razorpay.payments.fetch(razorpay_payment_id);
+    let payment = await razorpay.payments.fetch(razorpay_payment_id);
+
+    if (
+      payment.order_id === razorpay_order_id &&
+      Number(payment.amount) === Number(orderData.amountPaise) &&
+      payment.status === "authorized"
+    ) {
+      payment = await razorpay.payments.capture(
+        razorpay_payment_id,
+        Number(orderData.amountPaise),
+        orderData.currency || payment.currency || "INR"
+      );
+    }
 
     if (
       payment.order_id !== razorpay_order_id ||

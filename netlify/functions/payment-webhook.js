@@ -3,6 +3,7 @@ const Razorpay = require('razorpay');
 const { getAdminApp, json } = require('./utils/firebase-admin');
 const { getRazorpayConfig } = require('./utils/payment-config');
 const { sendPaymentSuccessEmail } = require('./utils/payment-success-email');
+const { getSuccessfulPaymentForOrder, markPaymentSuccess } = require('./utils/payment-reconcile-core');
 
 function verifyWebhookSignature(body, signature, webhookSecret) {
   const expected = crypto
@@ -13,7 +14,7 @@ function verifyWebhookSignature(body, signature, webhookSecret) {
   return expected === signature;
 }
 
-async function markPaymentSuccess(firebaseAdmin, payment, verifiedBy) {
+async function markWebhookPaymentSuccess(firebaseAdmin, payment, verifiedBy) {
   const orderId = payment?.order_id;
   const paymentId = payment?.id;
 
@@ -117,14 +118,39 @@ exports.handler = async (event) => {
     const payload = JSON.parse(rawBody);
     const eventName = payload?.event;
 
-    if (!['payment.captured', 'payment.authorized'].includes(eventName)) {
+    if (!['payment.captured', 'payment.authorized', 'order.paid'].includes(eventName)) {
       await recordWebhookEvent(firebaseAdmin, payload, 'ignored');
       return json(200, { status: 'ignored', event: eventName });
     }
 
     let payment = payload?.payload?.payment?.entity;
+    let result = null;
 
-    if (eventName === 'payment.authorized') {
+    if (eventName === 'order.paid') {
+      const order = payload?.payload?.order?.entity;
+      const orderSnap = await firebaseAdmin.firestore().collection('paymentOrders').doc(order.id).get();
+
+      if (!orderSnap.exists) {
+        throw Object.assign(new Error(`Payment order ${order.id} not found`), { statusCode: 404 });
+      }
+
+      const orderData = orderSnap.data();
+      const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+      payment = await getSuccessfulPaymentForOrder(razorpay, orderData);
+
+      if (!payment) {
+        throw Object.assign(new Error(`No successful payment found for order ${order.id}`), { statusCode: 404 });
+      }
+
+      await markPaymentSuccess(firebaseAdmin, orderData, payment, 'razorpay_webhook');
+      result = {
+        userId: orderData.userId,
+        paymentId: payment.id,
+        orderId: order.id,
+      };
+    }
+
+    if (!result && eventName === 'payment.authorized') {
       const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
       const orderSnap = await firebaseAdmin.firestore().collection('paymentOrders').doc(payment.order_id).get();
 
@@ -136,7 +162,9 @@ exports.handler = async (event) => {
       payment = await razorpay.payments.capture(payment.id, Number(orderData.amountPaise), orderData.currency || 'INR');
     }
 
-    const result = await markPaymentSuccess(firebaseAdmin, payment, 'razorpay_webhook');
+    if (!result) {
+      result = await markWebhookPaymentSuccess(firebaseAdmin, payment, 'razorpay_webhook');
+    }
     let emailResult = null;
     try {
       emailResult = await sendPaymentSuccessEmail(firebaseAdmin, result.userId, result.paymentId);

@@ -6,6 +6,9 @@
   directory = "netlify/functions"
   node_bundler = "nft"
 
+[functions."payment-reconcile-scheduled"]
+  schedule = "*/5 * * * *"
+
 [[redirects]]
   from = "/api/payment/order"
   to = "/.netlify/functions/payment-order"
