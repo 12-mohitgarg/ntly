@@ -14,7 +14,6 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import {
   DEGREES,
   GENDERS,
-  SESSIONS,
   SEMESTERS
 } from '../lib/constants';
 import {
@@ -63,6 +62,8 @@ const WhatsAppIcon = ({ size = 20, className = "" }: { size?: number; className?
   </svg>
 );
 
+const REGISTRATION_SESSIONS = ['2023-27', '2024-28', '2025-29', '2026-30'];
+
 let registrationConfigCache: {
   districts: District[];
   colleges: College[];
@@ -104,7 +105,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
     degree: '',
     department: '',
     subject: '',
-    session: '',
+    session: '2023-27',
     semester: 'Semester 5',
     universityRoll: '',
     internshipDomain: '',
@@ -438,43 +439,45 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
       {/* STEPPER TIMELINE */}
       <section className="max-w-4xl mx-auto px-4 mb-10">
-        <div className="flex items-center justify-between w-full relative z-0">
-          {stepsList.map((s, i) => {
-            const isCompleted = step > i + 1;
-            const isActive = step === i + 1;
+        <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:overflow-visible sm:mx-0 sm:px-0">
+          <div className="flex items-start justify-start sm:justify-between min-w-[520px] sm:min-w-0 w-full relative z-0">
+            {stepsList.map((s, i) => {
+              const isCompleted = step > i + 1;
+              const isActive = step === i + 1;
 
-            return (
-              <React.Fragment key={i}>
-                {/* Horizontal connecting lines */}
-                {i > 0 && (
-                  <div className={`flex-1 h-0.5 mx-1 sm:mx-4 self-start mt-[18px] transition-colors duration-500 ${step > i
-                    ? 'bg-blue-600'
-                    : 'border-t-2 border-dashed border-slate-200'
-                    }`} />
-                )}
+              return (
+                <React.Fragment key={i}>
+                  {/* Horizontal connecting lines */}
+                  {i > 0 && (
+                    <div className={`flex-1 h-0.5 mx-1 sm:mx-4 self-start mt-[18px] transition-colors duration-500 ${step > i
+                      ? 'bg-blue-600'
+                      : 'border-t-2 border-dashed border-slate-200'
+                      }`} />
+                  )}
 
-                {/* Step Circle & Description */}
-                <div className="flex flex-col items-center space-y-2.5 z-10 shrink-0">
-                  <div className={`w-9.5 h-9.5 rounded-full flex items-center justify-center border-2 text-xs font-black shadow-sm transition-all duration-300 ${isCompleted
-                    ? 'bg-blue-650 border-blue-650 text-white'
-                    : isActive
-                      ? 'bg-blue-600 border-blue-600 text-white scale-105'
-                      : 'bg-white border-slate-200 text-slate-400'
-                    }`}>
-                    {isCompleted ? '✓' : i + 1}
+                  {/* Step Circle & Description */}
+                  <div className="flex flex-col items-center space-y-2.5 z-10 shrink-0">
+                    <div className={`w-9.5 h-9.5 rounded-full flex items-center justify-center border-2 text-xs font-black shadow-sm transition-all duration-300 ${isCompleted
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : isActive
+                        ? 'bg-blue-600 border-blue-600 text-white scale-105'
+                        : 'bg-white border-slate-200 text-slate-400'
+                      }`}>
+                      {i + 1}
+                    </div>
+                    <div className="text-center">
+                      <span className={`text-[10px] md:text-xs block font-black leading-none ${isActive ? 'text-blue-600' : 'text-slate-700'}`}>
+                        {s.title}
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-bold tracking-tight hidden sm:block mt-0.5">
+                        {s.sub}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <span className={`text-[10px] md:text-xs block font-black leading-none ${isActive ? 'text-blue-600' : 'text-slate-805'}`}>
-                      {s.title}
-                    </span>
-                    <span className="text-[9px] text-slate-400 font-bold tracking-tight hidden sm:block mt-0.5">
-                      {s.sub}
-                    </span>
-                  </div>
-                </div>
-              </React.Fragment>
-            );
-          })}
+                </React.Fragment>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -621,9 +624,13 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                   </div>
 
                   <div className="space-y-1.5 text-left">
-                    <Label htmlFor="department" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Branch *</Label>
+                    <Label htmlFor="department" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Department *</Label>
                     <select name="department" value={formData.department} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
+<<<<<<< HEAD
                       <option value="">Department</option>
+=======
+                      <option value="">Select Department</option>
+>>>>>>> 4212c7bec5618c5ced4bc7260cce4edf9e910f0a
                       {degrees.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
                     </select>
                   </div>
@@ -639,8 +646,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                   <div className="space-y-1.5 text-left">
                     <Label htmlFor="session" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Session *</Label>
                     <select name="session" value={formData.session} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
-                      <option value="">Session</option>
-                      {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                      {REGISTRATION_SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
 
@@ -653,8 +659,8 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                   </div>
 
                   <div className="space-y-1.5 text-left">
-                    <Label htmlFor="universityRoll" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Roll Number *</Label>
-                    <Input id="universityRoll" name="universityRoll" value={formData.universityRoll} onChange={handleChange} placeholder="As per ID Card" className="h-12 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm" />
+                    <Label htmlFor="universityRoll" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">University Registration Number *</Label>
+                    <Input id="universityRoll" name="universityRoll" value={formData.universityRoll} onChange={handleChange} placeholder="As per university record" className="h-12 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm" />
                   </div>
 
                   <div className="space-y-1.5 text-left">
@@ -709,7 +715,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     </h4>
 
                     <p>
-                      I, <strong className="text-slate-955">{formData.fullName || '[Full Name]'}</strong>, son/daughter of <strong className="text-slate-955">{formData.parentName || '[Parent/Guardian Name]'}</strong>, student of <strong className="text-slate-955">{formData.college || '[College Name]'}</strong> pursuing <strong className="text-slate-955">{formData.degree || '[Degree]'}</strong> (Roll No: <strong className="text-slate-955">{formData.universityRoll || '[Roll Number]'}</strong>), hereby declare that I will diligently undertake the UGC-mandated Internship Program in <strong className="text-blue-700">{formData.internshipDomain || '[Internship Domain]'}</strong> starting from the registered academic session.
+                      I, <strong className="text-slate-955">{formData.fullName || '[Full Name]'}</strong>, son/daughter of <strong className="text-slate-955">{formData.parentName || '[Parent/Guardian Name]'}</strong>, student of <strong className="text-slate-955">{formData.college || '[College Name]'}</strong> pursuing <strong className="text-slate-955">{formData.degree || '[Degree]'}</strong> (University Registration Number: <strong className="text-slate-955">{formData.universityRoll || '[Registration Number]'}</strong>), hereby declare that I will diligently undertake the UGC-mandated Internship Program in <strong className="text-blue-700">{formData.internshipDomain || '[Internship Domain]'}</strong> starting from the registered academic session.
                     </p>
 
                     <p>
@@ -748,14 +754,14 @@ export default function Register({ mode = 'public' }: RegisterProps) {
           </AnimatePresence>
 
           {/* Stepper Navigation Actions */}
-          <div className="flex items-center justify-between pt-5 border-t border-slate-100">
+          <div className="flex items-center justify-between gap-3 pt-5 border-t border-slate-100">
             {step > 1 ? (
               <Button
                 variant="outline"
                 onClick={prevStep}
-                className="h-11 px-5 border-slate-200 text-slate-500 hover:bg-slate-50 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+                className="h-10 sm:h-11 px-3 sm:px-5 border-slate-200 text-slate-500 hover:bg-slate-50 rounded-xl font-bold text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1.5 transition active:scale-95 cursor-pointer shrink-0"
               >
-                <ChevronLeft size={16} /> Back
+                <ChevronLeft size={14} className="sm:w-4 sm:h-4" /> Back
               </Button>
             ) : (
               <div />
@@ -765,17 +771,23 @@ export default function Register({ mode = 'public' }: RegisterProps) {
               <Button
                 onClick={nextStep}
                 disabled={loading}
-                className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-wider text-xs shadow-md transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+                className="h-10 sm:h-11 px-4 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-wider text-[10px] sm:text-xs shadow-md transition active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0"
               >
-                {loading ? 'Validating...' : 'Next Step'} <ChevronRight size={16} />
+                {loading ? 'Validating...' : 'Next Step'} <ChevronRight size={14} className="sm:w-4 sm:h-4" />
               </Button>
             ) : (
               <Button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="h-11 px-8 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-wider text-xs shadow-md shadow-blue-500/10 hover:scale-[1.01] transition-all cursor-pointer flex items-center gap-1.5"
+                className="h-10 sm:h-11 px-3 sm:px-8 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-wider text-[9px] sm:text-xs shadow-md shadow-blue-500/10 hover:scale-[1.01] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap"
               >
-                {loading ? 'Processing...' : isEmitraStudentMode ? 'Register Student' : 'Complete Register'} <ArrowRight size={16} />
+                <span className="sm:hidden">
+                  {loading ? 'Processing...' : isEmitraStudentMode ? 'Register' : 'Complete'}
+                </span>
+                <span className="hidden sm:inline">
+                  {loading ? 'Processing...' : isEmitraStudentMode ? 'Register Student' : 'Complete Register'}
+                </span>
+                <ArrowRight size={14} className="sm:w-4 sm:h-4" />
               </Button>
             )}
           </div>
