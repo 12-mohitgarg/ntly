@@ -1,45 +1,117 @@
 const crypto = require('crypto');
+const Razorpay = require('razorpay');
+const { getAdminApp, isEmitraUser, json, requireSignedIn } = require('./utils/firebase-admin');
+const { getRazorpayConfig } = require('./utils/payment-config');
+
+function verifySignature(orderId, paymentId, signature, keySecret) {
+  const hmac = crypto.createHmac('sha256', keySecret);
+  hmac.update(`${orderId}|${paymentId}`);
+  return hmac.digest('hex') === signature;
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return json(405, { error: 'Method Not Allowed' });
   }
 
   try {
+    const authResult = await requireSignedIn(event);
+    if (!authResult.allowed) {
+      return authResult.response;
+    }
+
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = JSON.parse(event.body || '{}');
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return {
-        statusCode: 400,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'failure', message: 'Missing required verification parameters' }),
-      };
+      return json(400, { status: 'failure', message: 'Missing required verification parameters' });
     }
 
-    const secret = process.env.RAZORPAY_KEY_SECRET || '23a2eaU3UwRf4LnZaBWVvpvr';
-    const hmac = crypto.createHmac('sha256', secret);
-    hmac.update(razorpay_order_id + '|' + razorpay_payment_id);
-    const generated_signature = hmac.digest('hex');
+    const firebaseAdmin = getAdminApp();
+    const { keyId, keySecret } = await getRazorpayConfig();
 
-    if (generated_signature === razorpay_signature) {
-      return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'success' }),
-      };
-    } else {
-      return {
-        statusCode: 400,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'failure', message: 'Invalid signature' }),
-      };
+    if (!verifySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature, keySecret)) {
+      return json(400, { status: 'failure', message: 'Invalid signature' });
     }
+
+    const orderSnap = await firebaseAdmin.firestore().collection('paymentOrders').doc(razorpay_order_id).get();
+    if (!orderSnap.exists) {
+      return json(404, { status: 'failure', message: 'Payment order not found' });
+    }
+
+    const orderData = orderSnap.data();
+    const studentSnap = await firebaseAdmin.firestore().collection('users').doc(orderData.userId).get();
+    const studentData = studentSnap.exists ? studentSnap.data() : null;
+
+    const isOwnPayment = orderData.userId === authResult.decodedToken.uid;
+    const isAllowedEmitraPayment =
+      studentData?.createdByEmitraId === authResult.decodedToken.uid &&
+      (await isEmitraUser(authResult.decodedToken));
+
+    if (!isOwnPayment && !isAllowedEmitraPayment) {
+      return json(403, { status: 'failure', message: 'You are not allowed to verify this payment' });
+    }
+
+    const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+    const payment = await razorpay.payments.fetch(razorpay_payment_id);
+
+    if (
+      payment.order_id !== razorpay_order_id ||
+      Number(payment.amount) !== Number(orderData.amountPaise) ||
+      !['captured', 'authorized'].includes(payment.status)
+    ) {
+      return json(400, { status: 'failure', message: 'Payment details did not match the order' });
+    }
+
+    const verifiedAt = new Date().toISOString();
+    const batch = firebaseAdmin.firestore().batch();
+    const userRef = firebaseAdmin.firestore().collection('users').doc(orderData.userId);
+    const paymentRef = firebaseAdmin.firestore().collection('payments').doc(razorpay_payment_id);
+    const orderRef = firebaseAdmin.firestore().collection('paymentOrders').doc(razorpay_order_id);
+
+    batch.update(userRef, {
+      isPaid: true,
+      hasPaid: true,
+      paymentStatus: 'success',
+      paymentVerifiedAt: verifiedAt,
+      razorpayOrderId: razorpay_order_id,
+      razorpayPaymentId: razorpay_payment_id,
+    });
+
+    batch.set(paymentRef, {
+      userId: orderData.userId,
+      createdByEmitraId: orderData.createdByEmitraId || null,
+      createdByEmitraName: orderData.createdByEmitraName || null,
+      razorpayOrderId: razorpay_order_id,
+      razorpayPaymentId: razorpay_payment_id,
+      amount: orderData.amount,
+      amountPaise: orderData.amountPaise,
+      currency: orderData.currency || 'INR',
+      status: 'success',
+      verifiedBy: authResult.decodedToken.uid,
+      timestamp: verifiedAt,
+    }, { merge: true });
+
+    batch.update(orderRef, {
+      status: 'success',
+      razorpayPaymentId: razorpay_payment_id,
+      verifiedAt,
+      verifiedBy: authResult.decodedToken.uid,
+    });
+
+    await batch.commit();
+
+    return json(200, {
+      status: 'success',
+      userId: orderData.userId,
+      paymentId: razorpay_payment_id,
+      amount: orderData.amount,
+    });
   } catch (error) {
     console.error('Verification Error:', error);
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'error', message: 'Internal server error during verification' }),
-    };
+    return json(500, {
+      status: 'error',
+      message: 'Internal server error during verification',
+      details: error?.message || 'Unknown error',
+    });
   }
 };

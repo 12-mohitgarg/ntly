@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../components/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
-import { doc, updateDoc, setDoc, collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { Button } from '../components/ui/button';
 import { motion } from 'motion/react';
 import { CreditCard, ShieldCheck, CheckCircle2 } from 'lucide-react';
@@ -63,39 +63,56 @@ export default function Payment() {
     setLoading(true);
 
     try {
+      const token = await user.getIdToken();
+      const orderResponse = await fetch('/api/payment/order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ paymentForUserId: user.uid }),
+      });
+
+      const order = await orderResponse.json();
+      if (!orderResponse.ok) {
+        throw new Error(order?.details || order?.error || 'Could not create payment order');
+      }
+
       const options = {
-        key: "rzp_live_SoVxB05ogtK0Fl",
-        amount: amount * 100,
-        currency: 'INR',
+        key: order.key,
+        amount: order.amount,
+        currency: order.currency || 'INR',
+        order_id: order.id,
         name: 'INTERNMITRA',
         description: 'Internship Registration Fee',
         handler: async function (response: any) {
           console.log('Payment received:', response.razorpay_payment_id);
           try {
-             if (!response.razorpay_payment_id) {
-              throw new Error('Missing Razorpay payment/order id');
+            if (!response.razorpay_payment_id || !response.razorpay_order_id || !response.razorpay_signature) {
+              throw new Error('Missing Razorpay verification details');
             }
-            await updateDoc(doc(db, 'users', user.uid), {
-              isPaid: true
+
+            const verifyToken = await user.getIdToken();
+            const verifyResponse = await fetch('/api/payment/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${verifyToken}`,
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
             });
-            await setDoc(doc(db, 'payments', response.razorpay_payment_id), {
-              userId: user.uid,
-              createdByEmitraId: profile?.createdByEmitraId || null,
-              createdByEmitraName: profile?.createdByEmitraName || null,
-              razorpayOrderId: response.razorpay_order_id || '',
-              razorpayPaymentId: response.razorpay_payment_id,
-              amount: amount,
-              status: 'success',
-              timestamp: new Date().toISOString()
-            });
+
+            const verifyResult = await verifyResponse.json();
+            if (!verifyResponse.ok || verifyResult.status !== 'success') {
+              throw new Error(verifyResult?.message || verifyResult?.details || 'Payment verification failed');
+            }
 
             // Send email in background without blocking the UI
             emailOfferLetter(user.uid, profile || {})
-              .then(() => {
-                updateDoc(doc(db, 'users', user.uid), {
-                  offerLetterEmailSentAt: new Date().toISOString()
-                }).catch(err => console.error('Error updating sent time:', err));
-              })
               .catch((emailError) => {
                 console.error('Offer letter email failed:', emailError);
               });
@@ -103,7 +120,8 @@ export default function Payment() {
             setSuccess(true);
           } catch (err) {
             console.error('Firestore update error:', err);
-            alert('Payment received but verification request could not be saved. Please contact support with payment ID: ' + response.razorpay_payment_id);
+            alert('Payment received but server verification failed. Please contact support with payment ID: ' + response.razorpay_payment_id);
+            setLoading(false);
           }
         },
         prefill: {

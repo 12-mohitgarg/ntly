@@ -29,6 +29,7 @@ const ManageUniversities = lazy(() => import('./pages/admin/ManageUniversities')
 const ManageSubjects = lazy(() => import('./pages/admin/ManageSubjects'));
 const ManageDailyVideos = lazy(() => import('./pages/admin/ManageDailyVideos'));
 const BulkAddColleges = lazy(() => import('./pages/admin/BulkAddColleges'));
+const PaymentSettings = lazy(() => import('./pages/admin/PaymentSettings'));
 const Notifications = lazy(() => import('./pages/dashboard/Notifications'));
 const AdminLayout = lazy(() => import('./components/AdminLayout'));
 
@@ -109,6 +110,7 @@ function AppContent() {
           <Route path="/admin/subjects" element={<AdminRoute><AdminLayout><ManageSubjects /></AdminLayout></AdminRoute>} />
           <Route path="/admin/daily-videos" element={<AdminRoute><AdminLayout><ManageDailyVideos /></AdminLayout></AdminRoute>} />
           <Route path="/admin/bulk-colleges" element={<AdminRoute><AdminLayout><BulkAddColleges /></AdminLayout></AdminRoute>} />
+          <Route path="/admin/payment-settings" element={<AdminRoute><AdminLayout><PaymentSettings /></AdminLayout></AdminRoute>} />
           <Route
             path="/notifications"
             element={

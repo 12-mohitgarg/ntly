@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { collection, doc, getDoc, getDocs, limit, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, query, where } from 'firebase/firestore';
 import { CheckCircle2, CreditCard, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../components/AuthContext';
@@ -32,7 +32,7 @@ interface College {
 
 export default function EmitraPayment() {
   const { studentId } = useParams();
-  const { user, emitraProfile } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [student, setStudent] = useState<StudentProfile | null>(null);
   const [amount, setAmount] = useState(1000);
@@ -91,40 +91,55 @@ export default function EmitraPayment() {
 
     setPaying(true);
     try {
+      const token = await user.getIdToken();
+      const orderResponse = await fetch('/api/payment/order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ paymentForUserId: student.uid }),
+      });
+
+      const order = await orderResponse.json();
+      if (!orderResponse.ok) {
+        throw new Error(order?.details || order?.error || 'Could not create payment order');
+      }
+
       const options = {
-        key: 'rzp_live_SoVxB05ogtK0Fl',
-        amount: amount * 100,
-        currency: 'INR',
+        key: order.key,
+        amount: order.amount,
+        currency: order.currency || 'INR',
+        order_id: order.id,
         name: 'INTERNMITRA',
         description: `Cyber cafe student payment - ${student.fullName}`,
         handler: async function (response: any) {
           try {
-            if (!response.razorpay_payment_id) {
-              throw new Error('Missing Razorpay payment id');
+            if (!response.razorpay_payment_id || !response.razorpay_order_id || !response.razorpay_signature) {
+              throw new Error('Missing Razorpay verification details');
             }
 
-            await updateDoc(doc(db, 'users', student.uid), {
-              isPaid: true
+            const verifyToken = await user.getIdToken();
+            const verifyResponse = await fetch('/api/payment/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${verifyToken}`,
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
             });
 
-            await setDoc(doc(db, 'payments', response.razorpay_payment_id), {
-              userId: student.uid,
-              createdByEmitraId: user.uid,
-              createdByEmitraName: emitraProfile?.centerName || student.createdByEmitraName || '',
-              razorpayOrderId: response.razorpay_order_id || '',
-              razorpayPaymentId: response.razorpay_payment_id,
-              amount,
-              status: 'success',
-              timestamp: new Date().toISOString()
-            });
+            const verifyResult = await verifyResponse.json();
+            if (!verifyResponse.ok || verifyResult.status !== 'success') {
+              throw new Error(verifyResult?.message || verifyResult?.details || 'Payment verification failed');
+            }
 
             // Send email in background without blocking the UI
             emailOfferLetter(student.uid, student)
-              .then(() => {
-                updateDoc(doc(db, 'users', student.uid), {
-                  offerLetterEmailSentAt: new Date().toISOString()
-                }).catch(err => console.error('Error updating sent time:', err));
-              })
               .catch((emailError) => {
                 console.error('Offer letter email failed:', emailError);
               });
@@ -132,7 +147,8 @@ export default function EmitraPayment() {
             setSuccess(true);
           } catch (error) {
             console.error('Cyber cafe payment save error:', error);
-            alert('Payment received but could not be saved. Please contact admin with payment ID: ' + response.razorpay_payment_id);
+            alert('Payment received but server verification failed. Please contact admin with payment ID: ' + response.razorpay_payment_id);
+            setPaying(false);
           }
         },
         prefill: {

@@ -17,7 +17,8 @@ import {
   Menu,
   X,
   Users,
-  ListPlus
+  ListPlus,
+  KeyRound
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -77,6 +78,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       subItems: [
         { name: 'Districts', path: '/admin/districts', icon: MapPin }
       ]
+    },
+    {
+      title: 'Payment Settings',
+      path: '/admin/payment-settings',
+      icon: KeyRound
     }
   ];
 

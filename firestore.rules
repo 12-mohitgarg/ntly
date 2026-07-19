@@ -40,6 +40,16 @@ service cloud.firestore {
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
+    function paymentProtectedFieldsChanged() {
+      return incoming().diff(existing()).affectedKeys().hasAny([
+        'isPaid',
+        'hasPaid',
+        'paymentStatus',
+        'paymentVerifiedAt',
+        'razorpayOrderId',
+        'razorpayPaymentId'
+      ]);
+    }
 
     // --- Collection Rules ---
 
@@ -60,21 +70,27 @@ service cloud.firestore {
 
   // Update own profile or admin
   allow update: if isSignedIn() &&
-                 (request.auth.uid == userId || isAdmin() || (isEmitra() && resource.data.createdByEmitraId == request.auth.uid));
+                 (isAdmin() ||
+                  (request.auth.uid == userId && !paymentProtectedFieldsChanged()) ||
+                  (isEmitra() && resource.data.createdByEmitraId == request.auth.uid && !paymentProtectedFieldsChanged()));
 }
 
     match /payments/{paymentId} {
       // Admins manage the verification queue
       allow read, write: if isAdmin();
       allow get, list: if isEmitra() && resource.data.createdByEmitraId == request.auth.uid;
-      
-      // Users can create a payment record for themselves
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow create: if isEmitra() && request.resource.data.createdByEmitraId == request.auth.uid;
-      
-      // Users can read/list their own payment records (for payment status tracking)
+
+      // Users can read their own verified payment records. Creation is server-only.
       allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /paymentOrders/{orderId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /privateSettings/{settingId} {
+      allow read, write: if false;
     }
 
     match /settings/{settingId} {
