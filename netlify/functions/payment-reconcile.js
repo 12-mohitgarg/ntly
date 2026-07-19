@@ -48,6 +48,10 @@ async function markPaymentSuccess(firebaseAdmin, orderData, payment, verifiedBy)
 }
 
 async function getSuccessfulPaymentForOrder(razorpay, orderData) {
+  if (!orderData.razorpayOrderId) {
+    throw new Error('Payment order is missing Razorpay order id');
+  }
+
   const payments = await razorpay.orders.fetchPayments(orderData.razorpayOrderId);
   const items = payments?.items || [];
 
@@ -90,7 +94,7 @@ exports.handler = async (event) => {
     const snapshot = await firebaseAdmin
       .firestore()
       .collection('paymentOrders')
-      .where('status', 'in', ['created', 'pending', 'failed'])
+      .orderBy('createdAt', 'desc')
       .limit(100)
       .get();
 
@@ -101,6 +105,11 @@ exports.handler = async (event) => {
     for (const orderDoc of snapshot.docs) {
       checked += 1;
       const orderData = orderDoc.data();
+      const orderStatus = String(orderData.status || 'created');
+
+      if (orderStatus === 'success') {
+        continue;
+      }
 
       try {
         const payment = await getSuccessfulPaymentForOrder(razorpay, orderData);

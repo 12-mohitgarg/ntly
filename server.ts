@@ -492,6 +492,10 @@ async function markReconciledPaymentSuccess(orderData: any, payment: any, verifi
 }
 
 async function getSuccessfulPaymentForOrder(razorpay: Razorpay, orderData: any) {
+  if (!orderData.razorpayOrderId) {
+    throw new Error("Payment order is missing Razorpay order id");
+  }
+
   const payments = await razorpay.orders.fetchPayments(orderData.razorpayOrderId);
   const items = payments?.items || [];
 
@@ -525,7 +529,7 @@ app.post("/api/payment/reconcile", requireAdmin, async (req, res) => {
     const snapshot = await admin
       .firestore()
       .collection("paymentOrders")
-      .where("status", "in", ["created", "pending", "failed"])
+      .orderBy("createdAt", "desc")
       .limit(100)
       .get();
 
@@ -536,6 +540,11 @@ app.post("/api/payment/reconcile", requireAdmin, async (req, res) => {
     for (const orderDoc of snapshot.docs) {
       checked += 1;
       const orderData = orderDoc.data();
+      const orderStatus = String(orderData.status || "created");
+
+      if (orderStatus === "success") {
+        continue;
+      }
 
       try {
         const payment = await getSuccessfulPaymentForOrder(razorpay, orderData);

@@ -820,11 +820,19 @@ export default function AdminDashboard() {
       }
 
       if (!response || !response.ok) {
-        throw new Error(result?.message || result?.error || 'Unable to sync Razorpay payments');
+        const failureText = Array.isArray(result?.failures) && result.failures.length > 0
+          ? ` Failures: ${result.failures.map((failure: any) => `${failure.orderId}: ${failure.message}`).join('; ')}`
+          : '';
+        throw new Error(
+          `Sync failed (${response?.status || 'no response'}). ${result?.message || result?.details || result?.error || 'Unable to sync Razorpay payments'}${failureText}`
+        );
       }
 
       await fetchData();
-      alert(`Razorpay sync complete. Checked ${result.checked || 0}, updated ${result.updated || 0}.`);
+      const failureText = Array.isArray(result.failures) && result.failures.length > 0
+        ? `\nFailures: ${result.failures.map((failure: any) => `${failure.orderId}: ${failure.message}`).join('\n')}`
+        : '';
+      alert(`Razorpay sync complete. Checked ${result.checked || 0}, updated ${result.updated || 0}.${failureText}`);
     } catch (error) {
       console.error('Razorpay sync error:', error);
       alert(error instanceof Error ? error.message : 'Unable to sync Razorpay payments');
