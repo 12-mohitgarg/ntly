@@ -38,20 +38,39 @@ export default function PaymentSettings() {
     try {
       return text ? JSON.parse(text) : {};
     } catch {
-      throw new Error(
-        response.status === 404
-          ? 'Payment settings API was not found. Restart the local server with npm run dev.'
-          : 'Payment settings API returned an invalid response.'
-      );
+      throw new Error('INVALID_JSON_RESPONSE');
     }
+  };
+
+  const requestPaymentSettings = async (init: RequestInit) => {
+    const endpoints = [
+      '/api/admin/payment-settings',
+      '/.netlify/functions/admin-payment-settings',
+    ];
+    let lastError: unknown = null;
+
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(endpoint, init);
+        const data = await readJsonResponse(response);
+        return { response, data };
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (lastError instanceof Error && lastError.message === 'INVALID_JSON_RESPONSE') {
+      throw new Error('Payment settings API returned an invalid response. Redeploy the latest Netlify functions.');
+    }
+
+    throw lastError instanceof Error ? lastError : new Error('Unable to reach payment settings API');
   };
 
   const fetchSettings = async () => {
     setLoading(true);
     try {
       const headers = await getAuthHeader();
-      const response = await fetch('/api/admin/payment-settings', { headers });
-      const data = await readJsonResponse(response);
+      const { response, data } = await requestPaymentSettings({ headers });
 
       if (!response.ok) {
         throw new Error(data?.details || data?.error || 'Unable to load payment settings');
@@ -74,7 +93,7 @@ export default function PaymentSettings() {
 
     try {
       const authHeader = await getAuthHeader();
-      const response = await fetch('/api/admin/payment-settings', {
+      const { response, data } = await requestPaymentSettings({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -82,7 +101,6 @@ export default function PaymentSettings() {
         },
         body: JSON.stringify({ keyId, keySecret }),
       });
-      const data = await readJsonResponse(response);
 
       if (!response.ok) {
         throw new Error(data?.details || data?.error || 'Unable to save payment settings');
