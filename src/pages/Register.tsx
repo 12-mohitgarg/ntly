@@ -792,7 +792,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
             </div>
             <div className="text-left space-y-0.5">
               <h3 className="text-base font-black text-slate-800 leading-tight">
-                Call us: <a href="tel:+919693921517" className="hover:underline text-blue-600 font-extrabold">+91 70509 36593</a>
+                Call us: <a href="tel:+919693921517" className="hover:underline text-blue-600 font-extrabold">+91 96939 21517</a>
               </h3>
               <p className="text-xs text-slate-500 font-semibold leading-relaxed">
                 Updates, deadlines & certificate info — join our WhatsApp channel for alerts.
