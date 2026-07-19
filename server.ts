@@ -16,16 +16,6 @@ const PORT = 3000;
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
-// Razorpay Initialization
-// Safety check for keys
-const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || "rzp_live_SoVxB05ogtK0Fl";
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "23a2eaU3UwRf4LnZaBWVvpvr";
-
-const razorpay = new Razorpay({
-  key_id: RAZORPAY_KEY_ID,
-  key_secret: RAZORPAY_KEY_SECRET,
-});
-
 function getFirebaseAdminCredential() {
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     return admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
@@ -116,6 +106,80 @@ const requireAdmin = async (req: Request, res: Response, next: NextFunction) => 
   }
 };
 
+async function getDecodedToken(req: Request) {
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+
+  if (!token) {
+    throw Object.assign(new Error("Missing authorization token"), { statusCode: 401 });
+  }
+
+  return admin.auth().verifyIdToken(token);
+}
+
+async function isEmitraUser(uid: string) {
+  const emitraDoc = await admin.firestore().collection("emitras").doc(uid).get();
+  return emitraDoc.exists && emitraDoc.data()?.isActive === true;
+}
+
+function maskKey(value?: string) {
+  if (!value) return "";
+  if (value.length <= 8) return "••••";
+  return `${value.slice(0, 8)}••••${value.slice(-4)}`;
+}
+
+async function getRazorpayConfig() {
+  const snap = await admin.firestore().collection("privateSettings").doc("razorpay").get();
+  const data = snap.exists ? snap.data() : {};
+  const keyId = data?.keyId || process.env.RAZORPAY_KEY_ID || "";
+  const keySecret = data?.keySecret || process.env.RAZORPAY_KEY_SECRET || "";
+
+  if (!keyId || !keySecret) {
+    throw Object.assign(new Error("Razorpay keys are not configured"), { statusCode: 500 });
+  }
+
+  return { keyId, keySecret, source: data?.keyId ? "database" : "environment" };
+}
+
+async function getStudentForPayment(decodedToken: admin.auth.DecodedIdToken, paymentForUserId?: string) {
+  const targetUserId = paymentForUserId || decodedToken.uid;
+  const userSnap = await admin.firestore().collection("users").doc(targetUserId).get();
+
+  if (!userSnap.exists) {
+    throw Object.assign(new Error("Student record not found"), { statusCode: 404 });
+  }
+
+  const student = { uid: userSnap.id, ...userSnap.data() } as any;
+
+  if (targetUserId === decodedToken.uid) {
+    return student;
+  }
+
+  const canPayForStudent =
+    student.createdByEmitraId === decodedToken.uid &&
+    (await isEmitraUser(decodedToken.uid));
+
+  if (!canPayForStudent) {
+    throw Object.assign(new Error("You are not allowed to pay for this student"), { statusCode: 403 });
+  }
+
+  return student;
+}
+
+async function getCollegeAmount(collegeName?: string) {
+  if (!collegeName) return 1000;
+
+  const snapshot = await admin
+    .firestore()
+    .collection("colleges")
+    .where("name", "==", collegeName)
+    .limit(1)
+    .get();
+
+  const price = snapshot.docs[0]?.data()?.price;
+  return Number.isFinite(Number(price)) && Number(price) > 0 ? Number(price) : 1000;
+}
+
 // API Routes
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", environment: process.env.NODE_ENV });
@@ -145,52 +209,196 @@ app.patch("/api/admin/users/:uid/password", requireAdmin, async (req, res) => {
   }
 });
 
-app.post("/api/payment/order", async (req, res) => {
+app.get("/api/admin/payment-settings", requireAdmin, async (req, res) => {
   try {
-    const { amount, currency = "INR" } = req.body;
-    
-    if (!amount) {
-      return res.status(400).send("Amount is required");
+    const settingsSnap = await admin.firestore().collection("privateSettings").doc("razorpay").get();
+    const data = settingsSnap.exists ? settingsSnap.data() : {};
+    const envKeyId = process.env.RAZORPAY_KEY_ID || "";
+
+    res.json({
+      hasDatabaseConfig: Boolean(data?.keyId && data?.keySecret),
+      keyId: data?.keyId || envKeyId || "",
+      keyIdMasked: maskKey(data?.keyId || envKeyId || ""),
+      source: data?.keyId ? "database" : envKeyId ? "environment" : "missing",
+      updatedAt: data?.updatedAt || null,
+      updatedBy: data?.updatedBy || null,
+    });
+  } catch (error: any) {
+    console.error("Payment settings load error:", error);
+    res.status(500).json({ error: "Unable to load payment settings", details: error?.message || "Unknown error" });
+  }
+});
+
+async function savePaymentSettings(req: Request, res: Response) {
+  try {
+    const decodedToken = await getDecodedToken(req);
+    const { keyId, keySecret } = req.body || {};
+
+    if (typeof keyId !== "string" || !keyId.startsWith("rzp_")) {
+      return res.status(400).json({ error: "Enter a valid Razorpay key id" });
     }
 
-    const options = {
-      amount: Math.round(amount * 100), // amount in the smallest currency unit (paise)
-      currency,
-      receipt: `receipt_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-    };
-    
-    const order = await razorpay.orders.create(options);
-    res.json(order);
+    if (typeof keySecret !== "string" || keySecret.trim().length < 10) {
+      return res.status(400).json({ error: "Enter a valid Razorpay key secret" });
+    }
+
+    const updatedAt = new Date().toISOString();
+    await admin.firestore().collection("privateSettings").doc("razorpay").set({
+      keyId: keyId.trim(),
+      keySecret: keySecret.trim(),
+      updatedAt,
+      updatedBy: decodedToken.uid,
+      updatedByEmail: decodedToken.email || "",
+    }, { merge: true });
+
+    res.json({ status: "success", keyIdMasked: maskKey(keyId.trim()), updatedAt, source: "database" });
+  } catch (error: any) {
+    console.error("Payment settings save error:", error);
+    res.status(500).json({ error: "Unable to save payment settings", details: error?.message || "Unknown error" });
+  }
+}
+
+app.patch("/api/admin/payment-settings", requireAdmin, savePaymentSettings);
+app.post("/api/admin/payment-settings", requireAdmin, savePaymentSettings);
+
+app.post("/api/payment/order", async (req, res) => {
+  try {
+    const decodedToken = await getDecodedToken(req);
+    const { paymentForUserId } = req.body || {};
+    const student = await getStudentForPayment(decodedToken, paymentForUserId);
+    const amount = await getCollegeAmount(student.college);
+    const { keyId, keySecret } = await getRazorpayConfig();
+    const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+
+    const order = await razorpay.orders.create({
+      amount: Math.round(amount * 100),
+      currency: "INR",
+      receipt: `im_${student.uid.slice(0, 18)}_${Date.now()}`,
+      notes: {
+        userId: student.uid,
+        college: student.college || "",
+        createdByEmitraId: student.createdByEmitraId || "",
+      },
+    });
+
+    await admin.firestore().collection("paymentOrders").doc(order.id).set({
+      userId: student.uid,
+      createdByEmitraId: student.createdByEmitraId || null,
+      createdByEmitraName: student.createdByEmitraName || null,
+      amount,
+      amountPaise: order.amount,
+      currency: order.currency,
+      status: "created",
+      razorpayOrderId: order.id,
+      requestedBy: decodedToken.uid,
+      createdAt: new Date().toISOString(),
+    });
+
+    res.json({
+      id: order.id,
+      amount: order.amount,
+      amountRupees: amount,
+      currency: order.currency,
+      key: keyId,
+    });
   } catch (error: any) {
     console.error("Razorpay Order Error:", error);
-    res.status(500).json({ 
+    res.status(error?.statusCode || 500).json({
       error: "Error creating Razorpay order", 
       details: error.description || error.message || "Unknown error" 
     });
   }
 });
 
-app.post("/api/payment/verify", (req, res) => {
+app.post("/api/payment/verify", async (req, res) => {
   try {
+    const decodedToken = await getDecodedToken(req);
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({ status: "failure", message: "Missing required verification parameters" });
     }
 
-    const hmac = crypto.createHmac("sha256", RAZORPAY_KEY_SECRET);
+    const { keyId, keySecret } = await getRazorpayConfig();
+    const hmac = crypto.createHmac("sha256", keySecret);
     hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
     const generated_signature = hmac.digest("hex");
 
-    if (generated_signature === razorpay_signature) {
-      res.json({ status: "success" });
-    } else {
-      console.warn("Signature Verification Failed");
-      res.status(400).json({ status: "failure", message: "Invalid signature" });
+    if (generated_signature !== razorpay_signature) {
+      return res.status(400).json({ status: "failure", message: "Invalid signature" });
     }
-  } catch (error) {
+
+    const orderSnap = await admin.firestore().collection("paymentOrders").doc(razorpay_order_id).get();
+    if (!orderSnap.exists) {
+      return res.status(404).json({ status: "failure", message: "Payment order not found" });
+    }
+
+    const orderData = orderSnap.data() as any;
+    const studentSnap = await admin.firestore().collection("users").doc(orderData.userId).get();
+    const studentData = studentSnap.exists ? studentSnap.data() : null;
+    const isOwnPayment = orderData.userId === decodedToken.uid;
+    const isAllowedEmitraPayment =
+      studentData?.createdByEmitraId === decodedToken.uid &&
+      (await isEmitraUser(decodedToken.uid));
+
+    if (!isOwnPayment && !isAllowedEmitraPayment) {
+      return res.status(403).json({ status: "failure", message: "You are not allowed to verify this payment" });
+    }
+
+    const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+    const payment = await razorpay.payments.fetch(razorpay_payment_id);
+
+    if (
+      payment.order_id !== razorpay_order_id ||
+      Number(payment.amount) !== Number(orderData.amountPaise) ||
+      !["captured", "authorized"].includes(payment.status)
+    ) {
+      return res.status(400).json({ status: "failure", message: "Payment details did not match the order" });
+    }
+
+    const verifiedAt = new Date().toISOString();
+    const batch = admin.firestore().batch();
+    const userRef = admin.firestore().collection("users").doc(orderData.userId);
+    const paymentRef = admin.firestore().collection("payments").doc(razorpay_payment_id);
+    const orderRef = admin.firestore().collection("paymentOrders").doc(razorpay_order_id);
+
+    batch.update(userRef, {
+      isPaid: true,
+      hasPaid: true,
+      paymentStatus: "success",
+      paymentVerifiedAt: verifiedAt,
+      razorpayOrderId: razorpay_order_id,
+      razorpayPaymentId: razorpay_payment_id,
+    });
+    batch.set(paymentRef, {
+      userId: orderData.userId,
+      createdByEmitraId: orderData.createdByEmitraId || null,
+      createdByEmitraName: orderData.createdByEmitraName || null,
+      razorpayOrderId: razorpay_order_id,
+      razorpayPaymentId: razorpay_payment_id,
+      amount: orderData.amount,
+      amountPaise: orderData.amountPaise,
+      currency: orderData.currency || "INR",
+      status: "success",
+      verifiedBy: decodedToken.uid,
+      timestamp: verifiedAt,
+    }, { merge: true });
+    batch.update(orderRef, {
+      status: "success",
+      razorpayPaymentId: razorpay_payment_id,
+      verifiedAt,
+      verifiedBy: decodedToken.uid,
+    });
+
+    await batch.commit();
+    res.json({ status: "success", userId: orderData.userId, paymentId: razorpay_payment_id, amount: orderData.amount });
+  } catch (error: any) {
     console.error("Verification Error:", error);
-    res.status(500).json({ status: "error", message: "Internal server error during verification" });
+    res.status(error?.statusCode || 500).json({
+      status: "error",
+      message: "Internal server error during verification",
+      details: error?.message || "Unknown error",
+    });
   }
 });
 
