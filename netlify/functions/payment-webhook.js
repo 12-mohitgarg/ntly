@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const { getAdminApp, json } = require('./utils/firebase-admin');
 const { getRazorpayConfig } = require('./utils/payment-config');
+const { sendPaymentSuccessEmail } = require('./utils/payment-success-email');
 
 function verifyWebhookSignature(body, signature, webhookSecret) {
   const expected = crypto
@@ -136,11 +137,19 @@ exports.handler = async (event) => {
     }
 
     const result = await markPaymentSuccess(firebaseAdmin, payment, 'razorpay_webhook');
+    let emailResult = null;
+    try {
+      emailResult = await sendPaymentSuccessEmail(firebaseAdmin, result.userId, result.paymentId);
+    } catch (emailError) {
+      console.error('Webhook payment success email failed:', emailError);
+    }
+
     await recordWebhookEvent(firebaseAdmin, payload, 'success', result);
 
     return json(200, {
       status: 'success',
       ...result,
+      email: emailResult,
     });
   } catch (error) {
     console.error('Razorpay webhook error:', error);

@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const { getAdminApp, isEmitraUser, json, requireSignedIn } = require('./utils/firebase-admin');
 const { getRazorpayConfig } = require('./utils/payment-config');
+const { sendPaymentSuccessEmail } = require('./utils/payment-success-email');
 
 function verifySignature(orderId, paymentId, signature, keySecret) {
   const hmac = crypto.createHmac('sha256', keySecret);
@@ -100,11 +101,19 @@ exports.handler = async (event) => {
 
     await batch.commit();
 
+    let emailResult = null;
+    try {
+      emailResult = await sendPaymentSuccessEmail(firebaseAdmin, orderData.userId, razorpay_payment_id);
+    } catch (emailError) {
+      console.error('Payment success email failed:', emailError);
+    }
+
     return json(200, {
       status: 'success',
       userId: orderData.userId,
       paymentId: razorpay_payment_id,
       amount: orderData.amount,
+      email: emailResult,
     });
   } catch (error) {
     console.error('Verification Error:', error);

@@ -6,7 +6,6 @@ import { motion } from 'motion/react';
 import { useAuth } from '../components/AuthContext';
 import { db } from '../lib/firebase';
 import { Button } from '../components/ui/button';
-import { emailOfferLetter } from '../lib/offerLetterPdf';
 
 declare global {
   interface Window {
@@ -139,11 +138,6 @@ export default function EmitraPayment() {
             }
 
             // Send email in background without blocking the UI
-            emailOfferLetter(student.uid, student)
-              .catch((emailError) => {
-                console.error('Offer letter email failed:', emailError);
-              });
-
             setSuccess(true);
           } catch (error) {
             console.error('Cyber cafe payment save error:', error);

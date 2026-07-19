@@ -10,7 +10,6 @@ import {
   ClipboardCheck, ArrowRight, Facebook, Instagram, Twitter, Linkedin,
   Youtube, Users, RotateCcw, ShieldAlert
 } from 'lucide-react';
-import { emailOfferLetter } from '../lib/offerLetterPdf';
 
 declare global {
   interface Window {
@@ -136,12 +135,6 @@ export default function Payment() {
             if (!verifyResponse.ok || verifyResult.status !== 'success') {
               throw new Error(verifyResult?.message || verifyResult?.details || 'Payment verification failed');
             }
-
-            // Send email in background without blocking the UI
-            emailOfferLetter(user.uid, profile || {})
-              .catch((emailError) => {
-                console.error('Offer letter email failed:', emailError);
-              });
 
             setSuccess(true);
           } catch (err) {
