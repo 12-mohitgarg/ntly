@@ -12,6 +12,10 @@ async function getStudentForPayment(firebaseAdmin, decodedToken, paymentForUserI
 
   const student = { uid: userSnap.id, ...userSnap.data() };
 
+  if (student.isPaid === true || student.paymentStatus === 'success') {
+    throw Object.assign(new Error('Student payment is already verified'), { statusCode: 409 });
+  }
+
   if (targetUserId === decodedToken.uid) {
     return student;
   }

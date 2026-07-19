@@ -60,6 +60,9 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   if (adminProfile?.role === 'teacher' && location.pathname !== '/admin/daily-videos') {
     return <Navigate to="/admin/daily-videos" replace />;
   }
+  if (adminProfile?.role === 'sub_user' && location.pathname !== '/admin-dashboard') {
+    return <Navigate to="/admin-dashboard" replace />;
+  }
 
   return <>{children}</>;
 }

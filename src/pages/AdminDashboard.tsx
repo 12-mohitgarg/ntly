@@ -117,6 +117,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [teachers, setTeachers] = useState<TeacherProfile[]>([]);
+  const [subUsers, setSubUsers] = useState<TeacherProfile[]>([]);
   const [emitras, setEmitras] = useState<EmitraProfile[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [courseReports, setCourseReports] = useState<CourseReport[]>([]);
@@ -138,6 +139,11 @@ export default function AdminDashboard() {
     email: '',
     password: '',
     course: ''
+  });
+  const [subUserForm, setSubUserForm] = useState({
+    fullName: '',
+    email: '',
+    password: ''
   });
   const [notificationForm, setNotificationForm] = useState({
     title: '',
@@ -166,6 +172,7 @@ export default function AdminDashboard() {
   const [reportFileInputKey, setReportFileInputKey] = useState(0);
   const [assignmentFileInputKey, setAssignmentFileInputKey] = useState(0);
   const [savingTeacher, setSavingTeacher] = useState(false);
+  const [savingSubUser, setSavingSubUser] = useState(false);
   const [savingEmitraId, setSavingEmitraId] = useState<string | null>(null);
   const [savingNotification, setSavingNotification] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
@@ -187,6 +194,10 @@ export default function AdminDashboard() {
 
   const [teachersPage, setTeachersPage] = useState(1);
   const [teachersPerPage, setTeachersPerPage] = useState(10);
+  const [subUsersPage, setSubUsersPage] = useState(1);
+  const [subUsersPerPage, setSubUsersPerPage] = useState(10);
+  const isSubUser = adminProfile?.role === 'sub_user';
+  const canManageAdminDashboard = !isSubUser;
 
   // Reset pages when filters change
   useEffect(() => {
@@ -303,14 +314,27 @@ export default function AdminDashboard() {
     }
 
     fetchData();
-  }, [user]);
+  }, [user, adminProfile?.role]);
 
   const fetchData = async () => {
     try {
       const usersRef = collection(db, 'users');
       const usersQuery = query(usersRef, orderBy('registrationDate', 'desc'));
       const paymentsRef = collection(db, 'payments');
+
+      if (isSubUser) {
+        const [usersSnapshot, paymentsSnapshot] = await Promise.all([
+          getDocs(usersQuery),
+          getDocs(paymentsRef)
+        ]);
+
+        setUsers(usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile)));
+        setPayments(paymentsSnapshot.docs.map(doc => doc.data() as Payment));
+        return;
+      }
+
       const teachersQuery = query(collection(db, 'admins'), where('role', '==', 'teacher'));
+      const subUsersQuery = query(collection(db, 'admins'), where('role', '==', 'sub_user'));
       const notificationsQuery = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
       const reportsQuery = query(collection(db, 'courseReports'), orderBy('uploadedAt', 'desc'));
       const assignmentsQuery = query(collection(db, 'assignments'), orderBy('createdAt', 'desc'));
@@ -319,6 +343,7 @@ export default function AdminDashboard() {
         usersSnapshot,
         paymentsSnapshot,
         teachersSnapshot,
+        subUsersSnapshot,
         emitrasSnapshot,
         notificationsSnapshot,
         reportsSnapshot,
@@ -331,6 +356,7 @@ export default function AdminDashboard() {
         getDocs(usersQuery),
         getDocs(paymentsRef),
         getDocs(teachersQuery),
+        getDocs(subUsersQuery),
         getDocs(collection(db, 'emitras')),
         getDocs(notificationsQuery),
         getDocs(reportsQuery),
@@ -363,6 +389,11 @@ export default function AdminDashboard() {
         .map(doc => ({ uid: doc.id, ...doc.data() } as TeacherProfile))
         .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       setTeachers(teachersData);
+
+      const subUsersData = subUsersSnapshot.docs
+        .map(doc => ({ uid: doc.id, ...doc.data() } as TeacherProfile))
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      setSubUsers(subUsersData);
 
       const emitrasData = emitrasSnapshot.docs
         .map(doc => ({ uid: doc.id, ...doc.data() } as EmitraProfile))
@@ -487,6 +518,63 @@ export default function AdminDashboard() {
       alert(error?.message || 'Error adding teacher');
     } finally {
       setSavingTeacher(false);
+    }
+  };
+
+  const handleAddSubUser = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const fullName = subUserForm.fullName.trim();
+    const email = subUserForm.email.trim().toLowerCase();
+    const password = subUserForm.password;
+
+    if (!fullName || !email || !password) {
+      alert('Please fill in sub user name, email, and password');
+      return;
+    }
+
+    if (password.length < 6) {
+      alert('Password must be at least 6 characters');
+      return;
+    }
+
+    setSavingSubUser(true);
+    let createdSubUser: FirebaseUser | null = null;
+
+    try {
+      const subUserAppName = 'sub-user-create-app';
+      const subUserApp = getApps().some(app => app.name === subUserAppName)
+        ? getApp(subUserAppName)
+        : initializeApp(firebaseConfig, subUserAppName);
+      const subUserAuth = getAuth(subUserApp);
+      const credential = await createUserWithEmailAndPassword(subUserAuth, email, password);
+      createdSubUser = credential.user;
+
+      await setDoc(doc(db, 'admins', credential.user.uid), {
+        uid: credential.user.uid,
+        fullName,
+        email,
+        password: '',
+        role: 'sub_user',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        createdBy: user?.uid || adminProfile?.email || 'admin'
+      });
+
+      await signOut(subUserAuth);
+      setSubUserForm({ fullName: '', email: '', password: '' });
+      fetchData();
+      alert('Sub user added successfully');
+    } catch (error: any) {
+      if (createdSubUser) {
+        await deleteUser(createdSubUser).catch((deleteError) => {
+          console.error('Error cleaning up sub user auth user:', deleteError);
+        });
+      }
+      console.error('Error adding sub user:', error);
+      alert(error?.message || 'Error adding sub user');
+    } finally {
+      setSavingSubUser(false);
     }
   };
 
@@ -1376,34 +1464,42 @@ export default function AdminDashboard() {
               <LayoutDashboard size={16} />
               Dashboard
             </TabsTrigger>
-            <TabsTrigger value="teachers" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <UserPlus size={14} />
-              Teachers
-            </TabsTrigger>
-            <TabsTrigger value="emitras" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <Building2 size={14} />
-              Cyber cafe
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <Bell size={14} />
-              Notifications
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <FileText size={14} />
-              Internship Reports
-            </TabsTrigger>
-            <TabsTrigger value="student-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <Upload size={14} />
-              Assignments
-            </TabsTrigger>
-            <TabsTrigger value="test-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <ClipboardList size={14} />
-              Test Reports
-            </TabsTrigger>
-            <TabsTrigger value="college-export" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <Download size={14} />
-              College Export
-            </TabsTrigger>
+            {canManageAdminDashboard && (
+              <>
+                <TabsTrigger value="teachers" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <UserPlus size={14} />
+                  Teachers
+                </TabsTrigger>
+                <TabsTrigger value="sub-users" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <Users size={14} />
+                  Sub Users
+                </TabsTrigger>
+                <TabsTrigger value="emitras" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <Building2 size={14} />
+                  Cyber cafe
+                </TabsTrigger>
+                <TabsTrigger value="notifications" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <Bell size={14} />
+                  Notifications
+                </TabsTrigger>
+                <TabsTrigger value="reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText size={14} />
+                  Internship Reports
+                </TabsTrigger>
+                <TabsTrigger value="student-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <Upload size={14} />
+                  Assignments
+                </TabsTrigger>
+                <TabsTrigger value="test-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <ClipboardList size={14} />
+                  Test Reports
+                </TabsTrigger>
+                <TabsTrigger value="college-export" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <Download size={14} />
+                  College Export
+                </TabsTrigger>
+              </>
+            )}
           </TabsList >
 
           <TabsContent value="dashboard" className="space-y-8 mt-4">
@@ -1627,9 +1723,11 @@ export default function AdminDashboard() {
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Payment Status</th>
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Registered</th>
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Source</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">
-                          Action
-                        </th>
+                        {canManageAdminDashboard && (
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">
+                            Action
+                          </th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -1690,36 +1788,38 @@ export default function AdminDashboard() {
                               </span>
                             )}
                           </td>
-                          <td className="p-4">
-                            <div className="flex flex-wrap gap-2">
+                          {canManageAdminDashboard && (
+                            <td className="p-4">
+                              <div className="flex flex-wrap gap-2">
 
-                              <button
-                                onClick={() =>
-                                  updatePaymentStatus(user.uid)
-                                }
-                                className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-emerald-600/10 hover:bg-emerald-700 active:scale-[0.98] transition-all cursor-pointer"
-                              >
-                                Verify
-                              </button>
+                                <button
+                                  onClick={() =>
+                                    updatePaymentStatus(user.uid)
+                                  }
+                                  className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-emerald-600/10 hover:bg-emerald-700 active:scale-[0.98] transition-all cursor-pointer"
+                                >
+                                  Verify
+                                </button>
 
-                              <button
-                                onClick={() => rejectPaymentStatus(user.uid)}
-                                className="px-3 py-1.5 bg-rose-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-rose-600/10 hover:bg-rose-700 active:scale-[0.98] transition-all cursor-pointer"
-                              >
-                                Reject
-                              </button>
+                                <button
+                                  onClick={() => rejectPaymentStatus(user.uid)}
+                                  className="px-3 py-1.5 bg-rose-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-rose-600/10 hover:bg-rose-700 active:scale-[0.98] transition-all cursor-pointer"
+                                >
+                                  Reject
+                                </button>
 
-                              <button
-                                onClick={() => openPasswordModal(user)}
-                                className="inline-flex items-center gap-1 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
-                                title="Update password"
-                              >
-                                <KeyRound size={14} />
-                                Change Password
-                              </button>
+                                <button
+                                  onClick={() => openPasswordModal(user)}
+                                  className="inline-flex items-center gap-1 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                                  title="Update password"
+                                >
+                                  <KeyRound size={14} />
+                                  Change Password
+                                </button>
 
-                            </div>
-                          </td>
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -2735,6 +2835,181 @@ export default function AdminDashboard() {
               </Tabs>
             </div>
           </TabsContent>
+
+          {canManageAdminDashboard && (
+            <TabsContent value="sub-users">
+              <div className="student-card p-4 sm:p-6 bg-white/80">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="student-icon bg-emerald-50 text-emerald-600 ring-emerald-100">
+                      <Users size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black text-slate-900 gradient-text">Sub User Management</h2>
+                      <p className="text-slate-500 text-sm font-semibold">Sub users can access only the admin dashboard in view mode.</p>
+                    </div>
+                  </div>
+                  <span className="bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-emerald-100/80 w-fit">
+                    {subUsers.length} Sub Users
+                  </span>
+                </div>
+
+                <form onSubmit={handleAddSubUser} className="border border-slate-200/60 rounded-3xl p-4 sm:p-6 bg-white/70 backdrop-blur-sm shadow-sm">
+                  <div className="flex flex-col lg:grid lg:grid-cols-4 gap-5 lg:items-end w-full">
+                    <div className="w-full">
+                      <Label className="student-label">Sub User Name</Label>
+                      <Input
+                        value={subUserForm.fullName}
+                        onChange={(event) => setSubUserForm({ ...subUserForm, fullName: event.target.value })}
+                        placeholder="Sub user name"
+                        className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80"
+                      />
+                    </div>
+                    <div className="w-full">
+                      <Label className="student-label">Email</Label>
+                      <Input
+                        type="email"
+                        value={subUserForm.email}
+                        onChange={(event) => setSubUserForm({ ...subUserForm, email: event.target.value })}
+                        placeholder="subuser@example.com"
+                        className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80"
+                      />
+                    </div>
+                    <div className="w-full">
+                      <Label className="student-label">Password</Label>
+                      <Input
+                        type="password"
+                        value={subUserForm.password}
+                        onChange={(event) => setSubUserForm({ ...subUserForm, password: event.target.value })}
+                        placeholder="Minimum 6 characters"
+                        className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80"
+                      />
+                    </div>
+                    <div className="w-full">
+                      <Button type="submit" disabled={savingSubUser} className="student-button-primary bg-emerald-600 hover:bg-emerald-700 text-white h-12 w-full px-5 min-h-[48px] shadow-emerald-500/10 cursor-pointer rounded-xl transition-all">
+                        <UserPlus size={18} />
+                        {savingSubUser ? 'Adding...' : 'Add Sub User'}
+                      </Button>
+                    </div>
+                  </div>
+                </form>
+
+                <div className="mt-6">
+                  {subUsers.length === 0 ? (
+                    <div className="border border-dashed border-slate-200 rounded-2xl p-12 text-center">
+                      <Users size={48} className="text-slate-300 mx-auto mb-4" />
+                      <p className="text-slate-500 font-bold">No sub users added yet</p>
+                    </div>
+                  ) : (
+                    <div className="student-card overflow-hidden bg-white/50 border-slate-100/50">
+                      <div className="hidden lg:block overflow-x-auto w-full">
+                        <table className="w-full min-w-[760px] table-auto">
+                          <thead className="bg-slate-50/50">
+                            <tr>
+                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Sub User</th>
+                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Email</th>
+                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Access</th>
+                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
+                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Created</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {subUsers.slice((subUsersPage - 1) * subUsersPerPage, subUsersPage * subUsersPerPage).map((subUser) => (
+                              <tr key={subUser.uid} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
+                                <td className="p-4">
+                                  <div className="font-black text-slate-900">{subUser.fullName}</div>
+                                  <div className="text-xs text-slate-400 font-semibold">{subUser.uid}</div>
+                                </td>
+                                <td className="p-4">
+                                  <div className="flex items-center gap-2 text-slate-600 text-sm font-semibold">
+                                    <Mail size={14} className="text-slate-400" />
+                                    {subUser.email}
+                                  </div>
+                                </td>
+                                <td className="p-4 text-slate-600 font-bold text-sm">Dashboard only</td>
+                                <td className="p-4">
+                                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${subUser.isActive
+                                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80'
+                                    : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
+                                    }`}>
+                                    {subUser.isActive ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+                                    {subUser.isActive ? 'Active' : 'Inactive'}
+                                  </span>
+                                </td>
+                                <td className="p-4 text-slate-600 text-sm font-medium">
+                                  {subUser.createdAt
+                                    ? new Date(subUser.createdAt).toLocaleDateString('en-IN', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      year: 'numeric'
+                                    })
+                                    : '-'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="lg:hidden divide-y divide-slate-100/50">
+                        {subUsers.slice((subUsersPage - 1) * subUsersPerPage, subUsersPage * subUsersPerPage).map((subUser) => (
+                          <div key={subUser.uid} className="p-4 space-y-3">
+                            <div className="flex justify-between items-start gap-2">
+                              <div>
+                                <div className="font-black text-slate-900 text-sm">{subUser.fullName}</div>
+                                <div className="text-[10px] text-slate-400 font-semibold truncate max-w-[180px]">{subUser.uid}</div>
+                              </div>
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${subUser.isActive
+                                ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80'
+                                : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
+                                }`}>
+                                {subUser.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5 text-xs text-slate-600 font-medium">
+                              <div className="flex items-center gap-2">
+                                <Mail size={12} className="text-slate-400 shrink-0" />
+                                <span className="truncate">{subUser.email}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <LayoutDashboard size={12} className="text-slate-400 shrink-0" />
+                                <span>Dashboard only</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock size={12} className="text-slate-400 shrink-0" />
+                                <span>
+                                  {subUser.createdAt
+                                    ? new Date(subUser.createdAt).toLocaleDateString('en-IN', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      year: 'numeric'
+                                    })
+                                    : '-'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <PaginationControls
+                        currentPage={subUsersPage}
+                        totalItems={subUsers.length}
+                        itemsPerPage={subUsersPerPage}
+                        onPageChange={setSubUsersPage}
+                        onItemsPerPageChange={(size) => {
+                          setSubUsersPerPage(size);
+                          setSubUsersPage(1);
+                        }}
+                        label="sub users"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+          )}
         </Tabs >
       </div >
     </div >
