@@ -119,6 +119,32 @@ export default function ManageSubjects() {
     setEditSubjects(updated);
   };
 
+  const handleDeleteSubject = async (degree: Degree, index: number) => {
+    const subjectName = degree.subjects[index];
+    if (!confirm(`Are you sure you want to delete "${subjectName}" from ${degree.name}?`)) return;
+
+    try {
+      const updatedSubjects = degree.subjects.filter((_, subjectIndex) => subjectIndex !== index);
+      await updateDoc(doc(db, 'degrees', degree.id), {
+        subjects: updatedSubjects
+      });
+      fetchDegrees();
+    } catch (error) {
+      console.error('Error deleting subject:', error);
+    }
+  };
+
+  const handleDeleteDegree = async (degree: Degree) => {
+    if (!confirm(`Are you sure you want to delete "${degree.name}" and all of its subjects?`)) return;
+
+    try {
+      await deleteDoc(doc(db, 'degrees', degree.id));
+      fetchDegrees();
+    } catch (error) {
+      console.error('Error deleting degree:', error);
+    }
+  };
+
   const handleAddSubjectInline = () => {
     setEditSubjects([...editSubjects, '']);
   };
@@ -147,14 +173,14 @@ export default function ManageSubjects() {
           <h2 className="text-xl font-black text-slate-900 mb-4 gradient-text">Add New Subject</h2>
           <form onSubmit={handleAddSubject} className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="w-full sm:w-64">
-              <Label className="student-label block mb-2">Select Branch</Label>
+              <Label className="student-label block mb-2">Select Department</Label>
               <select
                 value={selectedDegree}
                 onChange={(e) => setSelectedDegree(e.target.value)}
                 className="student-input h-14 px-4"
                 required
               >
-                <option value="">Select Branch</option>
+                <option value="">Select Department</option>
                 {Object.keys(DEPARTMENTS).map(degree => (
                   <option key={degree} value={degree}>{degree}</option>
                 ))}
@@ -232,8 +258,17 @@ export default function ManageSubjects() {
                         <div className="flex flex-wrap gap-2">
                           {degree.subjects.length > 0 ? (
                             degree.subjects.map((subject, index) => (
-                              <span key={index} className="px-3 py-1 bg-blue-50 text-blue-700 rounded-xl text-xs font-black ring-1 ring-blue-100/80">
-                                {subject}
+                              <span key={`${subject}-${index}`} className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-xl text-xs font-black ring-1 ring-blue-100/80">
+                                <span>{subject}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSubject(degree, index)}
+                                  className="inline-flex h-5 w-5 items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer"
+                                  title={`Delete ${subject}`}
+                                  aria-label={`Delete ${subject}`}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
                               </span>
                             ))
                           ) : (
@@ -244,6 +279,9 @@ export default function ManageSubjects() {
                       <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                         <Button onClick={() => handleEdit(degree)} className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm shadow-blue-600/10 transition-all active:scale-[0.98] cursor-pointer">
                           <Edit2 size={16} />
+                        </Button>
+                        <Button onClick={() => handleDeleteDegree(degree)} className="h-10 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm shadow-rose-600/10 transition-all active:scale-[0.98] cursor-pointer">
+                          <Trash2 size={16} />
                         </Button>
                       </div>
                     </div>

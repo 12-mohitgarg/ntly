@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
-import aboutFullContent from '../../dd.tsx?raw';
+import aboutFullContent from '../content/about-full.txt?raw';
 import {
   Handshake, Target, Users, Award, ShieldCheck, Zap, Eye, Gem, Check,
   Mail, Phone, X, ArrowRight, ClipboardCheck, UserCheck, Briefcase, FileText,
@@ -11,6 +11,7 @@ import {
 
 export default function About() {
   const [activePolicy, setActivePolicy] = useState<'privacy' | 'terms' | null>(null);
+  const completeAboutContent = aboutFullContent.trim();
 
   const privacyPolicyContent = {
     title: "Privacy Policy",
@@ -453,12 +454,12 @@ export default function About() {
               Full INTERNMITRA Information
             </h2>
             <p className="mt-3 text-sm text-slate-500 font-semibold leading-relaxed max-w-3xl">
-              This section includes the complete content provided for the About page, including the full company profile, roadmap, founder message, and privacy-policy text.
+              This section includes the complete content provided for the About page, including the company profile, founders, roadmap, services, and privacy-policy information.
             </p>
           </div>
           <div className="max-h-[720px] overflow-y-auto p-5 md:p-8">
             <div className="whitespace-pre-wrap text-sm leading-7 text-slate-600 font-semibold">
-              {aboutFullContent}
+              {completeAboutContent}
             </div>
           </div>
         </div>
