@@ -247,19 +247,19 @@ export default function Register({ mode = 'public' }: RegisterProps) {
         setError("Please fill all personal information fields.");
         return;
       }
-      
+
       setLoading(true);
       setError(null);
       setEmailError(null);
       setPhoneError(null);
-      
+
       try {
         const usersRef = collection(db, 'users');
-        
+
         // Parallel email and phone checks
         const emailQ = query(usersRef, where('email', '==', formData.email.trim()));
         const phoneQ = query(usersRef, where('contactNumber', '==', formData.contactNumber.trim()));
-        
+
         const [emailSnap, phoneSnap] = await Promise.all([
           getDocs(emailQ),
           getDocs(phoneQ)
@@ -422,7 +422,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
   return (
     <div className="bg-[#f8fafc] overflow-hidden select-none font-sans text-left">
-      
+
       {/* HEADER SECTION */}
       <section className="py-12 text-center space-y-4 max-w-4xl mx-auto px-4">
         <div className="w-14 h-14 bg-blue-50 text-blue-600 border border-blue-100 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
@@ -442,27 +442,25 @@ export default function Register({ mode = 'public' }: RegisterProps) {
           {stepsList.map((s, i) => {
             const isCompleted = step > i + 1;
             const isActive = step === i + 1;
-            
+
             return (
               <React.Fragment key={i}>
                 {/* Horizontal connecting lines */}
                 {i > 0 && (
-                  <div className={`flex-1 h-0.5 mx-1 sm:mx-4 self-start mt-[18px] transition-colors duration-500 ${
-                    step > i
-                      ? 'bg-blue-600'
-                      : 'border-t-2 border-dashed border-slate-200'
-                  }`} />
+                  <div className={`flex-1 h-0.5 mx-1 sm:mx-4 self-start mt-[18px] transition-colors duration-500 ${step > i
+                    ? 'bg-blue-600'
+                    : 'border-t-2 border-dashed border-slate-200'
+                    }`} />
                 )}
 
                 {/* Step Circle & Description */}
                 <div className="flex flex-col items-center space-y-2.5 z-10 shrink-0">
-                  <div className={`w-9.5 h-9.5 rounded-full flex items-center justify-center border-2 text-xs font-black shadow-sm transition-all duration-300 ${
-                    isCompleted 
-                      ? 'bg-blue-650 border-blue-650 text-white' 
-                      : isActive 
-                        ? 'bg-blue-600 border-blue-600 text-white scale-105' 
-                        : 'bg-white border-slate-200 text-slate-400'
-                  }`}>
+                  <div className={`w-9.5 h-9.5 rounded-full flex items-center justify-center border-2 text-xs font-black shadow-sm transition-all duration-300 ${isCompleted
+                    ? 'bg-blue-650 border-blue-650 text-white'
+                    : isActive
+                      ? 'bg-blue-600 border-blue-600 text-white scale-105'
+                      : 'bg-white border-slate-200 text-slate-400'
+                    }`}>
                     {isCompleted ? '✓' : i + 1}
                   </div>
                   <div className="text-center">
@@ -483,7 +481,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
       {/* FORM CONTAINER CARD */}
       <section className="max-w-4xl mx-auto px-4 mb-8">
         <div className="bg-white rounded-3xl p-6 md:p-10 border border-slate-200/60 shadow-sm flex flex-col justify-between space-y-6">
-          
+
           {/* Form Card Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-100 pb-5 gap-4">
             <div className="flex items-center gap-4">
@@ -502,7 +500,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                 </p>
               </div>
             </div>
-            
+
             {/* Step Progress indicators */}
             <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
@@ -544,7 +542,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                       <Input id="fullName" name="fullName" value={formData.fullName} onChange={handleChange} placeholder="e.g. Abhishek Kumar" className="pl-11 h-12 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm" />
                     </div>
                   </div>
-                  
+
                   <div className="space-y-1.5 text-left">
                     <Label htmlFor="gender" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Gender *</Label>
                     <div className="relative">
@@ -589,7 +587,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
               {/* STEP 2: ACADEMIC DETAILS */}
               {step === 2 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-h-[50vh] overflow-y-auto pr-1">
-                  
+
                   <div className="space-y-1.5 text-left md:col-span-2">
                     <Label htmlFor="university" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">University *</Label>
                     <select name="university" value={formData.university} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
@@ -689,7 +687,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                       <Input id="password" type="password" name="password" value={formData.password} onChange={handleChange} placeholder="Enter a secure password" className="pl-11 h-12 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm" />
                     </div>
                   </div>
-                  
+
                   <div className="space-y-1.5 text-left">
                     <Label htmlFor="confirmPassword" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Confirm Secret Password *</Label>
                     <div className="relative">
@@ -703,13 +701,13 @@ export default function Register({ mode = 'public' }: RegisterProps) {
               {/* STEP 4: CONSENT LETTER */}
               {step === 4 && (
                 <div className="space-y-5 max-w-2xl mx-auto text-left">
-                  
+
                   {/* Undertaking Declaration Box */}
                   <div className="bg-amber-50/40 border border-amber-200/50 rounded-2xl p-5 md:p-6 shadow-inner text-left font-serif text-slate-800 text-xs sm:text-sm leading-relaxed space-y-4 max-h-[35vh] overflow-y-auto">
                     <h4 className="text-center font-bold uppercase tracking-wider text-slate-900 border-b border-amber-200/60 pb-2 text-sm sm:text-base">
                       Student Undertaking & Declaration
                     </h4>
-                    
+
                     <p>
                       I, <strong className="text-slate-955">{formData.fullName || '[Full Name]'}</strong>, son/daughter of <strong className="text-slate-955">{formData.parentName || '[Parent/Guardian Name]'}</strong>, student of <strong className="text-slate-955">{formData.college || '[College Name]'}</strong> pursuing <strong className="text-slate-955">{formData.degree || '[Degree]'}</strong> (Roll No: <strong className="text-slate-955">{formData.universityRoll || '[Roll Number]'}</strong>), hereby declare that I will diligently undertake the UGC-mandated Internship Program in <strong className="text-blue-700">{formData.internshipDomain || '[Internship Domain]'}</strong> starting from the registered academic session.
                     </p>
@@ -732,13 +730,12 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     </div>
                   </div>
 
-                  <div 
-                    className="flex items-center gap-3 pt-2 group cursor-pointer text-left" 
+                  <div
+                    className="flex items-center gap-3 pt-2 group cursor-pointer text-left"
                     onClick={() => setFormData({ ...formData, terms: !formData.terms })}
                   >
-                    <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
-                      formData.terms ? 'bg-blue-600 border-blue-600' : 'border-slate-200 bg-slate-50'
-                    }`}>
+                    <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${formData.terms ? 'bg-blue-600 border-blue-600' : 'border-slate-200 bg-slate-50'
+                      }`}>
                       {formData.terms && <Check size={12} className="stroke-[3] text-white" />}
                     </div>
                     <Label htmlFor="terms" className="text-xs text-slate-500 font-bold cursor-pointer select-none leading-relaxed">
@@ -773,9 +770,9 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                 {loading ? 'Validating...' : 'Next Step'} <ChevronRight size={16} />
               </Button>
             ) : (
-              <Button 
-                onClick={handleSubmit} 
-                disabled={loading} 
+              <Button
+                onClick={handleSubmit}
+                disabled={loading}
                 className="h-11 px-8 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-wider text-xs shadow-md shadow-blue-500/10 hover:scale-[1.01] transition-all cursor-pointer flex items-center gap-1.5"
               >
                 {loading ? 'Processing...' : isEmitraStudentMode ? 'Register Student' : 'Complete Register'} <ArrowRight size={16} />
@@ -795,7 +792,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
             </div>
             <div className="text-left space-y-0.5">
               <h3 className="text-base font-black text-slate-800 leading-tight">
-                Call us: <a href="tel:+917050936593" className="hover:underline text-blue-600 font-extrabold">+91 70509 36593</a>
+                Call us: <a href="tel:+919693921517" className="hover:underline text-blue-600 font-extrabold">+91 70509 36593</a>
               </h3>
               <p className="text-xs text-slate-500 font-semibold leading-relaxed">
                 Updates, deadlines & certificate info — join our WhatsApp channel for alerts.
@@ -804,16 +801,16 @@ export default function Register({ mode = 'public' }: RegisterProps) {
           </div>
 
           <div className="flex flex-col items-center sm:items-start gap-3.5 shrink-0">
-            <a 
-              href="https://whatsapp.com/channel/0029VbDNWPACxoAsRFQgYz40" 
-              target="_blank" 
-              rel="noopener noreferrer" 
+            <a
+              href="https://whatsapp.com/channel/0029VbDNWPACxoAsRFQgYz40"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-black uppercase tracking-wider px-6 text-xs shadow-md transition active:scale-95 cursor-pointer whitespace-nowrap shrink-0 w-full sm:w-auto"
             >
               <WhatsAppIcon size={16} />
               Join WhatsApp Channel
             </a>
-            
+
             {/* Instant alerts check row */}
             <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-3 flex items-start gap-2.5 max-w-xs shrink-0">
               <ShieldCheck size={18} className="text-emerald-700 shrink-0 mt-0.5" />
