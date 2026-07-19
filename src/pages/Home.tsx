@@ -184,7 +184,7 @@ export default function Home() {
           transition={{ repeat: Infinity, duration: 18, ease: "linear" }}
           className="inline-block"
         >
-          🎓 Registrations Open for 2026-2027 Academic Batch • UGC-Mandated 120-Hour Internships
+          🎓 Registrations Open for 2023-2027 and 2024-2028 Academic Batch • UGC-Mandated 120-Hour Internships
         </motion.div>
       </div>
 
