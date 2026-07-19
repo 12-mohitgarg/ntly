@@ -1,0 +1,133 @@
+const Razorpay = require('razorpay');
+const { getAdminApp, json, requireAdmin } = require('./utils/firebase-admin');
+const { getRazorpayConfig } = require('./utils/payment-config');
+const { sendPaymentSuccessEmail } = require('./utils/payment-success-email');
+
+async function markPaymentSuccess(firebaseAdmin, orderData, payment, verifiedBy) {
+  const verifiedAt = new Date().toISOString();
+  const userRef = firebaseAdmin.firestore().collection('users').doc(orderData.userId);
+  const paymentRef = firebaseAdmin.firestore().collection('payments').doc(payment.id);
+  const orderRef = firebaseAdmin.firestore().collection('paymentOrders').doc(orderData.razorpayOrderId);
+
+  const batch = firebaseAdmin.firestore().batch();
+  batch.update(userRef, {
+    isPaid: true,
+    hasPaid: true,
+    paymentStatus: 'success',
+    paymentVerifiedAt: verifiedAt,
+    razorpayOrderId: orderData.razorpayOrderId,
+    razorpayPaymentId: payment.id,
+  });
+  batch.set(paymentRef, {
+    userId: orderData.userId,
+    createdByEmitraId: orderData.createdByEmitraId || null,
+    createdByEmitraName: orderData.createdByEmitraName || null,
+    razorpayOrderId: orderData.razorpayOrderId,
+    razorpayPaymentId: payment.id,
+    amount: orderData.amount,
+    amountPaise: orderData.amountPaise,
+    currency: orderData.currency || payment.currency || 'INR',
+    status: 'success',
+    verifiedBy,
+    timestamp: verifiedAt,
+  }, { merge: true });
+  batch.update(orderRef, {
+    status: 'success',
+    razorpayPaymentId: payment.id,
+    verifiedAt,
+    verifiedBy,
+  });
+
+  await batch.commit();
+
+  try {
+    await sendPaymentSuccessEmail(firebaseAdmin, orderData.userId, payment.id);
+  } catch (emailError) {
+    console.error('Reconcile success email failed:', emailError);
+  }
+}
+
+async function getSuccessfulPaymentForOrder(razorpay, orderData) {
+  const payments = await razorpay.orders.fetchPayments(orderData.razorpayOrderId);
+  const items = payments?.items || [];
+
+  const captured = items.find((payment) =>
+    payment.status === 'captured' &&
+    Number(payment.amount) === Number(orderData.amountPaise)
+  );
+
+  if (captured) return captured;
+
+  const authorized = items.find((payment) =>
+    payment.status === 'authorized' &&
+    Number(payment.amount) === Number(orderData.amountPaise)
+  );
+
+  if (!authorized) return null;
+
+  return razorpay.payments.capture(
+    authorized.id,
+    Number(orderData.amountPaise),
+    orderData.currency || authorized.currency || 'INR'
+  );
+}
+
+exports.handler = async (event) => {
+  if (event.httpMethod !== 'POST') {
+    return json(405, { error: 'Method Not Allowed' });
+  }
+
+  try {
+    const authResult = await requireAdmin(event);
+    if (!authResult.allowed) {
+      return authResult.response;
+    }
+
+    const firebaseAdmin = getAdminApp();
+    const { keyId, keySecret } = await getRazorpayConfig();
+    const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+
+    const snapshot = await firebaseAdmin
+      .firestore()
+      .collection('paymentOrders')
+      .where('status', 'in', ['created', 'pending', 'failed'])
+      .limit(100)
+      .get();
+
+    let checked = 0;
+    let updated = 0;
+    const failures = [];
+
+    for (const orderDoc of snapshot.docs) {
+      checked += 1;
+      const orderData = orderDoc.data();
+
+      try {
+        const payment = await getSuccessfulPaymentForOrder(razorpay, orderData);
+
+        if (payment) {
+          await markPaymentSuccess(firebaseAdmin, orderData, payment, authResult.decodedToken.uid);
+          updated += 1;
+        }
+      } catch (error) {
+        failures.push({
+          orderId: orderData.razorpayOrderId || orderDoc.id,
+          message: error?.message || 'Unknown reconciliation error',
+        });
+      }
+    }
+
+    return json(200, {
+      status: 'success',
+      checked,
+      updated,
+      failures,
+    });
+  } catch (error) {
+    console.error('Payment reconcile error:', error);
+    return json(500, {
+      status: 'error',
+      message: error?.message || 'Unable to reconcile payments',
+    });
+  }
+};

@@ -407,6 +407,161 @@ app.post("/api/payment/verify", async (req, res) => {
   }
 });
 
+async function sendServerPaymentSuccessEmail(userId: string, paymentId?: string) {
+  const userRef = admin.firestore().collection("users").doc(userId);
+  const userSnap = await userRef.get();
+
+  if (!userSnap.exists) {
+    throw new Error(`Student ${userId} not found for success email`);
+  }
+
+  const student = userSnap.data() as any;
+  if (!student?.email || student.paymentSuccessEmailSentAt) {
+    return;
+  }
+
+  const studentName = student.fullName || "Student";
+  const internshipDomain = student.internshipDomain || "Internship";
+
+  const result: any = await sendEmail({
+    to: student.email,
+    subject: "Your InternMitra Internship Acceptance Letter",
+    html: `
+      <div style="font-family:Arial,sans-serif;color:#0f172a;line-height:1.6">
+        <p>Dear ${studentName},</p>
+        <p>Greetings from InternMitra!</p>
+        <p>Congratulations! You have been successfully enrolled in the ${internshipDomain} Internship Program.</p>
+        <p>This email serves as your official Internship Acceptance Letter and confirms your participation in the internship program.</p>
+        <p>Further details, including internship access, training schedules, assignments, and guidelines, will be shared on your registered email address.</p>
+        <p>We wish you a successful and rewarding internship journey.</p>
+        <p>Best Regards,<br/>InternMitra Team</p>
+      </div>
+    `,
+  });
+
+  await userRef.set({
+    paymentSuccessEmailSentAt: new Date().toISOString(),
+    paymentSuccessEmailProvider: result?.provider || "smtp",
+    paymentSuccessEmailId: result?.messageId || null,
+    paymentSuccessEmailForPaymentId: paymentId || null,
+  }, { merge: true });
+}
+
+async function markReconciledPaymentSuccess(orderData: any, payment: any, verifiedBy: string) {
+  const verifiedAt = new Date().toISOString();
+  const userRef = admin.firestore().collection("users").doc(orderData.userId);
+  const paymentRef = admin.firestore().collection("payments").doc(payment.id);
+  const orderRef = admin.firestore().collection("paymentOrders").doc(orderData.razorpayOrderId);
+
+  const batch = admin.firestore().batch();
+  batch.update(userRef, {
+    isPaid: true,
+    hasPaid: true,
+    paymentStatus: "success",
+    paymentVerifiedAt: verifiedAt,
+    razorpayOrderId: orderData.razorpayOrderId,
+    razorpayPaymentId: payment.id,
+  });
+  batch.set(paymentRef, {
+    userId: orderData.userId,
+    createdByEmitraId: orderData.createdByEmitraId || null,
+    createdByEmitraName: orderData.createdByEmitraName || null,
+    razorpayOrderId: orderData.razorpayOrderId,
+    razorpayPaymentId: payment.id,
+    amount: orderData.amount,
+    amountPaise: orderData.amountPaise,
+    currency: orderData.currency || payment.currency || "INR",
+    status: "success",
+    verifiedBy,
+    timestamp: verifiedAt,
+  }, { merge: true });
+  batch.update(orderRef, {
+    status: "success",
+    razorpayPaymentId: payment.id,
+    verifiedAt,
+    verifiedBy,
+  });
+
+  await batch.commit();
+
+  try {
+    await sendServerPaymentSuccessEmail(orderData.userId, payment.id);
+  } catch (emailError) {
+    console.error("Reconcile success email failed:", emailError);
+  }
+}
+
+async function getSuccessfulPaymentForOrder(razorpay: Razorpay, orderData: any) {
+  const payments = await razorpay.orders.fetchPayments(orderData.razorpayOrderId);
+  const items = payments?.items || [];
+
+  const captured = items.find((payment: any) =>
+    payment.status === "captured" &&
+    Number(payment.amount) === Number(orderData.amountPaise)
+  );
+
+  if (captured) return captured;
+
+  const authorized = items.find((payment: any) =>
+    payment.status === "authorized" &&
+    Number(payment.amount) === Number(orderData.amountPaise)
+  );
+
+  if (!authorized) return null;
+
+  return razorpay.payments.capture(
+    authorized.id,
+    Number(orderData.amountPaise),
+    orderData.currency || authorized.currency || "INR"
+  );
+}
+
+app.post("/api/payment/reconcile", requireAdmin, async (req, res) => {
+  try {
+    const decodedToken = await getDecodedToken(req);
+    const { keyId, keySecret } = await getRazorpayConfig();
+    const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+
+    const snapshot = await admin
+      .firestore()
+      .collection("paymentOrders")
+      .where("status", "in", ["created", "pending", "failed"])
+      .limit(100)
+      .get();
+
+    let checked = 0;
+    let updated = 0;
+    const failures: { orderId: string; message: string }[] = [];
+
+    for (const orderDoc of snapshot.docs) {
+      checked += 1;
+      const orderData = orderDoc.data();
+
+      try {
+        const payment = await getSuccessfulPaymentForOrder(razorpay, orderData);
+
+        if (payment) {
+          await markReconciledPaymentSuccess(orderData, payment, decodedToken.uid);
+          updated += 1;
+        }
+      } catch (error: any) {
+        failures.push({
+          orderId: orderData.razorpayOrderId || orderDoc.id,
+          message: error?.message || "Unknown reconciliation error",
+        });
+      }
+    }
+
+    res.json({ status: "success", checked, updated, failures });
+  } catch (error: any) {
+    console.error("Payment reconcile error:", error);
+    res.status(error?.statusCode || 500).json({
+      status: "error",
+      message: error?.message || "Unable to reconcile payments",
+    });
+  }
+});
+
 app.post("/api/offer-letter-email", async (req, res) => {
   try {
     const { to, studentName, internshipDomain, fileName, pdfBase64 } = req.body || {};

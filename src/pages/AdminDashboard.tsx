@@ -7,7 +7,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
-import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus, Download, Bell, Send, Upload, FileText, Trash2, ClipboardList, KeyRound } from 'lucide-react';
+import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus, Download, Bell, Send, Upload, FileText, Trash2, ClipboardList, KeyRound, RefreshCw } from 'lucide-react';
 import { createUserWithEmailAndPassword, deleteUser, getAuth, signOut, User as FirebaseUser } from 'firebase/auth';
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { auth } from '../lib/firebase';
@@ -178,6 +178,7 @@ export default function AdminDashboard() {
   const [savingReport, setSavingReport] = useState(false);
   const [savingAssignment, setSavingAssignment] = useState(false);
   const [backupLoading, setBackupLoading] = useState(false);
+  const [reconcileLoading, setReconcileLoading] = useState(false);
 
   // Pagination states
   const [usersPage, setUsersPage] = useState(1);
@@ -792,6 +793,43 @@ export default function AdminDashboard() {
     } catch (error: any) {
       console.error('Error deleting assignment:', error);
       alert(error?.message || 'Error deleting assignment');
+    }
+  };
+
+  const reconcileRazorpayPayments = async () => {
+    setReconcileLoading(true);
+
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('Admin session expired. Please login again.');
+
+      const endpoints = ['/api/payment/reconcile', '/.netlify/functions/payment-reconcile'];
+      let response: Response | null = null;
+      let result: any = null;
+
+      for (const endpoint of endpoints) {
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        result = await response.json().catch(() => null);
+
+        if (response.status !== 404) break;
+      }
+
+      if (!response || !response.ok) {
+        throw new Error(result?.message || result?.error || 'Unable to sync Razorpay payments');
+      }
+
+      await fetchData();
+      alert(`Razorpay sync complete. Checked ${result.checked || 0}, updated ${result.updated || 0}.`);
+    } catch (error) {
+      console.error('Razorpay sync error:', error);
+      alert(error instanceof Error ? error.message : 'Unable to sync Razorpay payments');
+    } finally {
+      setReconcileLoading(false);
     }
   };
   const updatePaymentStatus = async (
@@ -1513,6 +1551,26 @@ export default function AdminDashboard() {
 
           <TabsContent value="dashboard" className="space-y-8 mt-4">
             {/* Stats Grid */}
+            {canManageAdminDashboard && (
+              <div className="student-card p-4 bg-white/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">Razorpay Payment Sync</h3>
+                  <p className="text-xs font-semibold text-slate-500 mt-1">
+                    Use this if Razorpay shows paid but the student is still pending.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={reconcileRazorpayPayments}
+                  disabled={reconcileLoading}
+                  className="h-11 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider"
+                >
+                  <RefreshCw size={16} className={reconcileLoading ? 'animate-spin' : ''} />
+                  {reconcileLoading ? 'Syncing...' : 'Sync Razorpay'}
+                </Button>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="student-card p-6 bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 border-indigo-500/15 relative overflow-hidden group">
                 <div className="flex items-center gap-3 mb-4">
