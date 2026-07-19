@@ -40,11 +40,21 @@ async function markPaymentSuccess(firebaseAdmin, orderData, payment, verifiedBy)
 
   await batch.commit();
 
+  let emailResult = null;
+  let emailErrorMessage = null;
   try {
-    await sendPaymentSuccessEmail(firebaseAdmin, orderData.userId, payment.id);
+    emailResult = await sendPaymentSuccessEmail(firebaseAdmin, orderData.userId, payment.id);
   } catch (emailError) {
+    emailErrorMessage = emailError?.message || 'Unknown email error';
     console.error('Reconcile success email failed:', emailError);
+    await userRef.set({
+      paymentSuccessEmailFailedAt: new Date().toISOString(),
+      paymentSuccessEmailError: emailErrorMessage,
+      paymentSuccessEmailForPaymentId: payment.id,
+    }, { merge: true });
   }
+
+  return { emailResult, emailError: emailErrorMessage };
 }
 
 async function getSuccessfulPaymentForOrder(razorpay, orderData) {
@@ -90,6 +100,9 @@ async function reconcilePayments({ limit = 100, verifiedBy = 'razorpay_reconcile
 
   let checked = 0;
   let updated = 0;
+  let emailsSent = 0;
+  let emailsSkipped = 0;
+  let emailsFailed = 0;
   const failures = [];
 
   for (const orderDoc of snapshot.docs) {
@@ -105,8 +118,11 @@ async function reconcilePayments({ limit = 100, verifiedBy = 'razorpay_reconcile
       const payment = await getSuccessfulPaymentForOrder(razorpay, orderData);
 
       if (payment) {
-        await markPaymentSuccess(firebaseAdmin, orderData, payment, verifiedBy);
+        const result = await markPaymentSuccess(firebaseAdmin, orderData, payment, verifiedBy);
         updated += 1;
+        if (result?.emailResult?.sent) emailsSent += 1;
+        if (result?.emailResult?.skipped) emailsSkipped += 1;
+        if (result?.emailError) emailsFailed += 1;
       }
     } catch (error) {
       failures.push({
@@ -121,7 +137,7 @@ async function reconcilePayments({ limit = 100, verifiedBy = 'razorpay_reconcile
     }
   }
 
-  return { checked, updated, failures };
+  return { checked, updated, emailsSent, emailsSkipped, emailsFailed, failures };
 }
 
 module.exports = {

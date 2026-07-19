@@ -428,8 +428,12 @@ async function sendServerPaymentSuccessEmail(userId: string, paymentId?: string)
   }
 
   const student = userSnap.data() as any;
-  if (!student?.email || student.paymentSuccessEmailSentAt) {
-    return;
+  if (!student?.email) {
+    throw new Error(`Student ${userId} does not have an email address`);
+  }
+
+  if (student.paymentSuccessEmailSentAt) {
+    return { skipped: true, reason: "already_sent" };
   }
 
   const studentName = student.fullName || "Student";
@@ -457,6 +461,8 @@ async function sendServerPaymentSuccessEmail(userId: string, paymentId?: string)
     paymentSuccessEmailId: result?.messageId || null,
     paymentSuccessEmailForPaymentId: paymentId || null,
   }, { merge: true });
+
+  return { sent: true, to: student.email, id: result?.messageId || null };
 }
 
 async function markReconciledPaymentSuccess(orderData: any, payment: any, verifiedBy: string) {
@@ -496,11 +502,21 @@ async function markReconciledPaymentSuccess(orderData: any, payment: any, verifi
 
   await batch.commit();
 
+  let emailResult: any = null;
+  let emailErrorMessage: string | null = null;
   try {
-    await sendServerPaymentSuccessEmail(orderData.userId, payment.id);
-  } catch (emailError) {
+    emailResult = await sendServerPaymentSuccessEmail(orderData.userId, payment.id);
+  } catch (emailError: any) {
+    emailErrorMessage = emailError?.message || "Unknown email error";
     console.error("Reconcile success email failed:", emailError);
+    await userRef.set({
+      paymentSuccessEmailFailedAt: new Date().toISOString(),
+      paymentSuccessEmailError: emailErrorMessage,
+      paymentSuccessEmailForPaymentId: payment.id,
+    }, { merge: true });
   }
+
+  return { emailResult, emailError: emailErrorMessage };
 }
 
 async function getSuccessfulPaymentForOrder(razorpay: Razorpay, orderData: any) {
@@ -547,6 +563,9 @@ app.post("/api/payment/reconcile", requireAdmin, async (req, res) => {
 
     let checked = 0;
     let updated = 0;
+    let emailsSent = 0;
+    let emailsSkipped = 0;
+    let emailsFailed = 0;
     const failures: { orderId: string; message: string }[] = [];
 
     for (const orderDoc of snapshot.docs) {
@@ -562,8 +581,11 @@ app.post("/api/payment/reconcile", requireAdmin, async (req, res) => {
         const payment = await getSuccessfulPaymentForOrder(razorpay, orderData);
 
         if (payment) {
-          await markReconciledPaymentSuccess(orderData, payment, decodedToken.uid);
+          const result = await markReconciledPaymentSuccess(orderData, payment, decodedToken.uid);
           updated += 1;
+          if (result?.emailResult?.sent) emailsSent += 1;
+          if (result?.emailResult?.skipped) emailsSkipped += 1;
+          if (result?.emailError) emailsFailed += 1;
         }
       } catch (error: any) {
         failures.push({
@@ -573,7 +595,7 @@ app.post("/api/payment/reconcile", requireAdmin, async (req, res) => {
       }
     }
 
-    res.json({ status: "success", checked, updated, failures });
+    res.json({ status: "success", checked, updated, emailsSent, emailsSkipped, emailsFailed, failures });
   } catch (error: any) {
     console.error("Payment reconcile error:", error);
     res.status(error?.statusCode || 500).json({

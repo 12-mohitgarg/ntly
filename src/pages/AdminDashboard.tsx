@@ -837,7 +837,11 @@ export default function AdminDashboard() {
       const failureText = Array.isArray(result.failures) && result.failures.length > 0
         ? `\nFailures: ${result.failures.map((failure: any) => `${failure.orderId}: ${failure.message}`).join('\n')}`
         : '';
-      alert(`Razorpay sync complete. Checked ${result.checked || 0}, updated ${result.updated || 0}.${failureText}`);
+      alert(
+        `Razorpay sync complete. Checked ${result.checked || 0}, updated ${result.updated || 0}. ` +
+        `Emails sent ${result.emailsSent || 0}, skipped ${result.emailsSkipped || 0}, failed ${result.emailsFailed || 0}.` +
+        failureText
+      );
     } catch (error) {
       console.error('Razorpay sync error:', error);
       alert(error instanceof Error ? error.message : 'Unable to sync Razorpay payments');
