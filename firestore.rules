@@ -51,7 +51,7 @@ service cloud.firestore {
               (request.auth.uid == userId || isAdmin() || (isEmitra() && resource.data.createdByEmitraId == request.auth.uid));
 
   // Query/search allow for certificate verification
-  allow list: if isSignedIn();
+  allow list: if true;
 
   // Create own profile
   allow create: if isSignedIn() &&

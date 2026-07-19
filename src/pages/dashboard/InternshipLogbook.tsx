@@ -34,7 +34,7 @@ function getBrowser(userAgent = '') {
   return 'Browser';
 }
 
-export default function LogBook() {
+export default function InternshipLogbook() {
   const { user, profile } = useAuth();
   const [logs, setLogs] = useState<LoginLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +59,7 @@ export default function LogBook() {
         userId: log.userId || user.uid
       })));
     } catch (error) {
-      console.error('Error fetching login logs:', error);
+      console.error('Error fetching internship logs:', error);
       setLogs(((profile?.loginLogs || []) as LoginLog[]).map((log, index) => ({
         ...log,
         id: log.id || `${log.loginAtIso || 'login'}-${index}`,
@@ -98,7 +98,7 @@ export default function LogBook() {
       pdf.addImage(headerImg, 'PNG', 0, 0, W, headerH);
       pdf.addImage(footerImg, 'JPEG', 0, H - 13, W, 13);
     } catch (error) {
-      console.warn('Unable to load log book PDF assets:', error);
+      console.warn('Unable to load internship logbook PDF assets:', error);
       pdf.setFillColor(22, 101, 52);
       pdf.rect(0, 0, W, 26, 'F');
       pdf.setTextColor(255, 255, 255);
@@ -111,7 +111,7 @@ export default function LogBook() {
     pdf.setTextColor(15, 23, 42);
     pdf.setFont('Helvetica', 'bold');
     pdf.setFontSize(17);
-    pdf.text('STUDENT LOGIN LOG BOOK', W / 2, y, { align: 'center' });
+    pdf.text('STUDENT INTERNSHIP LOGBOOK', W / 2, y, { align: 'center' });
     y += 10;
 
     pdf.setFillColor(239, 246, 255);
@@ -133,9 +133,9 @@ export default function LogBook() {
 
     pdf.setFontSize(10);
     pdf.setTextColor(30, 64, 175);
-    pdf.text(`Total Login Entries: ${sortedLogs.length}`, ML, y);
+    pdf.text(`Total Logbook Entries: ${sortedLogs.length}`, ML, y);
     const lastLogin = getLogDate(sortedLogs[0]);
-    pdf.text(`Last Login: ${lastLogin ? lastLogin.toLocaleString('en-IN') : 'N/A'}`, W - MR, y, { align: 'right' });
+    pdf.text(`Last Session: ${lastLogin ? lastLogin.toLocaleString('en-IN') : 'N/A'}`, W - MR, y, { align: 'right' });
     y += 9;
 
     const columns = ['#', 'Date', 'Time', 'Browser', 'Status'];
@@ -187,10 +187,10 @@ export default function LogBook() {
     if (sortedLogs.length === 0) {
       pdf.setTextColor(100, 116, 139);
       pdf.setFont('Helvetica', 'normal');
-      pdf.text('No login entries found yet.', ML + 2, y);
+      pdf.text('No logbook entries found yet.', ML + 2, y);
     }
 
-    pdf.save(`InternMitra_Log_Book_${name.replace(/\s+/g, '_')}.pdf`);
+    pdf.save(`InternMitra_Internship_Logbook_${name.replace(/\s+/g, '_')}.pdf`);
   };
 
   return (
@@ -202,10 +202,10 @@ export default function LogBook() {
             Activity Records
           </span>
           <h2 className="text-3xl font-black tracking-tight text-white leading-none">
-            Login Log Book
+            Internship Logbook
           </h2>
           <p className="text-xs text-indigo-100 max-w-md leading-relaxed">
-            Your official sign-in history for internship access and participation tracking.
+            Your official activity history for internship access and participation tracking.
           </p>
           
           <div className="flex flex-wrap gap-3 pt-2">
@@ -230,7 +230,7 @@ export default function LogBook() {
         <div className="z-10 flex-shrink-0 flex justify-center md:justify-start">
           <img
             src="/reports_illustration.png"
-            alt="Log Book Illustration"
+            alt="Internship Logbook Illustration"
             className="h-32 md:h-36 w-auto object-contain drop-shadow-md"
           />
         </div>
@@ -242,13 +242,13 @@ export default function LogBook() {
       {/* 2. STATS CARDS ROW */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 select-none">
         
-        {/* Total Logins */}
+        {/* Total Entries */}
         <div className="bg-white rounded-3xl p-5 border border-gray-200/50 shadow-sm flex items-center gap-4 relative overflow-hidden">
           <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center border border-blue-100 flex-shrink-0">
             <History size={18} className="md:w-5 md:h-5" />
           </div>
           <div className="text-left">
-            <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Total Logins</span>
+            <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Total Entries</span>
             <h4 className="text-base md:text-lg font-black text-slate-800 mt-1">{sortedLogs.length}</h4>
             <span className="text-[9px] text-slate-400 font-semibold mt-0.5 block">Entries logged</span>
           </div>
@@ -286,7 +286,7 @@ export default function LogBook() {
       {/* 3. TABLE SECTION */}
       <section className="bg-white rounded-3xl border border-gray-200/50 shadow-sm overflow-hidden text-left">
         <div className="border-b border-slate-100 p-5 select-none">
-          <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Recent Login Entries</h2>
+          <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Recent Logbook Entries</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -302,11 +302,11 @@ export default function LogBook() {
             <tbody className="divide-y divide-slate-100 select-text">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">Loading log book...</td>
+                  <td colSpan={5} className="px-6 py-12 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">Loading logbook...</td>
                 </tr>
               ) : sortedLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">No login entries found yet.</td>
+                  <td colSpan={5} className="px-6 py-12 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">No logbook entries found yet.</td>
                 </tr>
               ) : (
                 sortedLogs.map((log) => {

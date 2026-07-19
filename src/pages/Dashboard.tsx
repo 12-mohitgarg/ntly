@@ -42,7 +42,7 @@ const Certifications = lazy(() => import('./dashboard/Certifications'));
 const Reports = lazy(() => import('./dashboard/Reports'));
 const Messages = lazy(() => import('./dashboard/Messages'));
 const Support = lazy(() => import('./dashboard/Support'));
-const LogBook = lazy(() => import('./dashboard/LogBook'));
+const InternshipLogbook = lazy(() => import('./dashboard/InternshipLogbook'));
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="bg-white/80 backdrop-blur-md rounded-3xl p-8 border border-gray-200/80 shadow-sm min-h-[400px] flex flex-col items-center justify-center text-center">
@@ -335,7 +335,7 @@ export default function Dashboard() {
     { name: 'Assignments', path: '/dashboard/assignments', icon: FileCheck },
     { name: 'Certifications', path: '/dashboard/certs', icon: Award },
     { name: 'Reports', path: '/dashboard/reports', icon: FileText },
-    { name: 'Log Book', path: '/dashboard/log-book', icon: ClipboardList },
+    { name: 'Internship Logbook', path: '/dashboard/internship-logbook', icon: ClipboardList },
     { name: 'Messages', path: '/dashboard/messages', icon: MessageSquare, badge: unreadMessagesCount || undefined },
     { name: 'Help & Support', path: '/dashboard/help', icon: HelpCircle },
   ];
@@ -350,7 +350,7 @@ export default function Dashboard() {
   const getPageTitle = () => {
     if (location.pathname.includes('/profile')) return 'Profile';
     if (location.pathname.includes('/offer-letter')) return 'Offer Letter';
-    if (location.pathname.includes('/log-book')) return 'Log Book';
+    if (location.pathname.includes('/internship-logbook')) return 'Internship Logbook';
     const activeItem = menuItems.find(item => isLinkActive(item.path));
     return activeItem ? activeItem.name : 'Dashboard';
   };
@@ -588,7 +588,7 @@ export default function Dashboard() {
                 <Route path="assignments" element={<Assignments />} />
                 <Route path="certs" element={<Certifications />} />
                 <Route path="reports" element={<Reports />} />
-                <Route path="log-book" element={<LogBook />} />
+                <Route path="internship-logbook" element={<InternshipLogbook />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="messages" element={<Messages />} />
                 <Route path="resources" element={<PlaceholderPage title="Resources" />} />

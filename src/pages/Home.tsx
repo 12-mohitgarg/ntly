@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { db } from "../lib/firebase";
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { Link } from "react-router-dom";
-import { SearchCheck, Download, ArrowRight, BadgeCheck, Users, Clock, Shield, BookOpen, BarChart3, Phone, Mail, MapPin, Facebook, Instagram, Twitter, Linkedin, Youtube, Award, CheckCircle2 } from "lucide-react";
+import { SearchCheck, Download, ArrowRight, BadgeCheck, Users, Clock, Shield, BookOpen, BarChart3, Phone, Mail, MapPin, Facebook, Instagram, Twitter, Linkedin, Youtube, Award, CheckCircle2, MessageCircle, Heart, Zap, Headset, ShieldCheck } from "lucide-react";
 import { generateCertificate } from "./dashboard/generateCertificate";
 
 export default function Home() {
@@ -529,10 +529,10 @@ export default function Home() {
                   key={filter}
                   onClick={() => setActiveFilter(filter === "Students" ? "Student" : filter === "Teachers" ? "Teacher" : "All")}
                   className={`px-6 py-2 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all duration-300 cursor-pointer ${(filter === "All" && activeFilter === "All") ||
-                      (filter === "Students" && activeFilter === "Student") ||
-                      (filter === "Teachers" && activeFilter === "Teacher")
-                      ? "bg-slate-900 text-white shadow-sm"
-                      : "text-slate-600 hover:bg-slate-50"
+                    (filter === "Students" && activeFilter === "Student") ||
+                    (filter === "Teachers" && activeFilter === "Teacher")
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "text-slate-600 hover:bg-slate-50"
                     }`}
                 >
                   {filter}
@@ -574,8 +574,8 @@ export default function Home() {
                   </div>
 
                   <span className={`px-2.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider ${item.type === "Student"
-                      ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                      : "bg-blue-50 text-blue-600 border border-blue-100"
+                    ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                    : "bg-blue-50 text-blue-600 border border-blue-100"
                     }`}>
                     {item.type}
                   </span>
@@ -647,39 +647,127 @@ export default function Home() {
       </section>
 
       {/* SUPPORT */}
-      <section className="py-20 bg-gradient-to-r from-blue-700 to-indigo-800 text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_120%,rgba(6,182,212,0.1),transparent_50%)] pointer-events-none" />
-        <div className="max-w-5xl mx-auto text-center px-4 relative z-10 space-y-4">
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            24/7 Live Mentor Support
-          </h2>
-          <p className="text-sm text-blue-100 max-w-xl mx-auto">
-            Have questions? Our support team and expert trainers are here to guide you.
-          </p>
+      <section className="py-10 md:py-14 bg-gradient-to-r from-blue-600 to-indigo-700 text-white relative overflow-hidden w-full text-left">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            {/* Left text elements */}
+            <div className="lg:col-span-7 space-y-5 relative z-10">
+              <span className="inline-flex items-center gap-2 bg-white/10 text-white border border-white/10 px-3.5 py-1 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider">
+                <Headset size={13} />
+                We're Here to Help
+              </span>
 
-          <div className="flex flex-wrap justify-center gap-6 pt-4 font-semibold text-sm">
-            <div className="flex items-center gap-3 bg-white/10 px-5 py-3 rounded-2xl border border-white/10 backdrop-blur-sm shadow-sm">
-              <Mail className="w-4 h-4 text-amber-400" />
-              info@internmitra.com
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-none text-white">
+                24/7 Live <br className="hidden sm:inline" />
+                Mentor <span className="text-blue-200">Support</span>
+              </h2>
+
+              <p className="text-slate-200 text-xs sm:text-sm leading-relaxed max-w-xl font-semibold">
+                Have questions? Our support team and expert trainers are here to guide you at every step of your journey.
+              </p>
+
+              {/* Sub features row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center text-white py-1">
+                <div className="flex gap-3 items-start">
+                  <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0 border border-white/5">
+                    <MessageCircle size={14} />
+                  </div>
+                  <div className="space-y-0.5">
+                    <h4 className="text-[11px] font-black uppercase tracking-tight">Instant Solutions</h4>
+                    <p className="text-[9px] text-slate-200 font-semibold leading-normal">Get quick answers to your queries.</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 items-start sm:border-l sm:border-white/10 sm:pl-5">
+                  <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0 border border-white/5">
+                    <Users size={14} />
+                  </div>
+                  <div className="space-y-0.5">
+                    <h4 className="text-[11px] font-black uppercase tracking-tight">Expert Guidance</h4>
+                    <p className="text-[9px] text-slate-200 font-semibold leading-normal">Learn from industry professionals.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                <a
+                  href="mailto:info@internmitra.com"
+                  className="flex items-center justify-center gap-2.5 bg-white text-slate-800 px-5 h-11 rounded-lg font-black text-[11px] uppercase tracking-wider shadow-sm hover:bg-slate-50 transition cursor-pointer"
+                >
+                  <Mail size={14} className="text-blue-650" />
+                  info@internmitra.com
+                </a>
+                <a
+                  href="tel:+919693921517"
+                  className="flex items-center justify-center gap-2.5 bg-white text-slate-800 px-5 h-11 rounded-lg font-black text-[11px] uppercase tracking-wider shadow-sm hover:bg-slate-50 transition cursor-pointer"
+                >
+                  <Phone size={14} className="text-blue-650" />
+                  +91 9693921517
+                </a>
+              </div>
             </div>
-            <div className="flex items-center gap-3 bg-white/10 px-5 py-3 rounded-2xl border border-white/10 backdrop-blur-sm shadow-sm">
-              <Phone className="w-4 h-4 text-amber-400" />
-              +91 9693921517
+
+            {/* Right illustration / graphics */}
+            <div className="lg:col-span-5 relative hidden lg:flex items-center justify-center">
+              {/* Floating icon cards */}
+              <div className="absolute top-2 left-6 w-10 h-10 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/80 font-black text-[10px] tracking-tight animate-pulse">
+                24/7
+              </div>
+              <div className="absolute bottom-2 left-12 w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/85">
+                <ShieldCheck size={14} />
+              </div>
+              <div className="absolute bottom-12 right-6 w-10 h-10 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/85">
+                <Award size={16} />
+              </div>
+
+              <img
+                src="/support_illustration.png"
+                alt="24/7 Live Mentor Support"
+                className="h-44 md:h-52 w-auto object-contain relative z-10 drop-shadow-md"
+              />
+
+              {/* Dotted grid details */}
+              <div className="absolute -top-4 -right-4 w-20 h-20 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
             </div>
           </div>
+
+          {/* Bottom transparent stats overlay bar */}
+          <div className="mt-8 pt-6 border-t border-white/10 grid grid-cols-2 lg:grid-cols-4 gap-5 items-center text-white">
+            {[
+              { title: 'Always Available', desc: 'We\'re here for you, anytime, anywhere.', icon: Clock },
+              { title: 'Trusted Support', desc: 'Reliable help from verified experts.', icon: ShieldCheck },
+              { title: 'Quick Response', desc: 'Fast and effective assistance.', icon: Zap },
+              { title: 'Your Success Matters', desc: 'We\'re committed to your learning journey.', icon: Heart }
+            ].map((node, idx) => (
+              <div key={idx} className="flex gap-3 items-start">
+                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-sm">
+                  <node.icon size={15} />
+                </div>
+                <div className="space-y-0.5">
+                  <h5 className="text-[10px] font-black text-white uppercase tracking-tight leading-none mb-0.5">{node.title}</h5>
+                  <p className="text-[9px] text-slate-200 font-semibold leading-normal">{node.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-[#0b0e1a] text-white pt-20 pb-10 border-t border-slate-900">
+      <footer className="bg-[#0b0e1a] text-white pt-20 pb-10 border-t border-slate-900 text-left select-none">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-5 gap-10 mb-16">
 
             <div className="lg:col-span-2 space-y-6">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-blue-600/10">
-                  IM
-                </div>
+                <img
+                  src="/logo-new.jpeg"
+                  alt="InternMitra Logo"
+                  className="h-11 w-auto object-contain rounded-xl"
+                />
                 <div>
                   <h2 className="text-xl font-black tracking-tight">InternMitra</h2>
                   <p className="text-slate-500 text-[9px] font-bold uppercase tracking-wider">Bihar's Internship Portal</p>
