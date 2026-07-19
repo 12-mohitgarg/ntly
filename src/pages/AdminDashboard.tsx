@@ -885,7 +885,10 @@ export default function AdminDashboard() {
         await updateDoc(
           doc(db, 'users', userDoc.id),
           {
-            isPaid: true
+            isPaid: true,
+            hasPaid: true,
+            paymentStatus: 'success',
+            paymentVerifiedAt: new Date().toISOString()
           }
         );
 
@@ -933,7 +936,13 @@ export default function AdminDashboard() {
         await updateDoc(
           doc(db, 'users', userDoc.id),
           {
-            isPaid: false
+            isPaid: false,
+            hasPaid: false,
+            paymentStatus: 'rejected',
+            paymentRejectedAt: new Date().toISOString(),
+            paymentVerifiedAt: null,
+            razorpayOrderId: null,
+            razorpayPaymentId: null
           }
         );
       });

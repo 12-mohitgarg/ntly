@@ -30,6 +30,9 @@ export interface UserProfile {
   createdByEmitraId?: string | null;
   createdByEmitraName?: string | null;
   isPaid: boolean;
+  hasPaid?: boolean;
+  paymentStatus?: string;
+  paymentVerifiedAt?: string;
   registrationDate: string;
   learningHours: number;
   progress: number;

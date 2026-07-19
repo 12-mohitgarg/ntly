@@ -39,13 +39,16 @@ function PageLoader() {
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, profile, isAdmin, isEmitra, adminProfile, loading } = useAuth();
+  const paymentRejected = profile?.paymentStatus === 'rejected';
+  const paymentComplete = !paymentRejected && Boolean(profile?.isPaid || profile?.hasPaid || profile?.paymentStatus === 'success');
 
   if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
   if (!user) return <Navigate to="/login" />;
   if (isAdmin) return <Navigate to={adminProfile?.role === 'teacher' ? '/admin/daily-videos' : '/admin-dashboard'} replace />;
   if (isEmitra) return <Navigate to="/emitra-dashboard" replace />;
   if (!profile) return <Navigate to="/login" replace />;
-  if (profile && !profile.isPaid && window.location.pathname !== '/payment') return <Navigate to="/payment" />;
+  if (!paymentComplete && window.location.pathname !== '/payment') return <Navigate to="/payment" />;
+  if (paymentComplete && window.location.pathname === '/payment') return <Navigate to="/dashboard" replace />;
 
   return <>{children}</>;
 }

@@ -37,6 +37,14 @@ export default function Payment() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [amount, setAmount] = useState(1000);
+  const paymentRejected = profile?.paymentStatus === 'rejected';
+  const paymentComplete = !paymentRejected && Boolean(profile?.isPaid || profile?.hasPaid || profile?.paymentStatus === 'success');
+
+  useEffect(() => {
+    if (paymentComplete) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [paymentComplete, navigate]);
 
   useEffect(() => {
     if (profile?.college) {
@@ -63,6 +71,10 @@ export default function Payment() {
 
   const handlePayment = async () => {
     if (!user) return;
+    if (paymentComplete) {
+      navigate('/dashboard', { replace: true });
+      return;
+    }
 
     if (typeof window.Razorpay === 'undefined') {
       console.error('Razorpay SDK not loaded');
@@ -85,6 +97,10 @@ export default function Payment() {
 
       const order = await orderResponse.json();
       if (!orderResponse.ok) {
+        if (orderResponse.status === 409) {
+          navigate('/dashboard', { replace: true });
+          return;
+        }
         throw new Error(order?.details || order?.error || 'Could not create payment order');
       }
 

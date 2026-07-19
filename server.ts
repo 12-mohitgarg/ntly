@@ -150,6 +150,11 @@ async function getStudentForPayment(decodedToken: admin.auth.DecodedIdToken, pay
   }
 
   const student = { uid: userSnap.id, ...userSnap.data() } as any;
+  const isRejected = student.paymentStatus === "rejected" || student.isPaid === false;
+
+  if ((student.isPaid === true || student.hasPaid === true || student.paymentStatus === "success") && !isRejected) {
+    throw Object.assign(new Error("Student payment is already verified"), { statusCode: 409 });
+  }
 
   if (targetUserId === decodedToken.uid) {
     return student;
