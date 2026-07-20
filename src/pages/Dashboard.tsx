@@ -356,10 +356,10 @@ export default function Dashboard() {
   };
 
   const sidebarContent = (isMobile = false) => (
-    <div className="flex flex-col h-full justify-between select-none">
-      <div>
+    <div className={`flex flex-col h-full select-none ${isMobile ? 'justify-start gap-3' : 'justify-between'}`}>
+      <div className={isMobile ? 'shrink-0' : ''}>
         {/* Brand Logo */}
-        <div className="flex items-center justify-center pb-4 border-b border-gray-100">
+        <div className={`flex items-center justify-center border-b border-gray-100 ${isMobile ? 'pb-3' : 'pb-4'}`}>
           <Link to="/dashboard" onClick={() => isMobile && setIsSidebarOpen(false)} className="flex items-center justify-center group w-full">
             <img
               src="/logo-new.jpeg"
@@ -370,7 +370,7 @@ export default function Dashboard() {
         </div>
 
         {/* Student Mini Profile Card */}
-        <div className="mt-4 p-3 bg-slate-50/80 border border-slate-150 rounded-2xl flex items-center gap-3">
+        <div className={`${isMobile ? 'mt-3 p-2.5 rounded-xl' : 'mt-4 p-3 rounded-2xl'} bg-slate-50/80 border border-slate-150 flex items-center gap-3`}>
           <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs flex-shrink-0 shadow-sm shadow-blue-500/10">
             {profile?.fullName ? profile.fullName.charAt(0).toUpperCase() : 'S'}
           </div>
@@ -385,7 +385,7 @@ export default function Dashboard() {
         </div>
 
         {/* Navigation Items */}
-        <nav className="mt-4 space-y-1">
+        <nav className={`${isMobile ? 'mt-3 space-y-0.5' : 'mt-4 space-y-1'}`}>
           {menuItems.map((item) => {
             const active = isLinkActive(item.path);
             return (
@@ -393,7 +393,7 @@ export default function Dashboard() {
                 key={item.name}
                 to={item.path}
                 onClick={() => isMobile && setIsSidebarOpen(false)}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl transition-all duration-200 group relative ${
+                className={`flex items-center justify-between px-3.5 ${isMobile ? 'py-2 rounded-xl' : 'py-2.5 rounded-2xl'} transition-all duration-200 group relative ${
                   active
                     ? 'bg-[#eff6ff] text-blue-600 font-bold'
                     : 'text-slate-650 hover:bg-slate-50 hover:text-slate-900 font-bold'
@@ -424,8 +424,8 @@ export default function Dashboard() {
       </div>
 
       {/* Footer Support Card & Illustration */}
-      <div className="mt-4 pt-3 border-t border-gray-100">
-        <div className="bg-[#eff6ff] rounded-2xl p-3.5 border border-blue-100/50 relative overflow-hidden">
+      <div className={`${isMobile ? 'mt-1 pt-3' : 'mt-4 pt-3'} border-t border-gray-100`}>
+        <div className={`bg-[#eff6ff] rounded-2xl ${isMobile ? 'p-3' : 'p-3.5'} border border-blue-100/50 relative overflow-hidden`}>
           <div className="flex items-center gap-2 text-blue-600 font-bold text-xs">
             <HelpCircle size={15} />
             <span>Need Help?</span>
@@ -444,7 +444,7 @@ export default function Dashboard() {
         </div>
 
         {/* Beanbag Illustration */}
-        <div className="flex justify-center -mb-2 mt-3">
+        <div className={`${isMobile ? 'hidden' : 'flex'} justify-center -mb-2 mt-3`}>
           <img
             src="/beanbag_guy.png"
             alt="Support Illustration"
@@ -617,7 +617,7 @@ export default function Dashboard() {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed left-0 top-0 bottom-0 z-50 w-72 bg-white p-6 border-r border-gray-200 flex flex-col justify-between"
+              className="fixed left-0 top-0 bottom-0 z-50 w-72 bg-white p-4 border-r border-gray-200 flex flex-col overflow-y-auto"
             >
               {sidebarContent(true)}
             </motion.aside>

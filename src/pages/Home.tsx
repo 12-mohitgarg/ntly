@@ -262,8 +262,8 @@ export default function Home() {
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-3xl blur-2xl opacity-10" />
                 <div className="bg-white p-4 rounded-3xl border border-slate-100 relative z-10 shadow-xl">
                   <img
-                    src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=800&auto=format&fit=crop"
-                    alt="Students collaborating"
+                    src="/home-internship-hero.jpg"
+                    alt="Students learning with internship dashboard"
                     className="rounded-2xl h-[300px] md:h-[380px] object-cover w-full shadow-inner"
                   />
                   {/* Floating badge cards */}

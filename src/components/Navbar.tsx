@@ -159,7 +159,7 @@ export default function Navbar() {
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 w-80 bg-white shadow-2xl p-8 flex flex-col gap-6 border-l border-slate-100 z-[10000]"
+            className="fixed right-0 top-0 bottom-0 w-80 bg-white shadow-2xl p-8 flex flex-col gap-6 border-l border-slate-100 z-[10000] overflow-y-auto"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-black uppercase tracking-[0.2em] text-blue-600">Navigation</span>
@@ -184,7 +184,7 @@ export default function Navbar() {
               ))}
             </div>
 
-            <div className="mt-auto pt-6 border-t border-slate-100 flex flex-col gap-4">
+            <div className="pt-4 border-t border-slate-100 flex flex-col gap-3">
               {user ? (
                 <>
                   {isAdmin ? (
