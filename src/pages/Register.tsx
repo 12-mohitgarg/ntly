@@ -626,11 +626,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                   <div className="space-y-1.5 text-left">
                     <Label htmlFor="department" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Department *</Label>
                     <select name="department" value={formData.department} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
-<<<<<<< HEAD
-                      <option value="">Department</option>
-=======
                       <option value="">Select Department</option>
->>>>>>> 4212c7bec5618c5ced4bc7260cce4edf9e910f0a
                       {degrees.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
                     </select>
                   </div>
