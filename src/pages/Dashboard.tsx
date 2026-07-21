@@ -43,6 +43,7 @@ const Reports = lazy(() => import('./dashboard/Reports'));
 const Messages = lazy(() => import('./dashboard/Messages'));
 const Support = lazy(() => import('./dashboard/Support'));
 const InternshipLogbook = lazy(() => import('./dashboard/InternshipLogbook'));
+const Progress = lazy(() => import('./dashboard/Progress'));
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="bg-white/80 backdrop-blur-md rounded-3xl p-8 border border-gray-200/80 shadow-sm min-h-[400px] flex flex-col items-center justify-center text-center">
@@ -335,7 +336,6 @@ export default function Dashboard() {
     { name: 'Assignments', path: '/dashboard/assignments', icon: FileCheck },
     { name: 'Certifications', path: '/dashboard/certs', icon: Award },
     { name: 'Reports', path: '/dashboard/reports', icon: FileText },
-    { name: 'Internship Logbook', path: '/dashboard/internship-logbook', icon: ClipboardList },
     { name: 'Messages', path: '/dashboard/messages', icon: MessageSquare, badge: unreadMessagesCount || undefined },
     { name: 'Help & Support', path: '/dashboard/help', icon: HelpCircle },
   ];
@@ -585,6 +585,7 @@ export default function Dashboard() {
                 <Route index element={<MainDashboard />} />
                 <Route path="offer-letter" element={<OfferLetter />} />
                 <Route path="lms/*" element={<LMS />} />
+                <Route path="course" element={<Progress />} />
                 <Route path="assignments" element={<Assignments />} />
                 <Route path="certs" element={<Certifications />} />
                 <Route path="reports" element={<Reports />} />

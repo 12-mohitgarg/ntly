@@ -13,7 +13,8 @@ import {
   FileText,
   Lock,
   ArrowRight,
-  Info
+  Info,
+  ClipboardList
 } from 'lucide-react';
 import { generateCertificate } from './generateCertificate';
 import { generateAttendanceReport } from './generateAttendanceReport';
@@ -194,16 +195,29 @@ export default function Certifications() {
       desc: 'Official record of your internship attendance',
       icon: Clock,
       type: 'attendance',
-      ready: true,
-      badge: 'Verified',
+      ready: progress >= 100,
+      badge: progress >= 100 ? 'Verified' : 'Pending',
       date: '14 Jun 2026',
       dateRaw: '2026-06-14',
       color: 'green'
+    },
+    {
+      id: 'logbook',
+      name: 'Internship Logbook',
+      desc: 'Detailed daily activities and learning records logbook',
+      icon: ClipboardList,
+      type: 'logbook',
+      ready: false,
+      badge: 'Pending',
+      date: '14 Jun 2026',
+      dateRaw: '2026-06-14',
+      color: 'orange'
     }
   ];
 
-  // Sorting
   const sortedDocs = [...initialDocs].sort((a, b) => {
+    if (a.id === 'offerletter') return -1;
+    if (b.id === 'offerletter') return 1;
     if (sortBy === 'latest') {
       return b.dateRaw.localeCompare(a.dateRaw);
     } else {
@@ -212,7 +226,7 @@ export default function Certifications() {
   });
 
   // Stats
-  const totalCount = 5;
+  const totalCount = initialDocs.length;
   const downloadedCount = initialDocs.filter(d => d.ready).length;
   const pendingCount = totalCount - downloadedCount;
   const verifiedCount = downloadedCount; // Ready certificates are verified
