@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const { getAdminApp, isEmitraUser, json, requireSignedIn } = require('./utils/firebase-admin');
 const { getRazorpayConfig } = require('./utils/payment-config');
+const { sendPaymentSuccessEmail } = require('./utils/payment-success-email');
 
 function verifySignature(orderId, paymentId, signature, keySecret) {
   const hmac = crypto.createHmac('sha256', keySecret);
@@ -52,12 +53,24 @@ exports.handler = async (event) => {
     }
 
     const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
-    const payment = await razorpay.payments.fetch(razorpay_payment_id);
+    let payment = await razorpay.payments.fetch(razorpay_payment_id);
+
+    if (
+      payment.order_id === razorpay_order_id &&
+      Number(payment.amount) === Number(orderData.amountPaise) &&
+      payment.status === 'authorized'
+    ) {
+      payment = await razorpay.payments.capture(
+        razorpay_payment_id,
+        Number(orderData.amountPaise),
+        orderData.currency || payment.currency || 'INR'
+      );
+    }
 
     if (
       payment.order_id !== razorpay_order_id ||
       Number(payment.amount) !== Number(orderData.amountPaise) ||
-      !['captured', 'authorized'].includes(payment.status)
+      payment.status !== 'captured'
     ) {
       return json(400, { status: 'failure', message: 'Payment details did not match the order' });
     }
@@ -100,11 +113,19 @@ exports.handler = async (event) => {
 
     await batch.commit();
 
+    let emailResult = null;
+    try {
+      emailResult = await sendPaymentSuccessEmail(firebaseAdmin, orderData.userId, razorpay_payment_id);
+    } catch (emailError) {
+      console.error('Payment success email failed:', emailError);
+    }
+
     return json(200, {
       status: 'success',
       userId: orderData.userId,
       paymentId: razorpay_payment_id,
       amount: orderData.amount,
+      email: emailResult,
     });
   } catch (error) {
     console.error('Verification Error:', error);

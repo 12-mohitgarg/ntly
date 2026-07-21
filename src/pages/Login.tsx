@@ -45,7 +45,8 @@ export default function Login() {
     }
 
     if (profile) {
-      navigate(profile.isPaid ? '/dashboard' : '/payment', { replace: true });
+      const paymentComplete = profile.paymentStatus !== 'rejected' && Boolean(profile.isPaid || profile.hasPaid || profile.paymentStatus === 'success');
+      navigate(paymentComplete ? '/dashboard' : '/payment', { replace: true });
     }
   }, [user, profile, isAdmin, isEmitra, adminProfile?.role, authLoading, navigate]);
 
@@ -88,6 +89,7 @@ export default function Login() {
 
       if (userDoc?.exists()) {
         const userData = userDoc.data();
+        const paymentComplete = userData?.paymentStatus !== 'rejected' && Boolean(userData?.isPaid || userData?.hasPaid || userData?.paymentStatus === 'success');
         const loginAtIso = new Date().toISOString();
         await updateDoc(doc(db, 'users', user.uid), {
           loginLogs: arrayUnion({
@@ -105,7 +107,7 @@ export default function Login() {
         }).catch((error) => {
           console.warn('Unable to save login log:', error);
         });
-        navigate(userData?.isPaid ? '/dashboard' : '/payment', { replace: true });
+        navigate(paymentComplete ? '/dashboard' : '/payment', { replace: true });
         return;
       }
 

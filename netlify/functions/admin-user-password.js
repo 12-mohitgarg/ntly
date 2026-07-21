@@ -62,7 +62,7 @@ if (!admin.apps.length) {
   });
 }
 
-async function requireAdmin(event) {
+async function requireDashboardOperator(event) {
   const authHeader = event.headers.authorization || event.headers.Authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
 
@@ -72,7 +72,7 @@ async function requireAdmin(event) {
 
   const decodedToken = await admin.auth().verifyIdToken(token);
 
-  if (decodedToken.email === 'admin@internmitra.com') {
+  if (decodedToken.email === 'admin@internmitra.com' || decodedToken.email === 'gargmohit8306@gmail.com') {
     return { allowed: true };
   }
 
@@ -80,10 +80,10 @@ async function requireAdmin(event) {
   const adminData = adminDoc.exists ? adminDoc.data() : null;
   const isAllowedAdmin =
     adminData?.isActive === true &&
-    ['admin', 'super_admin'].includes(String(adminData?.role || ''));
+    ['admin', 'super_admin', 'sub_user'].includes(String(adminData?.role || ''));
 
   if (!isAllowedAdmin) {
-    return { allowed: false, response: json(403, { error: 'Only admins can update user passwords' }) };
+    return { allowed: false, response: json(403, { error: 'Only dashboard operators can update user passwords' }) };
   }
 
   return { allowed: true };
@@ -99,7 +99,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const authResult = await requireAdmin(event);
+    const authResult = await requireDashboardOperator(event);
     if (!authResult.allowed) {
       return authResult.response;
     }

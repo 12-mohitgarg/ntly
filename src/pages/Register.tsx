@@ -63,6 +63,15 @@ const WhatsAppIcon = ({ size = 20, className = "" }: { size?: number; className?
 );
 
 const REGISTRATION_SESSIONS = ['2023-27', '2024-28', '2025-29', '2026-30'];
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const PHONE_PATTERN = /^[6-9]\d{9}$/;
+
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
+const normalizePhoneNumber = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
+  return digits.slice(0, 10);
+};
 
 let registrationConfigCache: {
   districts: District[];
@@ -117,9 +126,11 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    const normalizedValue = name === 'contactNumber' ? normalizePhoneNumber(value) : value;
+
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : normalizedValue
     }));
     setError(null);
     if (name === 'email') setEmailError(null);
@@ -127,8 +138,19 @@ export default function Register({ mode = 'public' }: RegisterProps) {
   };
 
   const handleEmailBlur = async () => {
-    const emailVal = formData.email.trim();
-    if (!emailVal || !emailVal.includes('@')) return;
+    const emailVal = normalizeEmail(formData.email);
+    if (!emailVal) return;
+
+    if (!EMAIL_PATTERN.test(emailVal)) {
+      setEmailError("Please enter a valid email address.");
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (emailVal !== formData.email) {
+      setFormData(prev => ({ ...prev, email: emailVal }));
+    }
+
     setEmailCheckLoading(true);
     setEmailError(null);
     try {
@@ -147,8 +169,19 @@ export default function Register({ mode = 'public' }: RegisterProps) {
   };
 
   const handlePhoneBlur = async () => {
-    const phoneVal = formData.contactNumber.trim();
-    if (!phoneVal || phoneVal.length < 10) return;
+    const phoneVal = normalizePhoneNumber(formData.contactNumber);
+    if (!phoneVal) return;
+
+    if (!PHONE_PATTERN.test(phoneVal)) {
+      setPhoneError("Please enter a valid 10 digit mobile number.");
+      setError("Please enter a valid 10 digit mobile number.");
+      return;
+    }
+
+    if (phoneVal !== formData.contactNumber) {
+      setFormData(prev => ({ ...prev, contactNumber: phoneVal }));
+    }
+
     setPhoneCheckLoading(true);
     setPhoneError(null);
     try {
@@ -249,6 +282,29 @@ export default function Register({ mode = 'public' }: RegisterProps) {
         return;
       }
 
+      const emailVal = normalizeEmail(formData.email);
+      const phoneVal = normalizePhoneNumber(formData.contactNumber);
+
+      if (!EMAIL_PATTERN.test(emailVal)) {
+        setEmailError("Please enter a valid email address.");
+        setError("Please enter a valid email address.");
+        return;
+      }
+
+      if (!PHONE_PATTERN.test(phoneVal)) {
+        setPhoneError("Please enter a valid 10 digit mobile number.");
+        setError("Please enter a valid 10 digit mobile number.");
+        return;
+      }
+
+      if (emailVal !== formData.email || phoneVal !== formData.contactNumber) {
+        setFormData(prev => ({
+          ...prev,
+          email: emailVal,
+          contactNumber: phoneVal
+        }));
+      }
+
       setLoading(true);
       setError(null);
       setEmailError(null);
@@ -258,8 +314,8 @@ export default function Register({ mode = 'public' }: RegisterProps) {
         const usersRef = collection(db, 'users');
 
         // Parallel email and phone checks
-        const emailQ = query(usersRef, where('email', '==', formData.email.trim()));
-        const phoneQ = query(usersRef, where('contactNumber', '==', formData.contactNumber.trim()));
+        const emailQ = query(usersRef, where('email', '==', emailVal));
+        const phoneQ = query(usersRef, where('contactNumber', '==', phoneVal));
 
         const [emailSnap, phoneSnap] = await Promise.all([
           getDocs(emailQ),
@@ -322,13 +378,15 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
     setLoading(true);
     try {
+      const emailVal = normalizeEmail(formData.email);
+      const phoneVal = normalizePhoneNumber(formData.contactNumber);
       const studentAuth = isEmitraStudentMode
         ? getAuth(getApps().some(app => app.name === 'emitra-student-create-app')
           ? getApp('emitra-student-create-app')
           : initializeApp(firebaseConfig, 'emitra-student-create-app'))
         : auth;
 
-      const userCredential = await createUserWithEmailAndPassword(studentAuth, formData.email, formData.password);
+      const userCredential = await createUserWithEmailAndPassword(studentAuth, emailVal, formData.password);
       const user = userCredential.user;
 
       const path = `users/${user.uid}`;
@@ -338,8 +396,8 @@ export default function Register({ mode = 'public' }: RegisterProps) {
           fullName: formData.fullName,
           gender: formData.gender,
           parentName: formData.parentName,
-          contactNumber: formData.contactNumber,
-          email: formData.email,
+          contactNumber: phoneVal,
+          email: emailVal,
           district: formData.district,
           college: formData.college,
           university: formData.university,
@@ -569,7 +627,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="contactNumber" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Phone Number *</Label>
                     <div className="relative">
                       <Phone size={16} className="absolute left-4 top-3.5 text-slate-400" />
-                      <Input id="contactNumber" name="contactNumber" value={formData.contactNumber} onChange={handleChange} onBlur={handlePhoneBlur} placeholder="10 digit contact number" className={`pl-11 h-12 rounded-xl bg-slate-50 transition-all font-semibold text-xs sm:text-sm ${phoneError ? 'border-red-500 bg-white ring-4 ring-red-500/10' : 'border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10'}`} />
+                      <Input id="contactNumber" type="tel" inputMode="numeric" maxLength={10} name="contactNumber" value={formData.contactNumber} onChange={handleChange} onBlur={handlePhoneBlur} placeholder="10 digit mobile number" className={`pl-11 h-12 rounded-xl bg-slate-50 transition-all font-semibold text-xs sm:text-sm ${phoneError ? 'border-red-500 bg-white ring-4 ring-red-500/10' : 'border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10'}`} />
                       {phoneCheckLoading && <div className="absolute right-4 top-4 w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />}
                     </div>
                     {phoneError && <p className="text-[10px] text-red-500 font-bold pl-1">{phoneError}</p>}

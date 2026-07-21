@@ -7,8 +7,10 @@ import { CreditCard, KeyRound, Save, ShieldCheck } from 'lucide-react';
 
 interface PaymentSettingsState {
   hasDatabaseConfig: boolean;
+  hasWebhookSecret: boolean;
   keyId: string;
   keyIdMasked: string;
+  webhookSecretMasked: string;
   source: 'database' | 'environment' | 'missing';
   updatedAt: string | null;
   updatedBy: string | null;
@@ -18,6 +20,7 @@ export default function PaymentSettings() {
   const [settings, setSettings] = useState<PaymentSettingsState | null>(null);
   const [keyId, setKeyId] = useState('');
   const [keySecret, setKeySecret] = useState('');
+  const [webhookSecret, setWebhookSecret] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -99,7 +102,7 @@ export default function PaymentSettings() {
           'Content-Type': 'application/json',
           ...authHeader,
         },
-        body: JSON.stringify({ keyId, keySecret }),
+        body: JSON.stringify({ keyId, keySecret, webhookSecret }),
       });
 
       if (!response.ok) {
@@ -107,6 +110,7 @@ export default function PaymentSettings() {
       }
 
       setKeySecret('');
+      setWebhookSecret('');
       setMessage('Razorpay keys updated successfully.');
       await fetchSettings();
     } catch (error) {
@@ -136,7 +140,7 @@ export default function PaymentSettings() {
             </div>
             <h1 className="mt-2 text-2xl font-black text-slate-950 tracking-tight">Razorpay Settings</h1>
             <p className="mt-2 text-sm font-semibold text-slate-500 max-w-2xl">
-              Add or update the active Razorpay key pair used by checkout and server verification.
+              Add or update the active Razorpay key pair used by checkout, server verification, and webhook reconciliation.
             </p>
           </div>
           <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-emerald-700 flex items-center gap-2">
@@ -167,12 +171,29 @@ export default function PaymentSettings() {
               className="student-input border-slate-200/80 rounded-xl"
             />
           </div>
+          <div className="lg:col-span-2">
+            <Label className="student-label block mb-2">Razorpay Webhook Secret</Label>
+            <Input
+              type="password"
+              value={webhookSecret}
+              onChange={(event) => setWebhookSecret(event.target.value)}
+              placeholder="Enter webhook secret from Razorpay"
+              className="student-input border-slate-200/80 rounded-xl"
+            />
+            <p className="mt-2 text-xs font-semibold text-slate-500">
+              Use this endpoint in Razorpay webhooks: <span className="font-black text-slate-800">https://internmitra.org/api/payment/webhook</span>
+            </p>
+          </div>
         </div>
 
-        <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div>
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Current Key</p>
             <p className="mt-1 text-sm font-black text-slate-900">{settings?.keyIdMasked || 'Not configured'}</p>
+          </div>
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Webhook Secret</p>
+            <p className="mt-1 text-sm font-black text-slate-900">{settings?.webhookSecretMasked || 'Not configured'}</p>
           </div>
           <div>
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Source</p>

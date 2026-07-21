@@ -10,7 +10,6 @@ import {
   ClipboardCheck, ArrowRight, Facebook, Instagram, Twitter, Linkedin,
   Youtube, Users, RotateCcw, ShieldAlert
 } from 'lucide-react';
-import { emailOfferLetter } from '../lib/offerLetterPdf';
 
 declare global {
   interface Window {
@@ -37,6 +36,14 @@ export default function Payment() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [amount, setAmount] = useState(1000);
+  const paymentRejected = profile?.paymentStatus === 'rejected';
+  const paymentComplete = !paymentRejected && Boolean(profile?.isPaid || profile?.hasPaid || profile?.paymentStatus === 'success');
+
+  useEffect(() => {
+    if (paymentComplete) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [paymentComplete, navigate]);
 
   useEffect(() => {
     if (profile?.college) {
@@ -63,6 +70,10 @@ export default function Payment() {
 
   const handlePayment = async () => {
     if (!user) return;
+    if (paymentComplete) {
+      navigate('/dashboard', { replace: true });
+      return;
+    }
 
     if (typeof window.Razorpay === 'undefined') {
       console.error('Razorpay SDK not loaded');
@@ -85,6 +96,10 @@ export default function Payment() {
 
       const order = await orderResponse.json();
       if (!orderResponse.ok) {
+        if (orderResponse.status === 409) {
+          navigate('/dashboard', { replace: true });
+          return;
+        }
         throw new Error(order?.details || order?.error || 'Could not create payment order');
       }
 
@@ -120,12 +135,6 @@ export default function Payment() {
             if (!verifyResponse.ok || verifyResult.status !== 'success') {
               throw new Error(verifyResult?.message || verifyResult?.details || 'Payment verification failed');
             }
-
-            // Send email in background without blocking the UI
-            emailOfferLetter(user.uid, profile || {})
-              .catch((emailError) => {
-                console.error('Offer letter email failed:', emailError);
-              });
 
             setSuccess(true);
           } catch (err) {

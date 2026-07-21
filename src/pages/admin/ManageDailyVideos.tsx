@@ -351,6 +351,7 @@ export default function ManageDailyVideos() {
       alert('Error deleting video');
     }
   };
+
   const markCourseCompleted = async () => {
     if (!selectedCourse) return;
 

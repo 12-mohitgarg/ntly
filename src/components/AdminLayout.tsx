@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { auth } from '../lib/firebase';
@@ -26,11 +26,26 @@ interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
+type AdminMenuSection = {
+  title: string;
+  path?: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  subItems?: Array<{
+    name: string;
+    path: string;
+    icon: React.ComponentType<{ size?: number; className?: string }>;
+  }>;
+};
+
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { adminProfile } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isTopMenuOpen, setIsTopMenuOpen] = useState(false);
+  const topMenuRef = useRef<HTMLDivElement | null>(null);
+  const isTeacher = adminProfile?.role === 'teacher';
+  const isSubUser = adminProfile?.role === 'sub_user';
 
   // Expanded states for menu sections
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -41,6 +56,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const handleLogout = async () => {
     try {
+      setIsTopMenuOpen(false);
       await signOut(auth);
       navigate('/login');
     } catch (error) {
@@ -48,12 +64,34 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     }
   };
 
-  const menuSections = [
-    {
-      title: 'Dashboard',
-      path: '/admin-dashboard',
-      icon: LayoutDashboard
-    },
+  useEffect(() => {
+    if (!isTopMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!topMenuRef.current?.contains(event.target as Node)) {
+        setIsTopMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [isTopMenuOpen]);
+
+  const dashboardMenuSection: AdminMenuSection = {
+    title: 'Dashboard',
+    path: '/admin-dashboard',
+    icon: LayoutDashboard
+  };
+
+  const menuSections: AdminMenuSection[] = isSubUser ? [
+    dashboardMenuSection
+  ] : [
+    dashboardMenuSection,
     {
       title: 'Academic Settings',
       icon: GraduationCap,
@@ -110,11 +148,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/50 p-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-xl bg-blue-600 text-sm font-black text-white shadow-md shadow-blue-500/20">
-              {adminProfile?.role === 'teacher' ? 'T' : 'A'}
+              {isTeacher ? 'T' : isSubUser ? 'S' : 'A'}
             </div>
             <div className="min-w-0">
               <p className="text-[8px] font-black uppercase tracking-wider text-blue-500">
-                {adminProfile?.role === 'teacher' ? 'Teacher Portal' : 'Admin Area'}
+                {isTeacher ? 'Teacher Portal' : isSubUser ? 'Dashboard Operator' : 'Admin Area'}
               </p>
               <h4 className="truncate text-xs font-bold text-slate-200 mt-0.5" title={adminProfile?.email || 'Administrator'}>
                 {adminProfile?.email?.split('@')[0] || 'Admin'}
@@ -226,7 +264,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50/50 flex flex-col relative">
+    <div className="h-screen overflow-hidden bg-slate-50/50 flex flex-col relative">
       {/* Premium Admin Top Header */}
       <header className="bg-white border-b border-slate-200/80 shadow-sm sticky top-0 z-30 backdrop-blur-md bg-opacity-95 h-20 flex items-center px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-4">
@@ -257,32 +295,50 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex flex-col text-right">
               <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 leading-none">
-                {adminProfile?.role === 'teacher' ? 'Teacher' : 'Administrator'}
+                {isTeacher ? 'Teacher' : isSubUser ? 'Dashboard Operator' : 'Administrator'}
               </p>
               <h4 className="text-xs font-bold text-slate-800 mt-1 max-w-[150px] truncate leading-none">
                 {adminProfile?.email?.split('@')[0] || 'Console'}
               </h4>
             </div>
 
-            <div className="relative group">
+            <div ref={topMenuRef} className="relative">
               <button
+                type="button"
+                onClick={() => setIsTopMenuOpen((open) => !open)}
+                aria-expanded={isTopMenuOpen}
                 className="h-10 px-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-[10px] font-black uppercase tracking-widest gap-1.5 active:scale-95 transition-all text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 Menu
+                <ChevronDown size={13} className={`transition-transform ${isTopMenuOpen ? 'rotate-180' : ''}`} />
               </button>
               {/* Dropdown Menu */}
-              <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-white border border-slate-200 shadow-xl p-2 hidden group-hover:block hover:block z-50 animate-fade-in">
-                <Link to="/admin-dashboard" className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50">
-                  Dashboard
-                </Link>
-                <div className="h-px bg-slate-150 my-1" />
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-50 text-left w-full cursor-pointer"
-                >
-                  Logout
-                </button>
-              </div>
+              <AnimatePresence>
+                {isTopMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute right-0 mt-2 w-48 rounded-2xl bg-white border border-slate-200 shadow-xl p-2 z-50"
+                  >
+                    <Link
+                      to="/admin-dashboard"
+                      onClick={() => setIsTopMenuOpen(false)}
+                      className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50"
+                    >
+                      Dashboard
+                    </Link>
+                    <div className="h-px bg-slate-150 my-1" />
+                    <button
+                      onClick={handleLogout}
+                      className="flex w-full items-center px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-50 text-left cursor-pointer"
+                    >
+                      Logout
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
 
@@ -290,11 +346,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </header>
 
       {/* Main Layout Area: Desktop Sidebar + Main Panel */}
-      <div className="flex-1 flex flex-row overflow-hidden relative">
+      <div className="h-[calc(100vh-80px)] flex flex-row overflow-hidden relative">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-[radial-gradient(circle_at_20%_20%,rgba(37,99,235,0.04),transparent_32%),radial-gradient(circle_at_85%_8%,rgba(6,182,212,0.03),transparent_30%)]" />
 
         {/* Desktop Sidebar (Left side, sticky, scrollable menu) */}
-        <aside className="hidden lg:flex w-64 shrink-0 border-r border-slate-900 bg-slate-950 p-5 h-[calc(100vh-80px)] sticky top-20 z-20">
+        <aside className="hidden lg:flex w-64 shrink-0 border-r border-slate-900 bg-slate-950 p-5 h-full z-20">
           {renderSidebarContent()}
         </aside>
 
@@ -336,7 +392,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </AnimatePresence>
 
         {/* Content Area */}
-        <main className="relative z-10 w-full flex-1 overflow-y-auto overflow-x-hidden px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
+        <main className="relative z-10 h-full w-full flex-1 overflow-y-auto overflow-x-hidden px-4 py-8 sm:px-6 lg:px-8 xl:px-10">
           <div className="mx-auto h-full max-w-7xl">
             {children}
           </div>

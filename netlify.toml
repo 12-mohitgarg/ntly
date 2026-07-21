@@ -5,6 +5,10 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "nft"
+  included_files = ["public/offer-letter-header.png", "public/ff.png", "public/dded.jpeg"]
+
+[functions."payment-reconcile-scheduled"]
+  schedule = "*/5 * * * *"
 
 [[redirects]]
   from = "/api/payment/order"
@@ -14,6 +18,16 @@
 [[redirects]]
   from = "/api/payment/verify"
   to = "/.netlify/functions/payment-verify"
+  status = 200
+
+[[redirects]]
+  from = "/api/payment/webhook"
+  to = "/.netlify/functions/payment-webhook"
+  status = 200
+
+[[redirects]]
+  from = "/api/payment/reconcile"
+  to = "/.netlify/functions/payment-reconcile"
   status = 200
 
 [[redirects]]

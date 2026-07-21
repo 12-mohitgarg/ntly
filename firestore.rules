@@ -24,6 +24,12 @@ service cloud.firestore {
         get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true &&
         get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'teacher';
     }
+    function isSubUser() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'sub_user';
+    }
     function isEmitra() {
       return isSignedIn() &&
         exists(/databases/$(database)/documents/emitras/$(request.auth.uid)) &&
@@ -46,6 +52,18 @@ service cloud.firestore {
         'hasPaid',
         'paymentStatus',
         'paymentVerifiedAt',
+        'paymentRejectedAt',
+        'razorpayOrderId',
+        'razorpayPaymentId'
+      ]);
+    }
+    function onlyPaymentProtectedFieldsChanged() {
+      return incoming().diff(existing()).affectedKeys().hasOnly([
+        'isPaid',
+        'hasPaid',
+        'paymentStatus',
+        'paymentVerifiedAt',
+        'paymentRejectedAt',
         'razorpayOrderId',
         'razorpayPaymentId'
       ]);
@@ -58,7 +76,7 @@ service cloud.firestore {
   // Single user read
   allow get: if isValidId(userId) &&
               isSignedIn() &&
-              (request.auth.uid == userId || isAdmin() || (isEmitra() && resource.data.createdByEmitraId == request.auth.uid));
+              (request.auth.uid == userId || isAdmin() || isSubUser() || (isEmitra() && resource.data.createdByEmitraId == request.auth.uid));
 
   // Query/search allow for certificate verification
   allow list: if true;
@@ -71,13 +89,15 @@ service cloud.firestore {
   // Update own profile or admin
   allow update: if isSignedIn() &&
                  (isAdmin() ||
+                  (isSubUser() && onlyPaymentProtectedFieldsChanged()) ||
                   (request.auth.uid == userId && !paymentProtectedFieldsChanged()) ||
                   (isEmitra() && resource.data.createdByEmitraId == request.auth.uid && !paymentProtectedFieldsChanged()));
 }
 
     match /payments/{paymentId} {
       // Admins manage the verification queue
-      allow read, write: if isAdmin();
+      allow read: if isAdmin() || isSubUser();
+      allow write: if isAdmin() || isSubUser();
       allow get, list: if isEmitra() && resource.data.createdByEmitraId == request.auth.uid;
 
       // Users can read their own verified payment records. Creation is server-only.

@@ -24,15 +24,15 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { generateCertificate } from './generateCertificate';
-import { generateAttendanceReport, AttendanceEntry } from './generateAttendanceReport';
+import { generateAttendanceReport, AttendanceEntry, AttendanceVideo } from './generateAttendanceReport';
 import { generateTestReport } from './generateTestReport';
-import { COURSE_VIDEO_DAY_LIMIT } from '../../lib/constants';
 
 export default function MainDashboard() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [learningProgress, setLearningProgress] = useState(0);
   const [attendanceEntries, setAttendanceEntries] = useState<AttendanceEntry[]>([]);
+  const [dailyVideos, setDailyVideos] = useState<AttendanceVideo[]>([]);
   const [testSubmission, setTestSubmission] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [totalHours, setTotalHours] = useState(0);
@@ -57,9 +57,21 @@ export default function MainDashboard() {
           where('course', '==', course)
         );
         const videosSnapshot = await getDocs(videosQuery);
+        const videos = videosSnapshot.docs
+          .map(videoDoc => {
+            const data = videoDoc.data();
+            return {
+              id: videoDoc.id,
+              day: Number(data.day),
+              title: data.title || data.videoTitle || data.name || `Day ${data.day}`,
+            } as AttendanceVideo;
+          })
+          .filter((video) => Number.isFinite(Number(video.day)) && Number(video.day) > 0)
+          .sort((a, b) => Number(a.day) - Number(b.day));
+        setDailyVideos(videos);
         const uploadedDays = new Set(
-          videosSnapshot.docs
-            .map((videoDoc) => String(videoDoc.data().day || '').trim())
+          videos
+            .map((video) => String(video.day || '').trim())
             .filter(Boolean)
         );
 
@@ -106,8 +118,8 @@ export default function MainDashboard() {
           setLearningProgress(calculatedProgress);
           setTotalHours(completedDays.size * 4); // Assume 4 hours per class/day watched
         } else {
-          setLearningProgress(profile.progress || 0);
-          setTotalHours(entries.length * 4);
+          setLearningProgress(0);
+          setTotalHours(0);
         }
 
         // 3. Fetch test submissions
@@ -138,8 +150,12 @@ export default function MainDashboard() {
 
   const handleDownloadAttendance = async () => {
     if (!profile) return;
+    if (dailyVideos.length === 0) {
+      alert('Attendance report will be available after lectures are uploaded.');
+      return;
+    }
     try {
-      await generateAttendanceReport(profile, attendanceEntries, []);
+      await generateAttendanceReport(profile, attendanceEntries, dailyVideos);
     } catch (error) {
       console.error(error);
       alert('Error downloading attendance report');
@@ -176,13 +192,25 @@ export default function MainDashboard() {
   ];
 
   // Dynamic values
-  const attendancePercentage = Math.round((attendanceEntries.length / (COURSE_VIDEO_DAY_LIMIT || 20)) * 100) || 0;
-  const totalDays = COURSE_VIDEO_DAY_LIMIT || 20;
+  const uploadedVideoDays = Array.from(new Set<number>(
+    dailyVideos
+      .map((video) => Number(video.day))
+      .filter((day) => Number.isFinite(day) && day > 0)
+  )).sort((a, b) => a - b);
+  const uploadedDaySet = new Set(uploadedVideoDays.map(String));
+  const attendedVideoDays = new Set(
+    attendanceEntries
+      .map((entry) => String(entry.day || '').trim())
+      .filter((day) => uploadedDaySet.has(day))
+  );
+  const hasUploadedVideos = uploadedVideoDays.length > 0;
+  const attendancePercentage = hasUploadedVideos ? Math.round((attendedVideoDays.size / uploadedVideoDays.length) * 100) : 0;
+  const totalDays = uploadedVideoDays.length;
 
   // Pagination calculation
-  const totalPages = Math.ceil(totalDays / pageSize);
+  const totalPages = Math.max(1, Math.ceil(totalDays / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
-  const paginatedDays = Array.from({ length: totalDays }, (_, idx) => idx + 1).slice(startIndex, startIndex + pageSize);
+  const paginatedDays = uploadedVideoDays.slice(startIndex, startIndex + pageSize);
 
   const WhatsAppIcon = () => (
     <svg className="w-8 h-8 text-white fill-current flex-shrink-0" viewBox="0 0 24 24">
@@ -274,9 +302,13 @@ export default function MainDashboard() {
           </div>
           <div>
             <h3 className="text-3xl font-black text-slate-900">{attendancePercentage}%</h3>
-            <span className="text-[10px] font-bold text-slate-400 mt-2 block">This Month</span>
+            <span className="text-[10px] font-bold text-slate-400 mt-2 block">
+              {hasUploadedVideos ? `${attendedVideoDays.size}/${totalDays} Lectures` : 'Not Started'}
+            </span>
           </div>
-          <span className="text-[10px] font-bold text-slate-400">Checked dynamically</span>
+          <span className="text-[10px] font-bold text-slate-400">
+            {hasUploadedVideos ? 'Checked dynamically' : 'After videos upload'}
+          </span>
         </div>
 
       </div>
@@ -430,7 +462,7 @@ export default function MainDashboard() {
               </div>
               <div className="h-4 w-px bg-slate-200" />
               <div>
-                Attended: <span className="text-green-600">{attendanceEntries.length} Days</span>
+                Attended: <span className="text-green-600">{attendedVideoDays.size} Days</span>
               </div>
               <div className="h-4 w-px bg-slate-200" />
               <div>
@@ -438,22 +470,30 @@ export default function MainDashboard() {
               </div>
             </div>
 
-            {/* Attendance slip download */}
-            <button
-              onClick={handleDownloadAttendance}
-              className="inline-flex h-9 items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 rounded-xl text-xs font-bold border border-emerald-100 transition active:scale-95 cursor-pointer shadow-sm"
-            >
-              <Download size={13} />
-              Download Report
-            </button>
-
-            {/* Month Dropdown Selector Mock */}
-            <div className="relative">
-              <button className="inline-flex h-9 items-center justify-center gap-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold px-4 text-slate-700 shadow-sm cursor-pointer hover:bg-slate-50">
-                <Calendar size={13} className="text-slate-400" />
-                <span>May 2025</span>
+            {hasUploadedVideos && (
+              <button
+                onClick={handleDownloadAttendance}
+                className="inline-flex h-9 items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 rounded-xl text-xs font-bold border border-emerald-100 transition active:scale-95 cursor-pointer shadow-sm"
+              >
+                <Download size={13} />
+                Download Report
               </button>
-            </div>
+            )}
+
+            {hasUploadedVideos && (
+              <div className="relative">
+                <button className="inline-flex h-9 items-center justify-center gap-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold px-4 text-slate-700 shadow-sm cursor-pointer hover:bg-slate-50">
+                  <Calendar size={13} className="text-slate-400" />
+                  <span>Uploaded Lectures</span>
+                </button>
+              </div>
+            )}
+            {!hasUploadedVideos && (
+              <div className="inline-flex h-9 items-center justify-center gap-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold px-4 text-slate-500">
+                <Calendar size={13} className="text-slate-400" />
+                <span>No lectures uploaded</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -461,6 +501,16 @@ export default function MainDashboard() {
         {loading ? (
           <div className="text-center py-10 text-slate-400 font-semibold text-sm">
             Loading attendance records...
+          </div>
+        ) : !hasUploadedVideos ? (
+          <div className="text-center py-12 px-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4 border border-amber-100">
+              <Calendar size={20} />
+            </div>
+            <h4 className="text-sm font-black text-slate-900">Attendance will start after lectures are uploaded</h4>
+            <p className="text-xs font-semibold text-slate-400 mt-1">
+              Once daily videos are added for your internship domain, attendance rows and report download will appear here.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -476,48 +526,20 @@ export default function MainDashboard() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {paginatedDays.map((dayNum) => {
-                  const entry = attendanceEntries.find(e => e.day === dayNum);
-                  
-                  // May 2025 starting date logic: fallback calculations
-                  const dateObj = new Date(2025, 4, dayNum); 
-                  const fallbackDateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                  const entry = attendanceEntries.find(e => Number(e.day) === Number(dayNum));
+                  const video = dailyVideos.find((item) => Number(item.day) === Number(dayNum));
 
-                  let dateStr = fallbackDateStr;
+                  let dateStr = '-';
                   let status = 'Absent';
-                  let topic = 'Pending watch';
-                  let hours = 2; // Show 2 Hrs in table
-
-                  const topicsList = [
-                    'Introduction to HTML',
-                    'HTML Tags & Attributes',
-                    'CSS Basics',
-                    'CSS Selectors',
-                    'Box Model',
-                    'Flexbox Layout',
-                    'Grid Layout',
-                    'Responsive Design',
-                    'JavaScript Fundamentals',
-                    'DOM Manipulation',
-                    'Event Listeners',
-                    'Async/Await & APIs',
-                    'React JS Introduction',
-                    'React Components & Props',
-                    'React Hooks (useState)',
-                    'React Hooks (useEffect)',
-                    'Routing in React',
-                    'State Management Basics',
-                    'Firebase Integration',
-                    'Project Deployment'
-                  ];
+                  let topic = video?.title || 'Uploaded lecture';
+                  const hours = 2;
 
                   if (entry) {
                     dateStr = entry.watchedAt 
                       ? new Date(entry.watchedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                      : fallbackDateStr;
+                      : '-';
                     status = 'Present';
-                    topic = entry.videoTitle || topicsList[dayNum - 1] || 'Class Session';
-                  } else {
-                    topic = topicsList[dayNum - 1] || 'Web Development Topic';
+                    topic = entry.videoTitle || video?.title || 'Class Session';
                   }
 
                   return (
@@ -545,7 +567,8 @@ export default function MainDashboard() {
         )}
 
         {/* local Frontend Table Pagination Controls */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-5 border-t border-slate-100 select-none">
+        {hasUploadedVideos && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-5 border-t border-slate-100 select-none">
           
           {/* Navigation Control Buttons */}
           <div className="flex items-center gap-1">
@@ -620,7 +643,8 @@ export default function MainDashboard() {
             </select>
           </div>
 
-        </div>
+          </div>
+        )}
 
       </div>
 

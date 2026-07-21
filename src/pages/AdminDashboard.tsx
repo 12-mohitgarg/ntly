@@ -7,7 +7,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
-import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus, Download, Bell, Send, Upload, FileText, Trash2, ClipboardList, KeyRound } from 'lucide-react';
+import { Users, LogOut, Mail, Phone, CheckCircle2, CreditCard, Clock, MapPin, GraduationCap, BookOpen, LayoutDashboard, Building2, List, Youtube, UserPlus, Download, Bell, Send, Upload, FileText, Trash2, ClipboardList, KeyRound, RefreshCw } from 'lucide-react';
 import { createUserWithEmailAndPassword, deleteUser, getAuth, signOut, User as FirebaseUser } from 'firebase/auth';
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { auth } from '../lib/firebase';
@@ -111,12 +111,24 @@ interface StudentReport {
   uploadedAt?: string;
 }
 
+interface CyberCafeSummary {
+  id: string;
+  name: string;
+  totalStudents: number;
+  successfulStudents: number;
+  pendingStudents: number;
+  paidAmount: number;
+  colleges: Set<string>;
+  domains: Set<string>;
+}
+
 export default function AdminDashboard() {
   const { user, adminProfile } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [teachers, setTeachers] = useState<TeacherProfile[]>([]);
+  const [subUsers, setSubUsers] = useState<TeacherProfile[]>([]);
   const [emitras, setEmitras] = useState<EmitraProfile[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [courseReports, setCourseReports] = useState<CourseReport[]>([]);
@@ -129,6 +141,10 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [collegeFilter, setCollegeFilter] = useState('');
   const [domainFilter, setDomainFilter] = useState('');
+  const [cyberCafeSearch, setCyberCafeSearch] = useState('');
+  const [cyberCafePaymentFilter, setCyberCafePaymentFilter] = useState('');
+  const [cyberCafeCollegeFilter, setCyberCafeCollegeFilter] = useState('');
+  const [cyberCafeDomainFilter, setCyberCafeDomainFilter] = useState('');
   const [exportCollege, setExportCollege] = useState('');
   const [passwordUser, setPasswordUser] = useState<UserProfile | null>(null);
   const [passwordForm, setPasswordForm] = useState({ password: '', confirmPassword: '' });
@@ -138,6 +154,11 @@ export default function AdminDashboard() {
     email: '',
     password: '',
     course: ''
+  });
+  const [subUserForm, setSubUserForm] = useState({
+    fullName: '',
+    email: '',
+    password: ''
   });
   const [notificationForm, setNotificationForm] = useState({
     title: '',
@@ -166,11 +187,13 @@ export default function AdminDashboard() {
   const [reportFileInputKey, setReportFileInputKey] = useState(0);
   const [assignmentFileInputKey, setAssignmentFileInputKey] = useState(0);
   const [savingTeacher, setSavingTeacher] = useState(false);
+  const [savingSubUser, setSavingSubUser] = useState(false);
   const [savingEmitraId, setSavingEmitraId] = useState<string | null>(null);
   const [savingNotification, setSavingNotification] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
   const [savingAssignment, setSavingAssignment] = useState(false);
   const [backupLoading, setBackupLoading] = useState(false);
+  const [reconcileLoading, setReconcileLoading] = useState(false);
 
   // Pagination states
   const [usersPage, setUsersPage] = useState(1);
@@ -187,6 +210,18 @@ export default function AdminDashboard() {
 
   const [teachersPage, setTeachersPage] = useState(1);
   const [teachersPerPage, setTeachersPerPage] = useState(10);
+  const [subUsersPage, setSubUsersPage] = useState(1);
+  const [subUsersPerPage, setSubUsersPerPage] = useState(10);
+  const isSubUser = adminProfile?.role === 'sub_user';
+  const canManageAdminDashboard = !isSubUser;
+  const canOperateDashboardPayments = adminProfile?.role !== 'teacher';
+  const [activeAdminTab, setActiveAdminTab] = useState('dashboard');
+
+  useEffect(() => {
+    if (isSubUser && !['dashboard', 'cyber-cafe-summary'].includes(activeAdminTab)) {
+      setActiveAdminTab('dashboard');
+    }
+  }, [activeAdminTab, isSubUser]);
 
   // Reset pages when filters change
   useEffect(() => {
@@ -303,14 +338,27 @@ export default function AdminDashboard() {
     }
 
     fetchData();
-  }, [user]);
+  }, [user, adminProfile?.role]);
 
   const fetchData = async () => {
     try {
       const usersRef = collection(db, 'users');
       const usersQuery = query(usersRef, orderBy('registrationDate', 'desc'));
       const paymentsRef = collection(db, 'payments');
+
+      if (isSubUser) {
+        const [usersSnapshot, paymentsSnapshot] = await Promise.all([
+          getDocs(usersQuery),
+          getDocs(paymentsRef)
+        ]);
+
+        setUsers(usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile)));
+        setPayments(paymentsSnapshot.docs.map(doc => doc.data() as Payment));
+        return;
+      }
+
       const teachersQuery = query(collection(db, 'admins'), where('role', '==', 'teacher'));
+      const subUsersQuery = query(collection(db, 'admins'), where('role', '==', 'sub_user'));
       const notificationsQuery = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
       const reportsQuery = query(collection(db, 'courseReports'), orderBy('uploadedAt', 'desc'));
       const assignmentsQuery = query(collection(db, 'assignments'), orderBy('createdAt', 'desc'));
@@ -319,6 +367,7 @@ export default function AdminDashboard() {
         usersSnapshot,
         paymentsSnapshot,
         teachersSnapshot,
+        subUsersSnapshot,
         emitrasSnapshot,
         notificationsSnapshot,
         reportsSnapshot,
@@ -331,6 +380,7 @@ export default function AdminDashboard() {
         getDocs(usersQuery),
         getDocs(paymentsRef),
         getDocs(teachersQuery),
+        getDocs(subUsersQuery),
         getDocs(collection(db, 'emitras')),
         getDocs(notificationsQuery),
         getDocs(reportsQuery),
@@ -363,6 +413,11 @@ export default function AdminDashboard() {
         .map(doc => ({ uid: doc.id, ...doc.data() } as TeacherProfile))
         .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       setTeachers(teachersData);
+
+      const subUsersData = subUsersSnapshot.docs
+        .map(doc => ({ uid: doc.id, ...doc.data() } as TeacherProfile))
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      setSubUsers(subUsersData);
 
       const emitrasData = emitrasSnapshot.docs
         .map(doc => ({ uid: doc.id, ...doc.data() } as EmitraProfile))
@@ -487,6 +542,63 @@ export default function AdminDashboard() {
       alert(error?.message || 'Error adding teacher');
     } finally {
       setSavingTeacher(false);
+    }
+  };
+
+  const handleAddSubUser = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const fullName = subUserForm.fullName.trim();
+    const email = subUserForm.email.trim().toLowerCase();
+    const password = subUserForm.password;
+
+    if (!fullName || !email || !password) {
+      alert('Please fill in sub user name, email, and password');
+      return;
+    }
+
+    if (password.length < 6) {
+      alert('Password must be at least 6 characters');
+      return;
+    }
+
+    setSavingSubUser(true);
+    let createdSubUser: FirebaseUser | null = null;
+
+    try {
+      const subUserAppName = 'sub-user-create-app';
+      const subUserApp = getApps().some(app => app.name === subUserAppName)
+        ? getApp(subUserAppName)
+        : initializeApp(firebaseConfig, subUserAppName);
+      const subUserAuth = getAuth(subUserApp);
+      const credential = await createUserWithEmailAndPassword(subUserAuth, email, password);
+      createdSubUser = credential.user;
+
+      await setDoc(doc(db, 'admins', credential.user.uid), {
+        uid: credential.user.uid,
+        fullName,
+        email,
+        password: '',
+        role: 'sub_user',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        createdBy: user?.uid || adminProfile?.email || 'admin'
+      });
+
+      await signOut(subUserAuth);
+      setSubUserForm({ fullName: '', email: '', password: '' });
+      fetchData();
+      alert('Sub user added successfully');
+    } catch (error: any) {
+      if (createdSubUser) {
+        await deleteUser(createdSubUser).catch((deleteError) => {
+          console.error('Error cleaning up sub user auth user:', deleteError);
+        });
+      }
+      console.error('Error adding sub user:', error);
+      alert(error?.message || 'Error adding sub user');
+    } finally {
+      setSavingSubUser(false);
     }
   };
 
@@ -706,6 +818,60 @@ export default function AdminDashboard() {
       alert(error?.message || 'Error deleting assignment');
     }
   };
+
+  const reconcileRazorpayPayments = async () => {
+    setReconcileLoading(true);
+
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('Admin session expired. Please login again.');
+
+      const endpoints = ['/api/payment/reconcile', '/.netlify/functions/payment-reconcile'];
+      let response: Response | null = null;
+      let result: any = null;
+      const endpointErrors: string[] = [];
+
+      for (const endpoint of endpoints) {
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        result = await response.json().catch(() => null);
+
+        if (response.ok) break;
+
+        endpointErrors.push(
+          `${endpoint} -> ${response.status}: ${result?.message || result?.details || result?.error || 'No details'}`
+        );
+      }
+
+      if (!response || !response.ok) {
+        const failureText = Array.isArray(result?.failures) && result.failures.length > 0
+          ? ` Failures: ${result.failures.map((failure: any) => `${failure.orderId}: ${failure.message}`).join('; ')}`
+          : '';
+        throw new Error(
+          `Sync failed (${response?.status || 'no response'}). ${result?.message || result?.details || result?.error || 'Unable to sync Razorpay payments'}${failureText}${endpointErrors.length ? `\n${endpointErrors.join('\n')}` : ''}`
+        );
+      }
+
+      await fetchData();
+      const failureText = Array.isArray(result.failures) && result.failures.length > 0
+        ? `\nFailures: ${result.failures.map((failure: any) => `${failure.orderId}: ${failure.message}`).join('\n')}`
+        : '';
+      alert(
+        `Razorpay sync complete. Checked ${result.checked || 0}, updated ${result.updated || 0}. ` +
+        `Emails sent ${result.emailsSent || 0}, skipped ${result.emailsSkipped || 0}, failed ${result.emailsFailed || 0}.` +
+        failureText
+      );
+    } catch (error) {
+      console.error('Razorpay sync error:', error);
+      alert(error instanceof Error ? error.message : 'Unable to sync Razorpay payments');
+    } finally {
+      setReconcileLoading(false);
+    }
+  };
   const updatePaymentStatus = async (
     userId: string
   ) => {
@@ -797,7 +963,10 @@ export default function AdminDashboard() {
         await updateDoc(
           doc(db, 'users', userDoc.id),
           {
-            isPaid: true
+            isPaid: true,
+            hasPaid: true,
+            paymentStatus: 'success',
+            paymentVerifiedAt: new Date().toISOString()
           }
         );
 
@@ -845,7 +1014,13 @@ export default function AdminDashboard() {
         await updateDoc(
           doc(db, 'users', userDoc.id),
           {
-            isPaid: false
+            isPaid: false,
+            hasPaid: false,
+            paymentStatus: 'rejected',
+            paymentRejectedAt: new Date().toISOString(),
+            paymentVerifiedAt: null,
+            razorpayOrderId: null,
+            razorpayPaymentId: null
           }
         );
       });
@@ -993,7 +1168,87 @@ export default function AdminDashboard() {
   const successfulUsersCount = successfulUsers.length;
   const pendingUsersCount = users.length - successfulUsersCount;
   const totalAmount = payments.filter(p => p.status === 'success').reduce((sum, p) => sum + (p.amount || 0), 0);
+  const formatCompactRupees = (amount: number) => {
+    if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(amount >= 100000000 ? 1 : 2)} Cr`;
+    if (amount >= 100000) return `₹${(amount / 100000).toFixed(amount >= 1000000 ? 1 : 2)} L`;
+    return `₹${amount.toLocaleString('en-IN')}`;
+  };
+  const successfulPaymentsByUser = payments
+    .filter((payment) => payment.status === 'success' && payment.userId)
+    .reduce<Record<string, number>>((acc, payment) => {
+      acc[payment.userId] = (acc[payment.userId] || 0) + (payment.amount || 0);
+      return acc;
+    }, {});
   const emitraStudentsCount = users.filter((student) => student.createdByEmitraId).length;
+
+  const cyberCafeStudents = users.filter((student) => {
+    if (!student.createdByEmitraId) return false;
+
+    const paymentMatch =
+      !cyberCafePaymentFilter ||
+      (cyberCafePaymentFilter === 'success' && isUserSuccessful(student)) ||
+      (cyberCafePaymentFilter === 'pending' && !isUserSuccessful(student));
+
+    const collegeMatch =
+      !cyberCafeCollegeFilter ||
+      getGroupName(student.college) === cyberCafeCollegeFilter;
+
+    const domainMatch =
+      !cyberCafeDomainFilter ||
+      getGroupName(student.internshipDomain) === cyberCafeDomainFilter;
+
+    const searchText = [
+      student.createdByEmitraName,
+      student.createdByEmitraId,
+      student.fullName,
+      student.email,
+      student.college,
+      student.internshipDomain,
+    ].join(' ').toLowerCase();
+    const searchMatch = !cyberCafeSearch.trim() || searchText.includes(cyberCafeSearch.trim().toLowerCase());
+
+    return paymentMatch && collegeMatch && domainMatch && searchMatch;
+  });
+
+  const cyberCafeSummaryMap = cyberCafeStudents.reduce<Record<string, CyberCafeSummary>>((acc, student) => {
+    const id = student.createdByEmitraId || 'unknown';
+    if (!acc[id]) {
+      acc[id] = {
+        id,
+        name: student.createdByEmitraName || id,
+        totalStudents: 0,
+        successfulStudents: 0,
+        pendingStudents: 0,
+        paidAmount: 0,
+        colleges: new Set<string>(),
+        domains: new Set<string>(),
+      };
+    }
+
+    const successful = isUserSuccessful(student);
+    acc[id].totalStudents += 1;
+    acc[id].successfulStudents += successful ? 1 : 0;
+    acc[id].pendingStudents += successful ? 0 : 1;
+    acc[id].paidAmount += successfulPaymentsByUser[student.uid] || 0;
+    acc[id].colleges.add(getGroupName(student.college));
+    acc[id].domains.add(getGroupName(student.internshipDomain));
+
+    return acc;
+  }, {});
+
+  const cyberCafeSummary: CyberCafeSummary[] = Object.keys(cyberCafeSummaryMap)
+    .map((id) => cyberCafeSummaryMap[id])
+    .sort((a, b) => b.totalStudents - a.totalStudents || b.paidAmount - a.paidAmount);
+
+  const cyberCafeTotals = cyberCafeSummary.reduce(
+    (acc, cafe) => ({
+      totalStudents: acc.totalStudents + cafe.totalStudents,
+      successfulStudents: acc.successfulStudents + cafe.successfulStudents,
+      pendingStudents: acc.pendingStudents + cafe.pendingStudents,
+      paidAmount: acc.paidAmount + cafe.paidAmount,
+    }),
+    { totalStudents: 0, successfulStudents: 0, pendingStudents: 0, paidAmount: 0 }
+  );
 
   const getEmitraStudents = (emitraId: string) =>
     users.filter((student) => student.createdByEmitraId === emitraId);
@@ -1370,44 +1625,88 @@ export default function AdminDashboard() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto p-8">
-        <Tabs defaultValue="dashboard" className="gap-6 flex-col">
+        <Tabs
+          value={activeAdminTab}
+          onValueChange={(value) => {
+            if (isSubUser && !['dashboard', 'cyber-cafe-summary'].includes(value)) {
+              setActiveAdminTab('dashboard');
+              return;
+            }
+            setActiveAdminTab(value);
+          }}
+          className="gap-6 flex-col"
+        >
           <TabsList className="bg-white border border-slate-100 shadow-lg h-12 p-1">
             <TabsTrigger value="dashboard" className="px-6 py-2 font-black">
               <LayoutDashboard size={16} />
               Dashboard
             </TabsTrigger>
-            <TabsTrigger value="teachers" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <UserPlus size={14} />
-              Teachers
-            </TabsTrigger>
-            <TabsTrigger value="emitras" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <Building2 size={14} />
-              Cyber cafe
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <Bell size={14} />
-              Notifications
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <FileText size={14} />
-              Internship Reports
-            </TabsTrigger>
-            <TabsTrigger value="student-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <Upload size={14} />
-              Assignments
-            </TabsTrigger>
-            <TabsTrigger value="test-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <ClipboardList size={14} />
-              Test Reports
-            </TabsTrigger>
-            <TabsTrigger value="college-export" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-              <Download size={14} />
-              College Export
-            </TabsTrigger>
+            {canOperateDashboardPayments && (
+              <TabsTrigger value="cyber-cafe-summary" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                <Building2 size={14} />
+                Cyber Cafe Summary
+              </TabsTrigger>
+            )}
+            {canManageAdminDashboard && (
+              <>
+                <TabsTrigger value="teachers" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <UserPlus size={14} />
+                  Teachers
+                </TabsTrigger>
+                <TabsTrigger value="sub-users" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <Users size={14} />
+                  Sub Users
+                </TabsTrigger>
+                <TabsTrigger value="emitras" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <Building2 size={14} />
+                  Cyber cafe
+                </TabsTrigger>
+                <TabsTrigger value="notifications" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <Bell size={14} />
+                  Notifications
+                </TabsTrigger>
+                <TabsTrigger value="reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText size={14} />
+                  Internship Reports
+                </TabsTrigger>
+                <TabsTrigger value="student-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <Upload size={14} />
+                  Assignments
+                </TabsTrigger>
+                <TabsTrigger value="test-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <ClipboardList size={14} />
+                  Test Reports
+                </TabsTrigger>
+                <TabsTrigger value="college-export" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <Download size={14} />
+                  College Export
+                </TabsTrigger>
+              </>
+            )}
           </TabsList >
 
           <TabsContent value="dashboard" className="space-y-8 mt-4">
             {/* Stats Grid */}
+            {canOperateDashboardPayments && (
+              <div className="student-card p-4 bg-white/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">Razorpay Payment Sync</h3>
+                  <p className="text-xs font-semibold text-slate-500 mt-1">
+                    Use this if Razorpay shows paid but the student is still pending.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={reconcileRazorpayPayments}
+                  disabled={reconcileLoading}
+                  className="h-11 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider"
+                >
+                  <RefreshCw size={16} className={reconcileLoading ? 'animate-spin' : ''} />
+                  {reconcileLoading ? 'Syncing...' : 'Sync Razorpay'}
+                </Button>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="student-card p-6 bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 border-indigo-500/15 relative overflow-hidden group">
                 <div className="flex items-center gap-3 mb-4">
@@ -1427,7 +1726,12 @@ export default function AdminDashboard() {
                   </div>
                   <span className="text-slate-500 font-black uppercase tracking-wider text-[10px]">Total Amount</span>
                 </div>
-                <p className="text-3xl sm:text-4xl font-black text-slate-900">₹{totalAmount.toLocaleString()}</p>
+                <p
+                  className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight whitespace-nowrap"
+                  title={`₹${totalAmount.toLocaleString('en-IN')}`}
+                >
+                  {formatCompactRupees(totalAmount)}
+                </p>
                 <p className="text-[10px] text-slate-400 font-bold mt-1">{successfulUsersCount} successful payments</p>
                 <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-emerald-600/5 rounded-full" />
               </div>
@@ -1454,6 +1758,160 @@ export default function AdminDashboard() {
                 <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-amber-600/5 rounded-full" />
               </div>
             </div>
+
+          </TabsContent>
+
+          <TabsContent value="cyber-cafe-summary" className="space-y-8 mt-4">
+            <div className="student-card bg-white/80 overflow-hidden">
+              <div className="p-6 border-b border-slate-100/70 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+                <div className="flex items-start gap-3">
+                  <div className="student-icon bg-indigo-50 text-indigo-600 ring-indigo-100">
+                    <Building2 size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900 gradient-text">Cyber Cafe Student Summary</h2>
+                    <p className="text-sm font-semibold text-slate-500 mt-1">
+                      Track how many students each cyber cafe has registered and how many are paid or pending.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full lg:w-auto">
+                  <div className="rounded-2xl bg-slate-50 border border-slate-100 px-4 py-3">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Students</p>
+                    <p className="mt-1 text-lg font-black text-slate-900">{cyberCafeTotals.totalStudents}</p>
+                  </div>
+                  <div className="rounded-2xl bg-emerald-50 border border-emerald-100 px-4 py-3">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Success</p>
+                    <p className="mt-1 text-lg font-black text-emerald-700">{cyberCafeTotals.successfulStudents}</p>
+                  </div>
+                  <div className="rounded-2xl bg-amber-50 border border-amber-100 px-4 py-3">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-amber-600">Pending</p>
+                    <p className="mt-1 text-lg font-black text-amber-700">{cyberCafeTotals.pendingStudents}</p>
+                  </div>
+                  <div className="rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-blue-600">Amount</p>
+                    <p className="mt-1 text-lg font-black text-blue-700 whitespace-nowrap" title={`₹${cyberCafeTotals.paidAmount.toLocaleString('en-IN')}`}>
+                      {formatCompactRupees(cyberCafeTotals.paidAmount)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-b border-slate-100/70 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div>
+                  <Label className="student-label block mb-2">Search Cyber Cafe</Label>
+                  <Input
+                    value={cyberCafeSearch}
+                    onChange={(event) => setCyberCafeSearch(event.target.value)}
+                    placeholder="Cafe, student, email..."
+                    className="student-input"
+                  />
+                </div>
+                <div>
+                  <Label className="student-label block mb-2">Payment Status</Label>
+                  <select
+                    value={cyberCafePaymentFilter}
+                    onChange={(event) => setCyberCafePaymentFilter(event.target.value)}
+                    className="student-input"
+                  >
+                    <option value="">All Students</option>
+                    <option value="success">Success Only</option>
+                    <option value="pending">Pending Only</option>
+                  </select>
+                </div>
+                <div>
+                  <Label className="student-label block mb-2">College</Label>
+                  <select
+                    value={cyberCafeCollegeFilter}
+                    onChange={(event) => setCyberCafeCollegeFilter(event.target.value)}
+                    className="student-input"
+                  >
+                    <option value="">All Colleges</option>
+                    {uniqueColleges.map((college) => (
+                      <option key={college} value={college}>{college}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label className="student-label block mb-2">Domain</Label>
+                  <select
+                    value={cyberCafeDomainFilter}
+                    onChange={(event) => setCyberCafeDomainFilter(event.target.value)}
+                    className="student-input"
+                  >
+                    <option value="">All Domains</option>
+                    {uniqueDomains.map((domain) => (
+                      <option key={domain} value={domain}>{domain}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {cyberCafeSummary.length === 0 ? (
+                <div className="p-10 text-center">
+                  <Building2 size={44} className="text-slate-300 mx-auto mb-3" />
+                  <p className="text-sm font-bold text-slate-500">No cyber cafe students found for selected filters.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[920px] table-auto">
+                    <thead className="bg-slate-50/60">
+                      <tr>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Cyber Cafe</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Students</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Success</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Pending</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Paid Amount</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Colleges</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Domains</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cyberCafeSummary.map((cafe) => (
+                        <tr key={cafe.id} className="border-b border-slate-100/60 hover:bg-indigo-50/10 transition-colors">
+                          <td className="p-4">
+                            <div className="font-black text-slate-900">{cafe.name}</div>
+                            <div className="text-xs text-slate-400 font-semibold">{cafe.id}</div>
+                          </td>
+                          <td className="p-4">
+                            <span className="inline-flex px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-black uppercase tracking-wider">
+                              {cafe.totalStudents}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 text-xs font-black uppercase tracking-wider">
+                              <CheckCircle2 size={12} />
+                              {cafe.successfulStudents}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-100 text-xs font-black uppercase tracking-wider">
+                              <Clock size={12} />
+                              {cafe.pendingStudents}
+                            </span>
+                          </td>
+                          <td className="p-4 text-slate-900 font-black" title={`₹${cafe.paidAmount.toLocaleString('en-IN')}`}>
+                            {formatCompactRupees(cafe.paidAmount)}
+                          </td>
+                          <td className="p-4 text-slate-600 text-xs font-bold max-w-[220px]">
+                            {Array.from(cafe.colleges).slice(0, 3).join(', ')}
+                            {cafe.colleges.size > 3 ? ` +${cafe.colleges.size - 3}` : ''}
+                          </td>
+                          <td className="p-4 text-slate-600 text-xs font-bold max-w-[220px]">
+                            {Array.from(cafe.domains).slice(0, 3).join(', ')}
+                            {cafe.domains.size > 3 ? ` +${cafe.domains.size - 3}` : ''}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+          </TabsContent>
+
+          <TabsContent value="dashboard" className="space-y-8 mt-4">
             {/* FILTERS */}
             <div className="grid md:grid-cols-2 gap-6 mb-8">
 
@@ -1627,9 +2085,11 @@ export default function AdminDashboard() {
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Payment Status</th>
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Registered</th>
                         <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Source</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">
-                          Action
-                        </th>
+                        {canOperateDashboardPayments && (
+                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">
+                            Action
+                          </th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -1690,36 +2150,38 @@ export default function AdminDashboard() {
                               </span>
                             )}
                           </td>
-                          <td className="p-4">
-                            <div className="flex flex-wrap gap-2">
+                          {canOperateDashboardPayments && (
+                            <td className="p-4">
+                              <div className="flex flex-wrap gap-2">
 
-                              <button
-                                onClick={() =>
-                                  updatePaymentStatus(user.uid)
-                                }
-                                className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-emerald-600/10 hover:bg-emerald-700 active:scale-[0.98] transition-all cursor-pointer"
-                              >
-                                Verify
-                              </button>
+                                <button
+                                  onClick={() =>
+                                    updatePaymentStatus(user.uid)
+                                  }
+                                  className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-emerald-600/10 hover:bg-emerald-700 active:scale-[0.98] transition-all cursor-pointer"
+                                >
+                                  Verify
+                                </button>
 
-                              <button
-                                onClick={() => rejectPaymentStatus(user.uid)}
-                                className="px-3 py-1.5 bg-rose-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-rose-600/10 hover:bg-rose-700 active:scale-[0.98] transition-all cursor-pointer"
-                              >
-                                Reject
-                              </button>
+                                <button
+                                  onClick={() => rejectPaymentStatus(user.uid)}
+                                  className="px-3 py-1.5 bg-rose-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-rose-600/10 hover:bg-rose-700 active:scale-[0.98] transition-all cursor-pointer"
+                                >
+                                  Reject
+                                </button>
 
-                              <button
-                                onClick={() => openPasswordModal(user)}
-                                className="inline-flex items-center gap-1 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
-                                title="Update password"
-                              >
-                                <KeyRound size={14} />
-                                Change Password
-                              </button>
+                                <button
+                                  onClick={() => openPasswordModal(user)}
+                                  className="inline-flex items-center gap-1 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                                  title="Update password"
+                                >
+                                  <KeyRound size={14} />
+                                  Change Password
+                                </button>
 
-                            </div>
-                          </td>
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -2735,6 +3197,181 @@ export default function AdminDashboard() {
               </Tabs>
             </div>
           </TabsContent>
+
+          {canManageAdminDashboard && (
+            <TabsContent value="sub-users">
+              <div className="student-card p-4 sm:p-6 bg-white/80">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="student-icon bg-emerald-50 text-emerald-600 ring-emerald-100">
+                      <Users size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black text-slate-900 gradient-text">Sub User Management</h2>
+                      <p className="text-slate-500 text-sm font-semibold">Sub users can access only the admin dashboard in view mode.</p>
+                    </div>
+                  </div>
+                  <span className="bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-emerald-100/80 w-fit">
+                    {subUsers.length} Sub Users
+                  </span>
+                </div>
+
+                <form onSubmit={handleAddSubUser} className="border border-slate-200/60 rounded-3xl p-4 sm:p-6 bg-white/70 backdrop-blur-sm shadow-sm">
+                  <div className="flex flex-col lg:grid lg:grid-cols-4 gap-5 lg:items-end w-full">
+                    <div className="w-full">
+                      <Label className="student-label">Sub User Name</Label>
+                      <Input
+                        value={subUserForm.fullName}
+                        onChange={(event) => setSubUserForm({ ...subUserForm, fullName: event.target.value })}
+                        placeholder="Sub user name"
+                        className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80"
+                      />
+                    </div>
+                    <div className="w-full">
+                      <Label className="student-label">Email</Label>
+                      <Input
+                        type="email"
+                        value={subUserForm.email}
+                        onChange={(event) => setSubUserForm({ ...subUserForm, email: event.target.value })}
+                        placeholder="subuser@example.com"
+                        className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80"
+                      />
+                    </div>
+                    <div className="w-full">
+                      <Label className="student-label">Password</Label>
+                      <Input
+                        type="password"
+                        value={subUserForm.password}
+                        onChange={(event) => setSubUserForm({ ...subUserForm, password: event.target.value })}
+                        placeholder="Minimum 6 characters"
+                        className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80"
+                      />
+                    </div>
+                    <div className="w-full">
+                      <Button type="submit" disabled={savingSubUser} className="student-button-primary bg-emerald-600 hover:bg-emerald-700 text-white h-12 w-full px-5 min-h-[48px] shadow-emerald-500/10 cursor-pointer rounded-xl transition-all">
+                        <UserPlus size={18} />
+                        {savingSubUser ? 'Adding...' : 'Add Sub User'}
+                      </Button>
+                    </div>
+                  </div>
+                </form>
+
+                <div className="mt-6">
+                  {subUsers.length === 0 ? (
+                    <div className="border border-dashed border-slate-200 rounded-2xl p-12 text-center">
+                      <Users size={48} className="text-slate-300 mx-auto mb-4" />
+                      <p className="text-slate-500 font-bold">No sub users added yet</p>
+                    </div>
+                  ) : (
+                    <div className="student-card overflow-hidden bg-white/50 border-slate-100/50">
+                      <div className="hidden lg:block overflow-x-auto w-full">
+                        <table className="w-full min-w-[760px] table-auto">
+                          <thead className="bg-slate-50/50">
+                            <tr>
+                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Sub User</th>
+                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Email</th>
+                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Access</th>
+                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
+                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Created</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {subUsers.slice((subUsersPage - 1) * subUsersPerPage, subUsersPage * subUsersPerPage).map((subUser) => (
+                              <tr key={subUser.uid} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
+                                <td className="p-4">
+                                  <div className="font-black text-slate-900">{subUser.fullName}</div>
+                                  <div className="text-xs text-slate-400 font-semibold">{subUser.uid}</div>
+                                </td>
+                                <td className="p-4">
+                                  <div className="flex items-center gap-2 text-slate-600 text-sm font-semibold">
+                                    <Mail size={14} className="text-slate-400" />
+                                    {subUser.email}
+                                  </div>
+                                </td>
+                                <td className="p-4 text-slate-600 font-bold text-sm">Dashboard only</td>
+                                <td className="p-4">
+                                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${subUser.isActive
+                                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80'
+                                    : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
+                                    }`}>
+                                    {subUser.isActive ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+                                    {subUser.isActive ? 'Active' : 'Inactive'}
+                                  </span>
+                                </td>
+                                <td className="p-4 text-slate-600 text-sm font-medium">
+                                  {subUser.createdAt
+                                    ? new Date(subUser.createdAt).toLocaleDateString('en-IN', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      year: 'numeric'
+                                    })
+                                    : '-'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="lg:hidden divide-y divide-slate-100/50">
+                        {subUsers.slice((subUsersPage - 1) * subUsersPerPage, subUsersPage * subUsersPerPage).map((subUser) => (
+                          <div key={subUser.uid} className="p-4 space-y-3">
+                            <div className="flex justify-between items-start gap-2">
+                              <div>
+                                <div className="font-black text-slate-900 text-sm">{subUser.fullName}</div>
+                                <div className="text-[10px] text-slate-400 font-semibold truncate max-w-[180px]">{subUser.uid}</div>
+                              </div>
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${subUser.isActive
+                                ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80'
+                                : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
+                                }`}>
+                                {subUser.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5 text-xs text-slate-600 font-medium">
+                              <div className="flex items-center gap-2">
+                                <Mail size={12} className="text-slate-400 shrink-0" />
+                                <span className="truncate">{subUser.email}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <LayoutDashboard size={12} className="text-slate-400 shrink-0" />
+                                <span>Dashboard only</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock size={12} className="text-slate-400 shrink-0" />
+                                <span>
+                                  {subUser.createdAt
+                                    ? new Date(subUser.createdAt).toLocaleDateString('en-IN', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      year: 'numeric'
+                                    })
+                                    : '-'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <PaginationControls
+                        currentPage={subUsersPage}
+                        totalItems={subUsers.length}
+                        itemsPerPage={subUsersPerPage}
+                        onPageChange={setSubUsersPage}
+                        onItemsPerPageChange={(size) => {
+                          setSubUsersPerPage(size);
+                          setSubUsersPage(1);
+                        }}
+                        label="sub users"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+          )}
         </Tabs >
       </div >
     </div >

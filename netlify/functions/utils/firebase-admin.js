@@ -92,10 +92,38 @@ async function isAdminUser(decodedToken) {
   );
 }
 
+async function isDashboardOperator(decodedToken) {
+  if (await isAdminUser(decodedToken)) {
+    return true;
+  }
+
+  const firebaseAdmin = getAdminApp();
+  const adminDoc = await firebaseAdmin.firestore().collection('admins').doc(decodedToken.uid).get();
+  const adminData = adminDoc.exists ? adminDoc.data() : null;
+
+  return (
+    adminData?.isActive === true &&
+    String(adminData?.role || '') === 'sub_user'
+  );
+}
+
 async function isEmitraUser(decodedToken) {
   const firebaseAdmin = getAdminApp();
   const emitraDoc = await firebaseAdmin.firestore().collection('emitras').doc(decodedToken.uid).get();
   return emitraDoc.exists && emitraDoc.data()?.isActive === true;
+}
+
+async function requireDashboardOperator(event) {
+  const authResult = await requireSignedIn(event);
+  if (!authResult.allowed) {
+    return authResult;
+  }
+
+  if (!(await isDashboardOperator(authResult.decodedToken))) {
+    return { allowed: false, response: json(403, { error: 'Only dashboard operators can perform this action' }) };
+  }
+
+  return authResult;
 }
 
 async function requireAdmin(event) {
@@ -114,8 +142,10 @@ async function requireAdmin(event) {
 module.exports = {
   getAdminApp,
   isAdminUser,
+  isDashboardOperator,
   isEmitraUser,
   json,
   requireAdmin,
+  requireDashboardOperator,
   requireSignedIn,
 };
