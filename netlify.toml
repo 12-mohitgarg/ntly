@@ -36,6 +36,16 @@
   status = 200
 
 [[redirects]]
+  from = "/api/admin/college-users"
+  to = "/.netlify/functions/admin-college-user"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/college-profile"
+  to = "/.netlify/functions/auth-college-profile"
+  status = 200
+
+[[redirects]]
   from = "/api/admin/payment-settings"
   to = "/.netlify/functions/admin-payment-settings"
   status = 200

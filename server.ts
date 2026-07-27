@@ -11,7 +11,8 @@ import { sendEmail } from "./server/mailer";
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
+const HMR_PORT = Number(process.env.VITE_HMR_PORT || 24678);
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
@@ -164,6 +165,25 @@ function maskKey(value?: string) {
   return `${value.slice(0, 8)}••••${value.slice(-4)}`;
 }
 
+function makeCollegeEmail(collegeId: string, collegeName: string) {
+  const base = String(collegeName || collegeId || "college")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 34) || "college";
+  const suffix = String(collegeId || "").toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 8);
+  return `college-${base}${suffix ? `-${suffix}` : ""}@internmitra.com`;
+}
+
+function makePassword() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  let password = "IM";
+  for (let i = 0; i < 10; i += 1) {
+    password += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return password;
+}
+
 async function getRazorpayConfig() {
   const snap = await admin.firestore().collection("privateSettings").doc("razorpay").get();
   const data = snap.exists ? snap.data() : {};
@@ -245,6 +265,161 @@ app.patch("/api/admin/users/:uid/password", requireDashboardOperator, async (req
     console.error("Password update error:", error);
     res.status(500).json({
       error: "Error updating user password",
+      details: error?.message || "Unknown error",
+    });
+  }
+});
+
+app.post("/api/admin/college-users", requireAdmin, async (req, res) => {
+  try {
+    const collegeId = String(req.body.collegeId || "").trim();
+    let collegeName = String(req.body.collegeName || "").trim();
+    let districtId = String(req.body.districtId || "").trim();
+    const contactPerson = String(req.body.contactPerson || "").trim();
+    let email = String(req.body.email || "").trim().toLowerCase();
+    const password = String(req.body.password || makePassword());
+
+    if (!collegeId) {
+      return res.status(400).json({ error: "College is required" });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+
+    const collegeDoc = await admin.firestore().collection("colleges").doc(collegeId).get();
+    if (!collegeDoc.exists) {
+      return res.status(404).json({ error: "College not found" });
+    }
+
+    const collegeData = collegeDoc.data() || {};
+    collegeName = collegeName || String(collegeData.name || "").trim();
+    districtId = districtId || String(collegeData.districtId || "").trim();
+
+    if (!collegeName || !districtId) {
+      return res.status(400).json({ error: "College record is missing name or district" });
+    }
+
+    const existingForCollege = await admin
+      .firestore()
+      .collection("collegeUsers")
+      .where("collegeId", "==", collegeId)
+      .limit(1)
+      .get();
+
+    const hasExistingCollegeLogin = !existingForCollege.empty;
+    let authUser: admin.auth.UserRecord;
+    let created = false;
+
+    if (hasExistingCollegeLogin) {
+      email = email || makeCollegeEmail(collegeId, collegeName);
+      authUser = await admin.auth().updateUser(existingForCollege.docs[0].id, {
+        email,
+        password,
+        displayName: collegeName,
+        disabled: false,
+      });
+    } else {
+      email = email || makeCollegeEmail(collegeId, collegeName);
+      try {
+        authUser = await admin.auth().getUserByEmail(email);
+        const [studentDoc, adminDoc, emitraDoc] = await Promise.all([
+          admin.firestore().collection("users").doc(authUser.uid).get(),
+          admin.firestore().collection("admins").doc(authUser.uid).get(),
+          admin.firestore().collection("emitras").doc(authUser.uid).get(),
+        ]);
+
+        if (studentDoc.exists || adminDoc.exists || emitraDoc.exists) {
+          return res.status(409).json({ error: "This email already belongs to another account type" });
+        }
+
+        await admin.auth().updateUser(authUser.uid, {
+          password,
+          displayName: collegeName,
+          disabled: false,
+        });
+      } catch (error: any) {
+        if (error?.code !== "auth/user-not-found") {
+          throw error;
+        }
+
+        authUser = await admin.auth().createUser({
+          email,
+          password,
+          displayName: collegeName,
+          disabled: false,
+        });
+        created = true;
+      }
+    }
+
+    const now = new Date().toISOString();
+    const profilePayload = {
+      uid: authUser.uid,
+      collegeId,
+      collegeName,
+      districtId,
+      contactPerson,
+      email,
+      isActive: true,
+      role: "college",
+      updatedAt: now,
+    };
+
+    await admin
+      .firestore()
+      .collection("collegeUsers")
+      .doc(authUser.uid)
+      .set(hasExistingCollegeLogin ? profilePayload : { ...profilePayload, createdAt: now }, { merge: true });
+
+    res.json({ status: "success", created, uid: authUser.uid, email, password, collegeName });
+  } catch (error: any) {
+    console.error("College user create/update error:", error);
+    res.status(500).json({
+      error: "Error saving college login",
+      details: error?.message || "Unknown error",
+    });
+  }
+});
+
+app.get("/api/auth/college-profile", async (req, res) => {
+  try {
+    const decodedToken = await getDecodedToken(req);
+    const db = admin.firestore();
+    const directDoc = await db.collection("collegeUsers").doc(decodedToken.uid).get();
+
+    if (directDoc.exists) {
+      return res.json({ profile: { uid: directDoc.id, ...directDoc.data() } });
+    }
+
+    const email = String(decodedToken.email || "").trim().toLowerCase();
+    if (!email) {
+      return res.status(404).json({ error: "College profile not found" });
+    }
+
+    const byEmail = await db
+      .collection("collegeUsers")
+      .where("email", "==", email)
+      .limit(1)
+      .get();
+
+    if (byEmail.empty) {
+      return res.status(404).json({ error: "College profile not found" });
+    }
+
+    const profileDoc = byEmail.docs[0];
+    if (profileDoc.id !== decodedToken.uid) {
+      await db.collection("collegeUsers").doc(decodedToken.uid).set(
+        { uid: decodedToken.uid, ...profileDoc.data(), updatedAt: new Date().toISOString() },
+        { merge: true }
+      );
+    }
+
+    res.json({ profile: { uid: decodedToken.uid, ...profileDoc.data() } });
+  } catch (error: any) {
+    console.error("College profile lookup error:", error);
+    res.status(error?.statusCode || 500).json({
+      error: "Unable to load college profile",
       details: error?.message || "Unknown error",
     });
   }
@@ -700,7 +875,10 @@ app.post("/api/offer-letter-email", async (req, res) => {
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: { port: HMR_PORT },
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);

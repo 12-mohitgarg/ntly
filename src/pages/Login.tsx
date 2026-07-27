@@ -21,7 +21,7 @@ const WhatsAppIcon = ({ size = 20, className = "" }: { size?: number; className?
 );
 
 export default function Login() {
-  const { user, profile, isAdmin, isEmitra, adminProfile, loading: authLoading } = useAuth();
+  const { user, profile, isAdmin, isEmitra, isCollege, adminProfile, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -44,11 +44,16 @@ export default function Login() {
       return;
     }
 
+    if (isCollege) {
+      navigate('/college-dashboard', { replace: true });
+      return;
+    }
+
     if (profile) {
       const paymentComplete = profile.paymentStatus !== 'rejected' && Boolean(profile.isPaid || profile.hasPaid || profile.paymentStatus === 'success');
       navigate(paymentComplete ? '/dashboard' : '/payment', { replace: true });
     }
-  }, [user, profile, isAdmin, isEmitra, adminProfile?.role, authLoading, navigate]);
+  }, [user, profile, isAdmin, isEmitra, isCollege, adminProfile?.role, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,9 +74,10 @@ export default function Login() {
         return;
       }
 
-      const [adminDoc, emitraDoc, userDoc] = await Promise.all([
+      const [adminDoc, emitraDoc, collegeDoc, userDoc] = await Promise.all([
         safeGetDoc('admins'),
         safeGetDoc('emitras'),
+        safeGetDoc('collegeUsers'),
         safeGetDoc('users')
       ]);
 
@@ -84,6 +90,22 @@ export default function Login() {
 
       if (emitraDoc?.exists()) {
         navigate('/emitra-dashboard', { replace: true });
+        return;
+      }
+
+      if (collegeDoc?.exists()) {
+        navigate('/college-dashboard', { replace: true });
+        return;
+      }
+
+      const collegeToken = await user.getIdToken();
+      const collegeProfileResponse = await fetch('/api/auth/college-profile', {
+        headers: {
+          Authorization: `Bearer ${collegeToken}`,
+        },
+      }).catch(() => null);
+      if (collegeProfileResponse?.ok) {
+        navigate('/college-dashboard', { replace: true });
         return;
       }
 
@@ -111,7 +133,7 @@ export default function Login() {
         return;
       }
 
-      setError('Login successful, but no student/admin/teacher/Cyber cafe profile was found for this account.');
+      setError('Login successful, but no student/admin/teacher/Cyber cafe/college profile was found for this account.');
     } catch (err: any) {
       setError("Invalid credentials. Please try again.");
     } finally {

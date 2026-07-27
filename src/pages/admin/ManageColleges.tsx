@@ -5,7 +5,9 @@ import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy 
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { ArrowLeft, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { useAuth } from '../../components/AuthContext';
+import { Copy, KeyRound, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
 
 interface District {
   id: string;
@@ -19,8 +21,15 @@ interface College {
   price: number;
 }
 
+interface GeneratedLogin {
+  collegeName: string;
+  email: string;
+  password: string;
+}
+
 export default function ManageColleges() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [colleges, setColleges] = useState<College[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +42,8 @@ export default function ManageColleges() {
   const [newPrice, setNewPrice] = useState('1000');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [generatingCollegeId, setGeneratingCollegeId] = useState<string | null>(null);
+  const [generatedLogin, setGeneratedLogin] = useState<GeneratedLogin | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -126,6 +137,51 @@ export default function ManageColleges() {
     }
   };
 
+  const handleGenerateLogin = async (college: College) => {
+    if (!user) {
+      alert('Admin session not found. Please login again.');
+      return;
+    }
+
+    setGeneratingCollegeId(college.id);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch('/api/admin/college-users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ collegeId: college.id }),
+      });
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(result?.details || result?.error || 'Unable to generate college login');
+      }
+
+      setGeneratedLogin({
+        collegeName: result.collegeName || college.name,
+        email: result.email,
+        password: result.password,
+      });
+    } catch (error: any) {
+      console.error('Error generating college login:', error);
+      alert(error?.message || 'Unable to generate college login');
+    } finally {
+      setGeneratingCollegeId(null);
+    }
+  };
+
+  const copyText = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      alert('Copied');
+    } catch {
+      alert(value);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -139,6 +195,57 @@ export default function ManageColleges() {
 
   return (
     <div className="space-y-6">
+        <Dialog open={Boolean(generatedLogin)} onOpenChange={(open) => !open && setGeneratedLogin(null)}>
+          <DialogContent className="sm:max-w-md rounded-3xl border border-slate-200 bg-white p-6 text-slate-900 shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-black text-slate-900">College Login Generated</DialogTitle>
+              <DialogDescription className="font-semibold">
+                Share these credentials with {generatedLogin?.collegeName}. The previous password has been revoked.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mb-1 text-[10px] font-black uppercase tracking-wider text-slate-500">Login ID</div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="break-all text-sm font-black text-slate-900">{generatedLogin?.email}</span>
+                  <Button
+                    type="button"
+                    onClick={() => generatedLogin?.email && copyText(generatedLogin.email)}
+                    className="h-9 rounded-xl bg-white px-3 text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                  >
+                    <Copy size={14} />
+                  </Button>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
+                <div className="mb-1 text-[10px] font-black uppercase tracking-wider text-blue-600">Password</div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="break-all text-sm font-black text-slate-900">{generatedLogin?.password}</span>
+                  <Button
+                    type="button"
+                    onClick={() => generatedLogin?.password && copyText(generatedLogin.password)}
+                    className="h-9 rounded-xl bg-white px-3 text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50"
+                  >
+                    <Copy size={14} />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="mt-2">
+              <Button
+                type="button"
+                onClick={() => generatedLogin && copyText(`Login ID: ${generatedLogin.email}\nPassword: ${generatedLogin.password}`)}
+                className="rounded-xl bg-blue-600 px-4 text-xs font-black uppercase tracking-wider text-white hover:bg-blue-700"
+              >
+                <Copy size={14} />
+                Copy Both
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Add New College Form */}
         <div className="student-card p-6 bg-white/80">
           <h2 className="text-xl font-black text-slate-900 mb-4 gradient-text">Add New College</h2>
@@ -243,6 +350,17 @@ export default function ManageColleges() {
                         <span className="text-emerald-600 text-sm ml-2 font-black">₹{college.price}</span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          onClick={() => handleGenerateLogin(college)}
+                          disabled={generatingCollegeId === college.id}
+                          className="h-10 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+                          title="Generate college login"
+                        >
+                          <KeyRound size={16} />
+                          <span className="hidden xl:inline text-xs font-black uppercase tracking-wider">
+                            {generatingCollegeId === college.id ? 'Generating' : 'Login'}
+                          </span>
+                        </Button>
                         <Button onClick={() => handleEdit(college)} className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm shadow-blue-600/10 transition-all active:scale-[0.98] cursor-pointer">
                           <Edit2 size={16} />
                         </Button>

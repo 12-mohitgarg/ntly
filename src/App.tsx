@@ -17,6 +17,7 @@ const Login = lazy(() => import('./pages/Login'));
 const EmitraRegister = lazy(() => import('./pages/EmitraRegister'));
 const EmitraDashboard = lazy(() => import('./pages/EmitraDashboard'));
 const EmitraPayment = lazy(() => import('./pages/EmitraPayment'));
+const CollegeDashboard = lazy(() => import('./pages/CollegeDashboard'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -38,7 +39,7 @@ function PageLoader() {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, profile, isAdmin, isEmitra, adminProfile, loading } = useAuth();
+  const { user, profile, isAdmin, isEmitra, isCollege, adminProfile, loading } = useAuth();
   const paymentRejected = profile?.paymentStatus === 'rejected';
   const paymentComplete = !paymentRejected && Boolean(profile?.isPaid || profile?.hasPaid || profile?.paymentStatus === 'success');
 
@@ -46,6 +47,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!user) return <Navigate to="/login" />;
   if (isAdmin) return <Navigate to={adminProfile?.role === 'teacher' ? '/admin/daily-videos' : '/admin-dashboard'} replace />;
   if (isEmitra) return <Navigate to="/emitra-dashboard" replace />;
+  if (isCollege) return <Navigate to="/college-dashboard" replace />;
   if (!profile) return <Navigate to="/login" replace />;
   if (!paymentComplete && window.location.pathname !== '/payment') return <Navigate to="/payment" />;
   if (paymentComplete && window.location.pathname === '/payment') return <Navigate to="/dashboard" replace />;
@@ -80,11 +82,22 @@ function EmitraRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function CollegeRoute({ children }: { children: React.ReactNode }) {
+  const { user, isCollege, loading } = useAuth();
+
+  if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
+  if (!user) return <Navigate to="/login" />;
+  if (!isCollege) return <Navigate to="/login" />;
+
+  return <>{children}</>;
+}
+
 function AppContent() {
   const location = useLocation();
   const hideNavbar = location.pathname.startsWith('/dashboard') ||
                      location.pathname.startsWith('/admin') ||
                      location.pathname.startsWith('/emitra-dashboard') ||
+                     location.pathname.startsWith('/college-dashboard') ||
                      location.pathname.startsWith('/emitra/payment') ||
                      location.pathname.startsWith('/emitra/register-student') ||
                      location.pathname === '/admin-dashboard';
@@ -102,6 +115,7 @@ function AppContent() {
           <Route path="/register" element={<Register />} />
           <Route path="/emitra-register" element={<EmitraRegister />} />
           <Route path="/emitra-dashboard" element={<EmitraRoute><EmitraDashboard /></EmitraRoute>} />
+          <Route path="/college-dashboard" element={<CollegeRoute><CollegeDashboard /></CollegeRoute>} />
           <Route path="/emitra/payment/:studentId" element={<EmitraRoute><EmitraPayment /></EmitraRoute>} />
           <Route path="/emitra/register-student" element={<EmitraRoute><Register mode="emitraStudent" /></EmitraRoute>} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

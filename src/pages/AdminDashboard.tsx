@@ -65,6 +65,13 @@ interface EmitraProfile {
   createdAt?: string;
 }
 
+interface College {
+  id: string;
+  name: string;
+  districtId: string;
+  price?: number;
+}
+
 interface Notification {
   id: string;
   title: string;
@@ -130,6 +137,7 @@ export default function AdminDashboard() {
   const [teachers, setTeachers] = useState<TeacherProfile[]>([]);
   const [subUsers, setSubUsers] = useState<TeacherProfile[]>([]);
   const [emitras, setEmitras] = useState<EmitraProfile[]>([]);
+  const [colleges, setColleges] = useState<College[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [courseReports, setCourseReports] = useState<CourseReport[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -337,6 +345,8 @@ export default function AdminDashboard() {
       return;
     }
 
+    if (!adminProfile) return;
+
     fetchData();
   }, [user, adminProfile?.role]);
 
@@ -362,6 +372,7 @@ export default function AdminDashboard() {
       const notificationsQuery = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
       const reportsQuery = query(collection(db, 'courseReports'), orderBy('uploadedAt', 'desc'));
       const assignmentsQuery = query(collection(db, 'assignments'), orderBy('createdAt', 'desc'));
+      const collegesQuery = query(collection(db, 'colleges'));
 
       const [
         usersSnapshot,
@@ -369,6 +380,7 @@ export default function AdminDashboard() {
         teachersSnapshot,
         subUsersSnapshot,
         emitrasSnapshot,
+        collegesSnapshot,
         notificationsSnapshot,
         reportsSnapshot,
         assignmentsSnapshot,
@@ -382,6 +394,7 @@ export default function AdminDashboard() {
         getDocs(teachersQuery),
         getDocs(subUsersQuery),
         getDocs(collection(db, 'emitras')),
+        getDocs(collegesQuery),
         getDocs(notificationsQuery),
         getDocs(reportsQuery),
         getDocs(assignmentsQuery),
@@ -423,6 +436,11 @@ export default function AdminDashboard() {
         .map(doc => ({ uid: doc.id, ...doc.data() } as EmitraProfile))
         .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       setEmitras(emitrasData);
+
+      const collegesData = collegesSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as College))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      setColleges(collegesData);
 
       const notificationsData = notificationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
       setNotifications(notificationsData);
