@@ -31,6 +31,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/admin/import-students"
+  to = "/.netlify/functions/admin-import-students"
+  status = 200
+
+[[redirects]]
   from = "/api/admin/users/:uid/password"
   to = "/.netlify/functions/admin-user-password?uid=:uid"
   status = 200

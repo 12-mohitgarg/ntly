@@ -113,6 +113,25 @@ exports.handler = async (event) => {
 
     await batch.commit();
 
+    if (studentData?.universityRoll) {
+      try {
+        const importedSnap = await firebaseAdmin.firestore()
+          .collection("importedStudents")
+          .where("universityRoll", "==", studentData.universityRoll)
+          .limit(1)
+          .get();
+        if (!importedSnap.empty) {
+          await importedSnap.docs[0].ref.update({
+            paymentStatus: "success",
+            paymentVerifiedAt: verifiedAt,
+            razorpayPaymentId: razorpay_payment_id
+          });
+        }
+      } catch (importUpdateErr) {
+        console.error("Error updating imported student payment status in functions:", importUpdateErr);
+      }
+    }
+
     let emailResult = null;
     try {
       emailResult = await sendPaymentSuccessEmail(firebaseAdmin, orderData.userId, razorpay_payment_id);

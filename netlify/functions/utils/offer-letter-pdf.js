@@ -190,8 +190,8 @@ function createOfferLetterPdf(profile, letterNumber) {
     ['Internship Domain', profile.internshipDomain ? domain : `[${domain}]`],
     ['Internship Duration', '120 Hours'],
     ['Mode of Internship', `${internshipMode} (as approved by College)`],
-    ['Internship Start Date', '16/08/2026'],
-    ['Expected End Date', '15/09/2026'],
+    // ['Internship Start Date', '16/08/2026'],
+    // ['Expected End Date', '15/09/2026'],
   ];
 
   rows.forEach(([label, value]) => {

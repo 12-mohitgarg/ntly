@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import Razorpay from "razorpay";
 import crypto from "crypto";
@@ -18,6 +19,15 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 function getFirebaseAdminCredential() {
+  try {
+    const saPath = path.join(process.cwd(), "service-account.json");
+    if (fs.existsSync(saPath)) {
+      return admin.credential.cert(saPath);
+    }
+  } catch (err) {
+    // Ignore fallback
+  }
+
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     return admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
   }
@@ -244,6 +254,134 @@ async function getCollegeAmount(collegeName?: string) {
 // API Routes
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", environment: process.env.NODE_ENV });
+});
+
+app.post("/api/admin/import-students", requireAdmin, async (req, res) => {
+  try {
+    const { students } = req.body || {};
+    if (!Array.isArray(students) || students.length === 0) {
+      return res.status(400).json({ error: "Invalid payload: students list is empty or not an array" });
+    }
+
+    const db = admin.firestore();
+    const importedRef = db.collection("importedStudents");
+    
+    let importedCount = 0;
+    const CHUNK_SIZE = 400; // Batch limit is 500
+
+    for (let i = 0; i < students.length; i += CHUNK_SIZE) {
+      const chunk = students.slice(i, i + CHUNK_SIZE);
+      const batch = db.batch();
+
+      for (const student of chunk) {
+        if (!student.universityRoll) continue;
+
+        const existingQuery = await importedRef.where("universityRoll", "==", student.universityRoll).limit(1).get();
+        
+        const docData = {
+          fullName: student.fullName || "",
+          parentName: student.parentName || "",
+          contactNumber: student.contactNumber || "",
+          email: student.email || "",
+          gender: student.gender || "",
+          college: student.college || "",
+          university: student.university || "",
+          course: student.course || "",
+          semester: student.semester || "",
+          universityRoll: student.universityRoll || "",
+          industrialRegNo: student.industrialRegNo || "",
+          academicDetails: student.academicDetails || "",
+          importedAt: new Date().toISOString(),
+          paymentStatus: "Pending",
+          whatsappSent: false,
+        };
+
+        if (!existingQuery.empty) {
+          const docId = existingQuery.docs[0].id;
+          batch.set(importedRef.doc(docId), docData, { merge: true });
+        } else {
+          const newRef = importedRef.doc();
+          batch.set(newRef, docData);
+        }
+        
+        importedCount += 1;
+      }
+
+      await batch.commit();
+    }
+
+    // Now, trigger WhatsApp messages asynchronously for imported students who are Pending
+    setTimeout(async () => {
+      try {
+        console.log(`[WhatsApp Notifications] Starting dispatch for ${students.length} students...`);
+        const appUrl = process.env.APP_URL || "https://internmitra.com";
+        
+        for (const student of students) {
+          if (!student.contactNumber || !student.universityRoll) continue;
+
+          // Check if student is already registered & paid
+          const registeredUserSnap = await db.collection("users").where("universityRoll", "==", student.universityRoll).limit(1).get();
+          if (!registeredUserSnap.empty) {
+            const registeredUserData = registeredUserSnap.docs[0].data();
+            if (registeredUserData.paymentStatus === "success" || registeredUserData.isPaid === true) {
+              continue;
+            }
+          }
+
+          // Fetch the college amount
+          const collegeAmount = await getCollegeAmount(student.college);
+          
+          // Formulate Secure Payment Link
+          const securePaymentLink = `${appUrl}/register?roll=${encodeURIComponent(student.universityRoll)}&ind=${encodeURIComponent(student.industrialRegNo)}`;
+          
+          // Message text
+          const messageText = `Dear ${student.fullName}, your registration for the Internship Program from ${student.college || 'your college'} is pending. Please complete your registration and pay a fee of ₹${collegeAmount} using this secure link: ${securePaymentLink}`;
+
+          // Simulate WhatsApp message (print to log)
+          console.log(`\n======================================================`);
+          console.log(`[WHATSAPP AUTOMATED DISPATCH]`);
+          console.log(`To: +91${student.contactNumber}`);
+          console.log(`Message: ${messageText}`);
+          console.log(`======================================================\n`);
+
+          // Update student status to whatsappSent: true
+          const checkImportedRef = await importedRef.where("universityRoll", "==", student.universityRoll).limit(1).get();
+          if (!checkImportedRef.empty) {
+            await checkImportedRef.docs[0].ref.update({
+              whatsappSent: true,
+              whatsappSentAt: new Date().toISOString()
+            });
+          }
+
+          // If a WhatsApp endpoint/service is configured, call it here:
+          if (process.env.WHATSAPP_API_URL && process.env.WHATSAPP_API_TOKEN) {
+            try {
+              await fetch(process.env.WHATSAPP_API_URL, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${process.env.WHATSAPP_API_TOKEN}`
+                },
+                body: JSON.stringify({
+                  phone: student.contactNumber,
+                  message: messageText
+                })
+              });
+            } catch (apiErr) {
+              console.error(`Failed to send WhatsApp message to ${student.contactNumber} via API:`, apiErr);
+            }
+          }
+        }
+      } catch (bgErr) {
+        console.error("Error sending background WhatsApp messages:", bgErr);
+      }
+    }, 1000);
+
+    res.json({ status: "success", importedCount });
+  } catch (error: any) {
+    console.error("Excel Import Error:", error);
+    res.status(500).json({ error: "Error occurred during Excel student import", details: error?.message || "Unknown error" });
+  }
 });
 
 app.patch("/api/admin/users/:uid/password", requireDashboardOperator, async (req, res) => {
@@ -619,6 +757,26 @@ app.post("/api/payment/verify", async (req, res) => {
     });
 
     await batch.commit();
+
+    if (studentData?.universityRoll) {
+      try {
+        const importedSnap = await admin.firestore()
+          .collection("importedStudents")
+          .where("universityRoll", "==", studentData.universityRoll)
+          .limit(1)
+          .get();
+        if (!importedSnap.empty) {
+          await importedSnap.docs[0].ref.update({
+            paymentStatus: "success",
+            paymentVerifiedAt: verifiedAt,
+            razorpayPaymentId: razorpay_payment_id
+          });
+        }
+      } catch (importUpdateErr) {
+        console.error("Error updating imported student payment status:", importUpdateErr);
+      }
+    }
+
     res.json({ status: "success", userId: orderData.userId, paymentId: razorpay_payment_id, amount: orderData.amount });
   } catch (error: any) {
     console.error("Verification Error:", error);

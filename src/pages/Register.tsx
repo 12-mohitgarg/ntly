@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { auth, db } from '../lib/firebase';
 import { createUserWithEmailAndPassword, getAuth, signOut } from 'firebase/auth';
 import { doc, setDoc, collection, getDocs, query, orderBy, where } from 'firebase/firestore';
@@ -88,6 +88,85 @@ export default function Register({ mode = 'public' }: RegisterProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const [searchParams] = useSearchParams();
+  const [inputUniversityRoll, setInputUniversityRoll] = useState(searchParams.get('roll') || '');
+  const [inputIndustrialRegNo, setInputIndustrialRegNo] = useState(searchParams.get('ind') || '');
+  const [verificationLoading, setVerificationLoading] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+
+  const handleVerify = async (rollParam?: string, indParam?: string) => {
+    const roll = (rollParam || inputUniversityRoll).trim();
+    const ind = (indParam || inputIndustrialRegNo).trim();
+
+    if (!roll || !ind) {
+      setError("Please enter both Roll Number and Industrial Registration Number.");
+      return;
+    }
+
+    setVerificationLoading(true);
+    setError(null);
+
+    try {
+      const usersRef = collection(db, 'users');
+      const registeredQuery = query(usersRef, where('universityRoll', '==', roll));
+      const registeredSnap = await getDocs(registeredQuery);
+
+      if (!registeredSnap.empty) {
+        setError("This student is already registered! Please login to your account.");
+        setVerificationLoading(false);
+        return;
+      }
+
+      const importedRef = collection(db, 'importedStudents');
+      const q = query(
+        importedRef,
+        where('universityRoll', '==', roll),
+        where('industrialRegNo', '==', ind)
+      );
+
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        setError("Invalid Roll Number or Industrial Registration Number. Please check your credentials or contact college/admin.");
+        setVerificationLoading(false);
+        return;
+      }
+
+      const importedData = snapshot.docs[0].data();
+
+      setFormData(prev => ({
+        ...prev,
+        fullName: importedData.fullName || '',
+        parentName: importedData.parentName || '',
+        email: importedData.email || '',
+        contactNumber: importedData.contactNumber || '',
+        gender: importedData.gender || '',
+        college: importedData.college || '',
+        university: importedData.university || '',
+        internshipDomain: importedData.course || '',
+        semester: importedData.semester || 'Semester 5',
+        universityRoll: roll,
+        industrialRegNo: ind,
+      }));
+
+      setIsVerified(true);
+      setStep(2);
+    } catch (err: any) {
+      console.error("Verification failed:", err);
+      setError(err?.message || "An error occurred during verification.");
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const roll = searchParams.get('roll');
+    const ind = searchParams.get('ind');
+    if (roll && ind) {
+      handleVerify(roll, ind);
+    }
+  }, []);
 
   const [districts, setDistricts] = useState<District[]>([]);
   const [colleges, setColleges] = useState<College[]>([]);
@@ -277,6 +356,13 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
   const nextStep = async () => {
     if (step === 1) {
+      // Step 1 verification is optional; if not verified, proceed as manual registration
+      if (!isVerified) {
+        setIsVerified(false);
+      }
+    }
+
+    if (step === 2) {
       if (!formData.fullName || !formData.gender || !formData.parentName || !formData.contactNumber || !formData.email) {
         setError("Please fill all personal information fields.");
         return;
@@ -342,14 +428,14 @@ export default function Register({ mode = 'public' }: RegisterProps) {
       }
     }
 
-    if (step === 2) {
+    if (step === 3) {
       if (!formData.district || !formData.college || !formData.university || !formData.degree || !formData.department || !formData.subject || !formData.session || !formData.semester || !formData.universityRoll || !formData.internshipDomain) {
         setError("Please fill all academic details.");
         return;
       }
     }
 
-    if (step === 3) {
+    if (step === 4) {
       if (!formData.password || !formData.confirmPassword) {
         setError("Please define your secret password.");
         return;
@@ -429,7 +515,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
     } catch (err: any) {
       if (err.code === 'auth/email-already-in-use') {
         setError("This email is already registered. Please use a different email.");
-        setStep(1);
+        setStep(2);
       } else {
         setError(err.message);
       }
@@ -439,6 +525,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
   };
 
   const stepsList = [
+    { title: 'Verify', sub: 'Identity Verification', icon: ShieldCheck },
     { title: 'Personal', sub: 'Basic Information', icon: User },
     { title: 'Academic', sub: 'Educational Details', icon: GraduationCap },
     { title: 'Security', sub: 'Account Security', icon: ShieldCheck },
@@ -457,23 +544,26 @@ export default function Register({ mode = 'public' }: RegisterProps) {
   }
 
   const getStepProgressText = () => {
-    if (step === 1) return "25% Completed";
-    if (step === 2) return "50% Completed";
-    if (step === 3) return "75% Completed";
+    if (step === 1) return "10% Completed";
+    if (step === 2) return "30% Completed";
+    if (step === 3) return "55% Completed";
+    if (step === 4) return "75% Completed";
     return "95% Completed";
   };
 
   const getStepProgressPercent = () => {
-    if (step === 1) return 25;
-    if (step === 2) return 50;
-    if (step === 3) return 75;
+    if (step === 1) return 10;
+    if (step === 2) return 30;
+    if (step === 3) return 55;
+    if (step === 4) return 75;
     return 95;
   };
 
   const getStepIcon = () => {
-    if (step === 1) return User;
-    if (step === 2) return GraduationCap;
-    if (step === 3) return ShieldCheck;
+    if (step === 1) return ShieldCheck;
+    if (step === 2) return User;
+    if (step === 3) return GraduationCap;
+    if (step === 4) return ShieldCheck;
     return FileText;
   };
 
@@ -551,13 +641,14 @@ export default function Register({ mode = 'public' }: RegisterProps) {
               </div>
               <div className="space-y-0.5">
                 <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">
-                  {step === 1 ? 'Personal Information' : step === 2 ? 'Academic Details' : step === 3 ? 'Account Security' : 'Consent Letter'}
+                  {step === 1 ? 'Verify Identity' : step === 2 ? 'Personal Information' : step === 3 ? 'Academic Details' : step === 4 ? 'Account Security' : 'Consent Letter'}
                 </h3>
                 <p className="text-xs text-slate-450 font-bold leading-none">
-                  {step === 1 && 'Please provide your basic details accurately.'}
-                  {step === 2 && 'Enter your educational track records.'}
-                  {step === 3 && 'Choose a password for your account.'}
-                  {step === 4 && 'Review your registration details and submit.'}
+                  {step === 1 && 'Enter your Roll Number and Industrial Reg Number to verify.'}
+                  {step === 2 && 'Review your basic details accurately.'}
+                  {step === 3 && 'Verify your educational track records.'}
+                  {step === 4 && 'Choose a password for your account.'}
+                  {step === 5 && 'Review your registration details and submit.'}
                 </p>
               </div>
             </div>
@@ -571,7 +662,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                 <div className="bg-blue-600 h-full transition-all duration-300" style={{ width: `${getStepProgressPercent()}%` }} />
               </div>
               <span className="bg-blue-50 text-blue-600 font-extrabold px-2.5 py-1 rounded text-xs leading-none">
-                Step {step} of 4
+                Step {step} of 5
               </span>
             </div>
           </div>
@@ -584,7 +675,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -5 }}
               className="space-y-5"
-              onSubmit={step === 4 ? handleSubmit : (e) => e.preventDefault()}
+              onSubmit={step === 5 ? handleSubmit : (e) => e.preventDefault()}
             >
               {error && (
                 <div className="bg-red-50 border border-red-100 text-red-600 p-4.5 rounded-2xl flex items-center gap-3 text-xs font-bold uppercase tracking-tight">
@@ -593,8 +684,77 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                 </div>
               )}
 
-              {/* STEP 1: PERSONAL INFORMATION */}
+              {/* STEP 1: VERIFICATION SCREEN */}
               {step === 1 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-left">
+                  <div className="space-y-1.5 md:col-span-2">
+                    <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-xs font-semibold text-blue-800 leading-relaxed">
+                      <strong>Optional:</strong> If your college has pre-registered/imported your details, enter your Roll Number and Industrial Registration Number below to verify and pre-fill the form. Otherwise, you can skip and register manually.
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="inputUniversityRoll" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Registration Number / Roll Number *</Label>
+                    <div className="relative">
+                      <GraduationCap size={16} className="absolute left-4 top-3.5 text-slate-400" />
+                      <Input
+                        id="inputUniversityRoll"
+                        value={inputUniversityRoll}
+                        onChange={(e) => setInputUniversityRoll(e.target.value)}
+                        placeholder="e.g. 23UGCO01"
+                        className="pl-11 h-12 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 font-semibold text-xs sm:text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="inputIndustrialRegNo" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Industrial Registration Number *</Label>
+                    <div className="relative">
+                      <ShieldCheck size={16} className="absolute left-4 top-3.5 text-slate-400" />
+                      <Input
+                        id="inputIndustrialRegNo"
+                        value={inputIndustrialRegNo}
+                        onChange={(e) => setInputIndustrialRegNo(e.target.value)}
+                        placeholder="e.g. IM-23-4567"
+                        className="pl-11 h-12 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 font-semibold text-xs sm:text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="md:col-span-2 pt-2 space-y-3">
+                    <Button
+                      type="button"
+                      disabled={verificationLoading}
+                      onClick={() => handleVerify()}
+                      className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-wider text-xs shadow-md active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      {verificationLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Verifying Credentials...
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck size={16} />
+                          Verify & Pre-fill Form
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsVerified(false);
+                        setError(null);
+                        setStep(2);
+                      }}
+                      className="w-full h-12 rounded-xl border border-slate-250 text-slate-700 font-bold hover:bg-slate-50 transition active:scale-95 cursor-pointer"
+                    >
+                      Skip & Register Manually
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: PERSONAL INFORMATION */}
+              {step === 2 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1.5 text-left">
                     <Label htmlFor="fullName" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Full Name (as per ID) *</Label>
@@ -645,8 +805,8 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                 </div>
               )}
 
-              {/* STEP 2: ACADEMIC DETAILS */}
-              {step === 2 && (
+              {/* STEP 3: ACADEMIC DETAILS */}
+              {step === 3 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-h-[50vh] overflow-y-auto pr-1">
 
                   <div className="space-y-1.5 text-left md:col-span-2">
@@ -669,7 +829,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="college" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">College Affiliate *</Label>
                     <select name="college" value={formData.college} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Select College</option>
-                      {formData.district && getCollegesForDistrict(formData.district).map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                      {formData.district ? getCollegesForDistrict(formData.district).map(c => <option key={c.id} value={c.name}>{c.name}</option>) : <option value={formData.college}>{formData.college}</option>}
                     </select>
                   </div>
 
@@ -693,13 +853,14 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="subject" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Subject *</Label>
                     <select name="subject" value={formData.subject} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Subject</option>
-                      {formData.department && getSubjectsForDegree(formData.department).map(s => <option key={s} value={s}>{s}</option>)}
+                      {formData.department ? getSubjectsForDegree(formData.department).map(s => <option key={s} value={s}>{s}</option>) : <option value={formData.subject}>{formData.subject}</option>}
                     </select>
                   </div>
 
                   <div className="space-y-1.5 text-left">
                     <Label htmlFor="session" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Session *</Label>
                     <select name="session" value={formData.session} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
+                      <option value="">Session</option>
                       {REGISTRATION_SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
@@ -737,8 +898,8 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                 </div>
               )}
 
-              {/* STEP 3: ACCOUNT SECURITY */}
-              {step === 3 && (
+              {/* STEP 4: ACCOUNT SECURITY */}
+              {step === 4 && (
                 <div className="grid grid-cols-1 gap-5 max-w-xl mx-auto">
                   <div className="space-y-1.5 text-left">
                     <Label htmlFor="password" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Secret Password *</Label>
@@ -758,8 +919,8 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                 </div>
               )}
 
-              {/* STEP 4: CONSENT LETTER */}
-              {step === 4 && (
+              {/* STEP 5: CONSENT LETTER */}
+              {step === 5 && (
                 <div className="space-y-5 max-w-2xl mx-auto text-left">
 
                   {/* Undertaking Declaration Box */}
@@ -769,7 +930,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     </h4>
 
                     <p>
-                      I, <strong className="text-slate-955">{formData.fullName || '[Full Name]'}</strong>, son/daughter of <strong className="text-slate-955">{formData.parentName || '[Parent/Guardian Name]'}</strong>, student of <strong className="text-slate-955">{formData.college || '[College Name]'}</strong> pursuing <strong className="text-slate-955">{formData.degree || '[Degree]'}</strong> (University Registration Number: <strong className="text-slate-955">{formData.universityRoll || '[Registration Number]'}</strong>), hereby declare that I will diligently undertake the UGC-mandated Internship Program in <strong className="text-blue-700">{formData.internshipDomain || '[Internship Domain]'}</strong> starting from the registered academic session.
+                      I, <strong className="text-slate-950">{formData.fullName || '[Full Name]'}</strong>, son/daughter of <strong className="text-slate-955">{formData.parentName || '[Parent/Guardian Name]'}</strong>, student of <strong className="text-slate-955">{formData.college || '[College Name]'}</strong> pursuing <strong className="text-slate-955">{formData.degree || '[Degree]'}</strong> (University Registration Number: <strong className="text-slate-955">{formData.universityRoll || '[Registration Number]'}</strong>), hereby declare that I will diligently undertake the UGC-mandated Internship Program in <strong className="text-blue-700">{formData.internshipDomain || '[Internship Domain]'}</strong> starting from the registered academic session.
                     </p>
 
                     <p>
@@ -821,7 +982,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
               <div />
             )}
 
-            {step < 4 ? (
+            {step < 5 ? (
               <Button
                 onClick={nextStep}
                 disabled={loading}

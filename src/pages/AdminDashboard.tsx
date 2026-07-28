@@ -977,7 +977,7 @@ export default function AdminDashboard() {
       const userSnapshot = await getDocs(userQuery);
 
       userSnapshot.forEach(async (userDoc) => {
-
+        const userData = userDoc.data();
         await updateDoc(
           doc(db, 'users', userDoc.id),
           {
@@ -988,6 +988,23 @@ export default function AdminDashboard() {
           }
         );
 
+        if (userData?.universityRoll) {
+          try {
+            const importedQuery = query(
+              collection(db, 'importedStudents'),
+              where('universityRoll', '==', userData.universityRoll)
+            );
+            const importedSnap = await getDocs(importedQuery);
+            importedSnap.forEach(async (importedDoc) => {
+              await updateDoc(doc(db, 'importedStudents', importedDoc.id), {
+                paymentStatus: 'success',
+                paymentVerifiedAt: new Date().toISOString()
+              });
+            });
+          } catch (syncErr) {
+            console.error("Sync error for manual payment confirm:", syncErr);
+          }
+        }
       });
 
       alert('Payment verified successfully');
