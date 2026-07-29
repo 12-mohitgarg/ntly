@@ -316,11 +316,10 @@ export default function AdminDashboard() {
                 key={idx}
                 type="button"
                 onClick={() => onPageChange(Number(p))}
-                className={`inline-flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold transition active:scale-[0.98] ${
-                  currentPage === p
-                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10'
-                    : 'border border-slate-250 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold transition active:scale-[0.98] ${currentPage === p
+                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10'
+                  : 'border border-slate-250 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
               >
                 {p}
               </Button>
@@ -1671,11 +1670,10 @@ export default function AdminDashboard() {
           }}
           className="gap-6 flex-col"
         >
-          <TabsList className="bg-white border border-slate-100 shadow-lg h-12 p-1">
-            <TabsTrigger value="dashboard" className="px-6 py-2 font-black">
-              <LayoutDashboard size={16} />
-              Dashboard
-            </TabsTrigger>
+          <TabsList className="w-full h-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 bg-white border border-slate-100 shadow-lg p-1.5">            <TabsTrigger value="dashboard" className="px-6 py-2 font-black">
+            <LayoutDashboard size={16} />
+            Dashboard
+          </TabsTrigger>
             {canOperateDashboardPayments && (
               <TabsTrigger value="cyber-cafe-summary" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
                 <Building2 size={14} />
@@ -2571,7 +2569,7 @@ export default function AdminDashboard() {
                               </tr>
                             </thead>
                             <tbody>
-                               {visibleTestSubmissions.slice((testSubmissionsPage - 1) * testSubmissionsPerPage, testSubmissionsPage * testSubmissionsPerPage).map((sub) => {
+                              {visibleTestSubmissions.slice((testSubmissionsPage - 1) * testSubmissionsPerPage, testSubmissionsPage * testSubmissionsPerPage).map((sub) => {
                                 const student = getStudentProfile(sub.userId);
                                 const isPassed = sub.scorePercentage >= 33;
 

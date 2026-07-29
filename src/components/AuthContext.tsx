@@ -121,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        const [adminDoc, emitraDoc, collegeDoc, userDoc] = await Promise.all([
+        const [adminDoc, emitraDoc, collegeDoc, userDoc, collegeProfileFromApi] = await Promise.all([
           getDoc(doc(db, 'admins', user.uid)).catch((error) => {
             console.warn('Admin profile lookup failed:', error);
             return null;
@@ -137,7 +137,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           getDoc(doc(db, 'users', user.uid)).catch((error) => {
             console.warn('User profile lookup failed:', error);
             return null;
-          })
+          }),
+          fetchCollegeProfileFromApi(user) // ab ye bhi saath mein chalega, alag se wait nahi karna padega
         ]);
 
         if (adminDoc?.exists() && adminDoc.data().isActive === true) {
@@ -161,14 +162,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        const collegeProfileFromApi = await fetchCollegeProfileFromApi(user);
         if (collegeProfileFromApi?.isActive === true) {
           setCollegeProfile(collegeProfileFromApi);
           setIsCollege(true);
           setLoading(false);
           return;
         }
-
         if (userDoc?.exists()) {
           setProfile(userDoc.data() as UserProfile);
           unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), (doc) => {
