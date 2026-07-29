@@ -18,7 +18,8 @@ import {
   X,
   Users,
   ListPlus,
-  KeyRound
+  KeyRound,
+  Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -99,7 +100,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         { name: 'Universities', path: '/admin/universities', icon: Building2 },
         { name: 'Colleges', path: '/admin/colleges', icon: GraduationCap },
         { name: 'Bulk Add Colleges', path: '/admin/bulk-colleges', icon: ListPlus },
-        { name: 'Subjects', path: '/admin/subjects', icon: List }
+        { name: 'Subjects', path: '/admin/subjects', icon: List },
+        { name: 'Import Students', path: '/admin/import-students', icon: Upload }
       ]
     },
     {

@@ -17,18 +17,32 @@ import { INTERNSHIP_DOMAINS } from '../lib/constants';
 import { jsPDF } from 'jspdf';
 import { backupFirestore } from "./backupFirestore";
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 import { QuizSubmission } from './dashboard/generateTestReport';
 
 interface UserProfile {
   uid: string;
   fullName: string;
+  gender?: string;
+  parentName?: string;
   email: string;
   contactNumber: string;
+  district?: string;
   college: string;
+  university?: string;
+  degree?: string;
   department: string;
+  subject?: string;
+  session?: string;
+  semester?: string;
   internshipDomain: string;
+  internshipMode?: string;
   isPaid: boolean;
+  hasPaid?: boolean;
+  paymentStatus?: string;
+  paymentVerifiedAt?: string;
+  universityRoll?: string;
   registrationDate: string;
   createdByEmitraId?: string | null;
   createdByEmitraName?: string | null;
@@ -39,8 +53,13 @@ interface Payment {
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   amount: number;
+  amountPaise?: number;
+  currency?: string;
   status: string;
   timestamp: string;
+  createdByEmitraId?: string | null;
+  createdByEmitraName?: string | null;
+  verifiedBy?: string;
 }
 
 interface TeacherProfile {
@@ -129,6 +148,15 @@ interface CyberCafeSummary {
   domains: Set<string>;
 }
 
+interface CollegeCompleteReport {
+  college: string;
+  university: string;
+  totalStudents: number;
+  totalPayments: number;
+  pendingPayments: number;
+  totalRevenue: number;
+}
+
 export default function AdminDashboard() {
   const { user, adminProfile } = useAuth();
   const navigate = useNavigate();
@@ -149,6 +177,10 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [collegeFilter, setCollegeFilter] = useState('');
   const [domainFilter, setDomainFilter] = useState('');
+  const [reportSearch, setReportSearch] = useState('');
+  const [reportCollegeFilter, setReportCollegeFilter] = useState('');
+  const [reportUniversityFilter, setReportUniversityFilter] = useState('');
+  const [reportPaymentFilter, setReportPaymentFilter] = useState('');
   const [cyberCafeSearch, setCyberCafeSearch] = useState('');
   const [cyberCafePaymentFilter, setCyberCafePaymentFilter] = useState('');
   const [cyberCafeCollegeFilter, setCyberCafeCollegeFilter] = useState('');
@@ -237,6 +269,10 @@ export default function AdminDashboard() {
   }, [collegeFilter, domainFilter]);
 
   useEffect(() => {
+    setUsersPage(1);
+  }, [reportSearch, reportCollegeFilter, reportUniversityFilter, reportPaymentFilter]);
+
+  useEffect(() => {
     setAssignmentsPage(1);
   }, [collegeFilter, domainFilter]);
 
@@ -316,11 +352,10 @@ export default function AdminDashboard() {
                 key={idx}
                 type="button"
                 onClick={() => onPageChange(Number(p))}
-                className={`inline-flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold transition active:scale-[0.98] ${
-                  currentPage === p
-                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10'
-                    : 'border border-slate-250 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold transition active:scale-[0.98] ${currentPage === p
+                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/10'
+                  : 'border border-slate-250 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
               >
                 {p}
               </Button>
@@ -977,7 +1012,7 @@ export default function AdminDashboard() {
       const userSnapshot = await getDocs(userQuery);
 
       userSnapshot.forEach(async (userDoc) => {
-
+        const userData = userDoc.data();
         await updateDoc(
           doc(db, 'users', userDoc.id),
           {
@@ -988,6 +1023,23 @@ export default function AdminDashboard() {
           }
         );
 
+        if (userData?.universityRoll) {
+          try {
+            const importedQuery = query(
+              collection(db, 'importedStudents'),
+              where('universityRoll', '==', userData.universityRoll)
+            );
+            const importedSnap = await getDocs(importedQuery);
+            importedSnap.forEach(async (importedDoc) => {
+              await updateDoc(doc(db, 'importedStudents', importedDoc.id), {
+                paymentStatus: 'success',
+                paymentVerifiedAt: new Date().toISOString()
+              });
+            });
+          } catch (syncErr) {
+            console.error("Sync error for manual payment confirm:", syncErr);
+          }
+        }
       });
 
       alert('Payment verified successfully');
@@ -1113,10 +1165,14 @@ export default function AdminDashboard() {
   );
 
   const isUserSuccessful = (user: UserProfile) =>
-    Boolean(user.isPaid || successfulUserIds.has(user.uid));
+    Boolean(user.isPaid || user.hasPaid || user.paymentStatus === 'success' || successfulUserIds.has(user.uid));
 
   const uniqueColleges = [
     ...new Set(users.map(user => getGroupName(user.college)))
+  ].sort();
+
+  const uniqueUniversities = [
+    ...new Set(users.map(user => getGroupName(user.university)))
   ].sort();
 
   const uniqueDomains = [
@@ -1197,6 +1253,211 @@ export default function AdminDashboard() {
       acc[payment.userId] = (acc[payment.userId] || 0) + (payment.amount || 0);
       return acc;
     }, {});
+
+  const getUserSuccessfulPaymentAmount = (student: UserProfile) => {
+    const paymentAmount = successfulPaymentsByUser[student.uid] || 0;
+    if (paymentAmount > 0) return paymentAmount;
+
+    if (!isUserSuccessful(student)) return 0;
+
+    const matchedCollege = colleges.find((college) => college.name === student.college);
+    return matchedCollege?.price || 0;
+  };
+
+  const reportFilteredUsers = users.filter((student) => {
+    const paymentSuccess = isUserSuccessful(student);
+    const searchValue = reportSearch.trim().toLowerCase();
+    const searchTarget = [
+      student.fullName,
+      student.email,
+      student.contactNumber,
+      student.college,
+      student.university,
+      student.department,
+      student.internshipDomain,
+      student.universityRoll,
+    ].join(' ').toLowerCase();
+
+    const searchMatch = !searchValue || searchTarget.includes(searchValue);
+    const collegeMatch = !reportCollegeFilter || getGroupName(student.college) === reportCollegeFilter;
+    const universityMatch = !reportUniversityFilter || getGroupName(student.university) === reportUniversityFilter;
+    const paymentMatch =
+      !reportPaymentFilter ||
+      (reportPaymentFilter === 'success' && paymentSuccess) ||
+      (reportPaymentFilter === 'pending' && !paymentSuccess);
+
+    return searchMatch && collegeMatch && universityMatch && paymentMatch;
+  });
+
+  const completeReportTotals = reportFilteredUsers.reduce(
+    (acc, student) => {
+      const paymentSuccess = isUserSuccessful(student);
+      acc.totalStudents += 1;
+      acc.totalPayments += paymentSuccess ? 1 : 0;
+      acc.pendingPayments += paymentSuccess ? 0 : 1;
+      acc.totalRevenue += getUserSuccessfulPaymentAmount(student);
+      return acc;
+    },
+    { totalStudents: 0, totalPayments: 0, pendingPayments: 0, totalRevenue: 0 }
+  );
+
+  const collegeCompleteReportMap = reportFilteredUsers.reduce<Record<string, CollegeCompleteReport>>((acc, student) => {
+      const college = getGroupName(student.college);
+      const university = getGroupName(student.university);
+      const key = `${college}__${university}`;
+
+      if (!acc[key]) {
+        acc[key] = {
+          college,
+          university,
+          totalStudents: 0,
+          totalPayments: 0,
+          pendingPayments: 0,
+          totalRevenue: 0,
+        };
+      }
+
+      const paymentSuccess = isUserSuccessful(student);
+      acc[key].totalStudents += 1;
+      acc[key].totalPayments += paymentSuccess ? 1 : 0;
+      acc[key].pendingPayments += paymentSuccess ? 0 : 1;
+      acc[key].totalRevenue += getUserSuccessfulPaymentAmount(student);
+      return acc;
+    }, {});
+
+  const collegeCompleteReport: CollegeCompleteReport[] = Object.keys(collegeCompleteReportMap)
+    .map((key) => collegeCompleteReportMap[key])
+    .sort((a, b) => b.totalStudents - a.totalStudents || a.college.localeCompare(b.college));
+
+  const exportCompleteReportExcel = () => {
+    const formatExportDate = (value?: string) => {
+      if (!value) return '';
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return value;
+      return parsed.toLocaleString('en-IN');
+    };
+
+    const getStudentSuccessfulPayments = (studentId: string) =>
+      payments
+        .filter((payment) => payment.userId === studentId && payment.status === 'success')
+        .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+
+    const getStudentLatestSuccessfulPayment = (studentId: string) =>
+      getStudentSuccessfulPayments(studentId)[0];
+
+    const applyColumnWidths = (sheet: XLSX.WorkSheet, widths: number[]) => {
+      sheet['!cols'] = widths.map((wch) => ({ wch }));
+    };
+
+    const generatedAt = new Date().toLocaleString('en-IN');
+    const summaryRows = [
+      ['InternMitra Admin Complete Report'],
+      ['Generated At', generatedAt],
+      ['College Filter', reportCollegeFilter || 'All Colleges'],
+      ['University Filter', reportUniversityFilter || 'All Universities'],
+      ['Payment Filter', reportPaymentFilter || 'All Payments'],
+      ['Search', reportSearch || ''],
+      [],
+      ['Total Students', completeReportTotals.totalStudents],
+      ['Total Payments', completeReportTotals.totalPayments],
+      ['Pending Payments', completeReportTotals.pendingPayments],
+      ['Total Revenue (INR)', completeReportTotals.totalRevenue],
+      [],
+      ['Note', 'Revenue is counted from successful payment records. If a paid student has no payment record, college fee is used as fallback.'],
+    ];
+
+    const collegeRows = collegeCompleteReport.map((row) => ({
+      College: row.college,
+      University: row.university,
+      'Total Students': row.totalStudents,
+      'Paid Students': row.totalPayments,
+      'Pending Payments': row.pendingPayments,
+      'Total Revenue (INR)': row.totalRevenue,
+    }));
+
+    const studentRows = reportFilteredUsers.map((student, index) => {
+      const paymentSuccess = isUserSuccessful(student);
+      const successfulPayment = getStudentLatestSuccessfulPayment(student.uid);
+      const studentRevenue = getUserSuccessfulPaymentAmount(student);
+
+      return {
+        'S.No.': index + 1,
+        'Student ID': student.uid,
+        'Student Name': student.fullName || '',
+        'Father/Parent Name': student.parentName || '',
+        Gender: student.gender || '',
+        Email: student.email || '',
+        'Mobile Number': student.contactNumber || '',
+        District: student.district || '',
+        College: student.college || '',
+        University: student.university || '',
+        Degree: student.degree || '',
+        Department: student.department || '',
+        Subject: student.subject || '',
+        Session: student.session || '',
+        Semester: student.semester || '',
+        'University Roll': student.universityRoll || '',
+        'Internship Domain': student.internshipDomain || '',
+        'Internship Mode': student.internshipMode || '',
+        'Payment Status': paymentSuccess ? 'Success' : 'Pending',
+        'Student Payment Field': student.paymentStatus || '',
+        'Revenue (INR)': studentRevenue,
+        'Latest Razorpay Order ID': successfulPayment?.razorpayOrderId || '',
+        'Latest Razorpay Payment ID': successfulPayment?.razorpayPaymentId || '',
+        Currency: successfulPayment?.currency || (studentRevenue > 0 ? 'INR' : ''),
+        'Payment Verified At': formatExportDate(student.paymentVerifiedAt || successfulPayment?.timestamp),
+        'Registration Date': formatExportDate(student.registrationDate),
+        Source: student.createdByEmitraId ? 'Cyber Cafe' : 'Direct',
+        'Cyber Cafe ID': student.createdByEmitraId || '',
+        'Cyber Cafe Name': student.createdByEmitraName || '',
+      };
+    });
+
+    const paymentRows = payments
+      .filter((payment) => {
+        const student = users.find((profile) => profile.uid === payment.userId);
+        return Boolean(student && reportFilteredUsers.some((filteredStudent) => filteredStudent.uid === student.uid));
+      })
+      .map((payment, index) => {
+        const student = users.find((profile) => profile.uid === payment.userId);
+
+        return {
+          'S.No.': index + 1,
+          'Student ID': payment.userId || '',
+          'Student Name': student?.fullName || '',
+          Email: student?.email || '',
+          College: student?.college || '',
+          University: student?.university || '',
+          'Payment Status': payment.status || '',
+          'Amount (INR)': payment.amount || 0,
+          'Amount Paise': payment.amountPaise || '',
+          Currency: payment.currency || 'INR',
+          'Razorpay Order ID': payment.razorpayOrderId || '',
+          'Razorpay Payment ID': payment.razorpayPaymentId || '',
+          'Payment Date': formatExportDate(payment.timestamp),
+          'Cyber Cafe ID': payment.createdByEmitraId || student?.createdByEmitraId || '',
+          'Cyber Cafe Name': payment.createdByEmitraName || student?.createdByEmitraName || '',
+          'Verified By': payment.verifiedBy || '',
+        };
+      });
+
+    const workbook = XLSX.utils.book_new();
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+    const collegeSheet = XLSX.utils.json_to_sheet(collegeRows);
+    const studentSheet = XLSX.utils.json_to_sheet(studentRows);
+    const paymentsSheet = XLSX.utils.json_to_sheet(paymentRows);
+
+    applyColumnWidths(summarySheet, [28, 70]);
+    applyColumnWidths(collegeSheet, [42, 36, 16, 16, 18, 20]);
+    applyColumnWidths(studentSheet, [8, 26, 28, 28, 14, 30, 16, 18, 42, 36, 14, 22, 20, 14, 14, 22, 24, 18, 18, 18, 20, 30, 30, 12, 24, 24, 14, 24, 24]);
+    applyColumnWidths(paymentsSheet, [8, 26, 28, 30, 42, 36, 18, 16, 14, 12, 30, 30, 24, 24, 24, 24]);
+
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+    XLSX.utils.book_append_sheet(workbook, collegeSheet, 'College Revenue');
+    XLSX.utils.book_append_sheet(workbook, studentSheet, 'Student Data');
+    XLSX.utils.book_append_sheet(workbook, paymentsSheet, 'Payment Data');
+    XLSX.writeFile(workbook, `InternMitra_Admin_Report_${Date.now()}.xlsx`);
+  };
   const emitraStudentsCount = users.filter((student) => student.createdByEmitraId).length;
 
   const cyberCafeStudents = users.filter((student) => {
@@ -1654,11 +1915,10 @@ export default function AdminDashboard() {
           }}
           className="gap-6 flex-col"
         >
-          <TabsList className="bg-white border border-slate-100 shadow-lg h-12 p-1">
-            <TabsTrigger value="dashboard" className="px-6 py-2 font-black">
-              <LayoutDashboard size={16} />
-              Dashboard
-            </TabsTrigger>
+          <TabsList className="w-full h-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 bg-white border border-slate-100 shadow-lg p-1.5">            <TabsTrigger value="dashboard" className="px-6 py-2 font-black">
+            <LayoutDashboard size={16} />
+            Dashboard
+          </TabsTrigger>
             {canOperateDashboardPayments && (
               <TabsTrigger value="cyber-cafe-summary" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
                 <Building2 size={14} />
@@ -1777,6 +2037,156 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+          </TabsContent>
+
+          <TabsContent value="complete-report" className="space-y-8 mt-4">
+            <div className="student-card bg-white/80 overflow-hidden">
+              <div className="p-6 border-b border-slate-100/70 flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
+                <div className="flex items-start gap-3">
+                  <div className="student-icon bg-blue-50 text-blue-600 ring-blue-100">
+                    <FileText size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900 gradient-text">सभी Colleges का Complete Report</h2>
+                    <p className="text-sm font-semibold text-slate-500 mt-1">
+                      Total Students, payments, pending payments, revenue और college-wise summary एक जगह.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  onClick={exportCompleteReportExcel}
+                  disabled={reportFilteredUsers.length === 0}
+                  className="student-button-primary bg-emerald-600 hover:bg-emerald-700 text-white h-12 px-5 shadow-emerald-600/10 cursor-pointer"
+                >
+                  <Download size={18} />
+                  Export to Excel
+                </Button>
+              </div>
+
+              <div className="p-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 border-b border-slate-100/70">
+                <div className="rounded-2xl bg-indigo-50 border border-indigo-100 px-4 py-4">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-indigo-600">Total Students</p>
+                  <p className="mt-1 text-2xl font-black text-slate-900">{completeReportTotals.totalStudents}</p>
+                </div>
+                <div className="rounded-2xl bg-emerald-50 border border-emerald-100 px-4 py-4">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Total Payments</p>
+                  <p className="mt-1 text-2xl font-black text-emerald-700">{completeReportTotals.totalPayments}</p>
+                </div>
+                <div className="rounded-2xl bg-amber-50 border border-amber-100 px-4 py-4">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-amber-600">Pending Payments</p>
+                  <p className="mt-1 text-2xl font-black text-amber-700">{completeReportTotals.pendingPayments}</p>
+                </div>
+                <div className="rounded-2xl bg-sky-50 border border-sky-100 px-4 py-4">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-sky-600">Total Revenue</p>
+                  <p className="mt-1 text-2xl font-black text-sky-700 whitespace-nowrap" title={`₹${completeReportTotals.totalRevenue.toLocaleString('en-IN')}`}>
+                    {formatCompactRupees(completeReportTotals.totalRevenue)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 border-b border-slate-100/70 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div>
+                  <Label className="student-label block mb-2">Search एवं Filter</Label>
+                  <Input
+                    value={reportSearch}
+                    onChange={(event) => setReportSearch(event.target.value)}
+                    placeholder="Name, email, phone, roll..."
+                    className="student-input"
+                  />
+                </div>
+                <div>
+                  <Label className="student-label block mb-2">College-wise Filter</Label>
+                  <select
+                    value={reportCollegeFilter}
+                    onChange={(event) => setReportCollegeFilter(event.target.value)}
+                    className="student-input"
+                  >
+                    <option value="">All Colleges</option>
+                    {uniqueColleges.map((college) => (
+                      <option key={college} value={college}>{college}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label className="student-label block mb-2">University-wise Filter</Label>
+                  <select
+                    value={reportUniversityFilter}
+                    onChange={(event) => setReportUniversityFilter(event.target.value)}
+                    className="student-input"
+                  >
+                    <option value="">All Universities</option>
+                    {uniqueUniversities.map((university) => (
+                      <option key={university} value={university}>{university}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label className="student-label block mb-2">Payment Filter</Label>
+                  <select
+                    value={reportPaymentFilter}
+                    onChange={(event) => setReportPaymentFilter(event.target.value)}
+                    className="student-input"
+                  >
+                    <option value="">All Payments</option>
+                    <option value="success">Paid / Success</option>
+                    <option value="pending">Pending Payments</option>
+                  </select>
+                </div>
+              </div>
+
+              {collegeCompleteReport.length === 0 ? (
+                <div className="p-12 text-center">
+                  <FileText size={48} className="text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-500 font-bold">No report data found for selected filters.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[980px] table-auto">
+                    <thead className="bg-slate-50/60">
+                      <tr>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">College</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">University</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Total Students</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Total Payments</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Pending Payments</th>
+                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Total Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {collegeCompleteReport.map((row) => (
+                        <tr key={`${row.college}-${row.university}`} className="border-b border-slate-100/60 hover:bg-blue-50/10 transition-colors">
+                          <td className="p-4">
+                            <div className="font-black text-slate-900">{row.college}</div>
+                          </td>
+                          <td className="p-4 text-slate-600 text-sm font-bold">{row.university}</td>
+                          <td className="p-4">
+                            <span className="inline-flex px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100 text-xs font-black uppercase tracking-wider">
+                              {row.totalStudents}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 text-xs font-black uppercase tracking-wider">
+                              <CheckCircle2 size={12} />
+                              {row.totalPayments}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-100 text-xs font-black uppercase tracking-wider">
+                              <Clock size={12} />
+                              {row.pendingPayments}
+                            </span>
+                          </td>
+                          <td className="p-4 text-slate-900 font-black" title={`₹${row.totalRevenue.toLocaleString('en-IN')}`}>
+                            {formatCompactRupees(row.totalRevenue)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="cyber-cafe-summary" className="space-y-8 mt-4">
@@ -2554,7 +2964,7 @@ export default function AdminDashboard() {
                               </tr>
                             </thead>
                             <tbody>
-                               {visibleTestSubmissions.slice((testSubmissionsPage - 1) * testSubmissionsPerPage, testSubmissionsPage * testSubmissionsPerPage).map((sub) => {
+                              {visibleTestSubmissions.slice((testSubmissionsPage - 1) * testSubmissionsPerPage, testSubmissionsPage * testSubmissionsPerPage).map((sub) => {
                                 const student = getStudentProfile(sub.userId);
                                 const isPassed = sub.scorePercentage >= 33;
 

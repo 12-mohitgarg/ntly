@@ -98,22 +98,23 @@ export default function Login() {
         return;
       }
 
-      const collegeToken = await user.getIdToken();
-      const collegeProfileResponse = await fetch('/api/auth/college-profile', {
-        headers: {
-          Authorization: `Bearer ${collegeToken}`,
-        },
-      }).catch(() => null);
-      if (collegeProfileResponse?.ok) {
-        navigate('/college-dashboard', { replace: true });
-        return;
-      }
+      // const collegeToken = await user.getIdToken();
+      // const collegeProfileResponse = await fetch('/api/auth/college-profile', {
+      //   headers: {
+      //     Authorization: `Bearer ${collegeToken}`,
+      //   },
+      // }).catch(() => null);
+      // if (collegeProfileResponse?.ok) {
+      //   navigate('/college-dashboard', { replace: true });
+      //   return;
+      // }
 
       if (userDoc?.exists()) {
         const userData = userDoc.data();
         const paymentComplete = userData?.paymentStatus !== 'rejected' && Boolean(userData?.isPaid || userData?.hasPaid || userData?.paymentStatus === 'success');
         const loginAtIso = new Date().toISOString();
-        await updateDoc(doc(db, 'users', user.uid), {
+        navigate(paymentComplete ? '/dashboard' : '/payment', { replace: true });
+        updateDoc(doc(db, 'users', user.uid), {
           loginLogs: arrayUnion({
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
             userId: user.uid,
@@ -129,7 +130,17 @@ export default function Login() {
         }).catch((error) => {
           console.warn('Unable to save login log:', error);
         });
-        navigate(paymentComplete ? '/dashboard' : '/payment', { replace: true });
+        // navigate(paymentComplete ? '/dashboard' : '/payment', { replace: true });
+        return;
+      }
+      const collegeToken = await user.getIdToken();
+      const collegeProfileResponse = await fetch('/api/auth/college-profile', {
+        headers: {
+          Authorization: `Bearer ${collegeToken}`,
+        },
+      }).catch(() => null);
+      if (collegeProfileResponse?.ok) {
+        navigate('/college-dashboard', { replace: true });
         return;
       }
 
@@ -151,7 +162,7 @@ export default function Login() {
       <AnimatePresence>
         {showNotice && (
           <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -173,7 +184,7 @@ export default function Login() {
                 <h4 className="text-amber-700 font-black text-xs uppercase tracking-wider">
                   पासवर्ड रीसेट करने के लिए निर्देश:
                 </h4>
-                
+
                 <div className="space-y-3.5">
                   {/* Step 1 */}
                   <div className="flex items-start gap-3">
@@ -222,7 +233,7 @@ export default function Login() {
                       </p>
                     </div>
                   </div>
-                  
+
                   <a
                     href="https://whatsapp.com/channel/0029VbDNWPACxoAsRFQgYz40"
                     target="_blank"
@@ -268,7 +279,7 @@ export default function Login() {
 
       {/* Main Grid content */}
       <div className="max-w-6xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center relative z-10">
-        
+
         {/* Left Side: Welcome and trust columns (Visible on lg desktop displays) */}
         <div className="lg:col-span-6 hidden lg:flex flex-col space-y-8 text-left">
           <div className="space-y-4">
@@ -304,9 +315,9 @@ export default function Login() {
 
           {/* Illustration graphic */}
           <div className="flex justify-start pt-4">
-            <img 
-              src="/welcome_illustration.png" 
-              alt="Welcome back to Internmitra" 
+            <img
+              src="/welcome_illustration.png"
+              alt="Welcome back to Internmitra"
               className="h-44 w-auto object-contain drop-shadow-md rounded-2xl"
             />
           </div>
@@ -315,12 +326,12 @@ export default function Login() {
         {/* Right Side: Login Form Card */}
         <div className="lg:col-span-6 flex justify-center w-full">
           <div className="bg-white rounded-[2.25rem] shadow-sm hover:shadow-md transition-all duration-300 p-8 sm:p-12 border border-slate-200/60 max-w-lg w-full flex flex-col items-center relative overflow-hidden">
-            
+
             {/* Top User logo background circle */}
             <div className="w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-blue-600/10 shrink-0">
-               <User size={24} />
+              <User size={24} />
             </div>
-            
+
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-905 tracking-tight mb-1 uppercase text-center">Login to Your Account</h2>
             <p className="text-slate-400 font-semibold mb-8 text-xs text-center">Enter your credentials to access your dashboard</p>
 
@@ -336,12 +347,12 @@ export default function Login() {
               <div className="space-y-1.5 text-left">
                 <Label htmlFor="email" className="uppercase tracking-[0.15em] text-[10px] sm:text-xs font-bold text-slate-400 px-1">Email Address</Label>
                 <div className="relative">
-                  <Input 
+                  <Input
                     id="email"
-                    type="email" 
-                    value={email} 
+                    type="email"
+                    value={email}
                     required
-                    onChange={(e) => setEmail(e.target.value)} 
+                    onChange={(e) => setEmail(e.target.value)}
                     className="h-12 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 pl-11 transition-all font-semibold text-xs sm:text-sm text-slate-800"
                     placeholder="e.g. name@domain.com"
                   />
@@ -358,12 +369,12 @@ export default function Login() {
                   </Link>
                 </div>
                 <div className="relative">
-                  <Input 
+                  <Input
                     id="password"
-                    type={showPassword ? "text" : "password"} 
-                    value={password} 
+                    type={showPassword ? "text" : "password"}
+                    value={password}
                     required
-                    onChange={(e) => setPassword(e.target.value)} 
+                    onChange={(e) => setPassword(e.target.value)}
                     className="h-12 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 pl-11 pr-11 transition-all font-semibold text-xs sm:text-sm text-slate-800"
                     placeholder="Enter your password"
                   />
@@ -380,9 +391,8 @@ export default function Login() {
 
               {/* Remember me option */}
               <div className="flex items-center gap-2 px-1 text-left cursor-pointer" onClick={() => setRememberMe(!rememberMe)}>
-                <div className={`w-4.5 h-4.5 rounded border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
-                  rememberMe ? 'bg-blue-600 border-blue-600' : 'border-slate-200 bg-slate-50'
-                }`}>
+                <div className={`w-4.5 h-4.5 rounded border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${rememberMe ? 'bg-blue-600 border-blue-600' : 'border-slate-200 bg-slate-50'
+                  }`}>
                   {rememberMe && <Check size={11} className="stroke-[3] text-white" />}
                 </div>
                 <span className="text-[10px] sm:text-xs text-slate-500 font-bold select-none cursor-pointer">Remember me</span>
@@ -396,12 +406,12 @@ export default function Login() {
 
             {/* Bottom Register Links */}
             <div className="mt-8 pt-5 border-t border-slate-100 w-full text-center space-y-2 text-xs sm:text-sm">
-               <p className="text-slate-400 font-semibold">
-                 Don't have an account? <Link to="/register" className="text-blue-600 font-extrabold hover:underline underline-offset-4 decoration-2">Register here</Link>
-               </p>
-               <p className="text-slate-400 font-semibold">
-                 Cyber cafe? <Link to="/emitra-register" className="text-blue-600 font-extrabold hover:underline underline-offset-4 decoration-2">Register Cyber cafe</Link>
-               </p>
+              <p className="text-slate-400 font-semibold">
+                Don't have an account? <Link to="/register" className="text-blue-600 font-extrabold hover:underline underline-offset-4 decoration-2">Register here</Link>
+              </p>
+              <p className="text-slate-400 font-semibold">
+                Cyber cafe? <Link to="/emitra-register" className="text-blue-600 font-extrabold hover:underline underline-offset-4 decoration-2">Register Cyber cafe</Link>
+              </p>
             </div>
 
             {/* Decorative background blob */}

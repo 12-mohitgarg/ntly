@@ -28,6 +28,17 @@ function getFirebaseProjectId() {
 }
 
 function getFirebaseAdminCredential() {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const saPath = path.join(process.cwd(), 'service-account.json');
+    if (fs.existsSync(saPath)) {
+      return admin.credential.cert(saPath);
+    }
+  } catch (err) {
+    // Ignore fallback
+  }
+
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     return admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
   }

@@ -196,8 +196,8 @@ export function createOfferLetterPdf(profile: OfferLetterProfile, letterNumber: 
     ['Internship Domain', profile.internshipDomain ? domain : `[${domain}]`],
     ['Internship Duration', '120 Hours'],
     ['Mode of Internship', `${internshipMode} (as approved by College)`],
-    ['Internship Start Date', '01/08/2026'],
-    ['Expected End Date', '20/08/2026'],
+    // ['Internship Start Date', '01/08/2026'],
+    // ['Expected End Date', '20/08/2026'],
   ];
   rows.forEach(([label, value]) => {
     pdf.setFont('Helvetica', 'bold');

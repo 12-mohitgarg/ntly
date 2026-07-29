@@ -10,8 +10,8 @@ service cloud.firestore {
     function isSignedIn() { return request.auth != null; }
        function isAdmin() { 
       return isSignedIn() && 
-        (request.auth.token.get('email', '').lower() == "gargmohit8306@gmail.com" ||
-         request.auth.token.get('email', '').lower() == "admin@internmitra.com" ||
+        (request.auth.token.email == "gargmohit8306@gmail.com" ||
+         request.auth.token.email == "admin@internmitra.com" ||
          (
            exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
            get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true &&
@@ -280,5 +280,10 @@ match /courseReports/{reportId} {
   allow read: if isSignedIn();
   allow create, update, delete: if isAdmin();
 }
+
+    match /importedStudents/{studentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }
