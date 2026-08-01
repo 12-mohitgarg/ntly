@@ -13,6 +13,7 @@ export interface UserProfile {
   session: string;
   semester: string;
   universityRoll: string;
+  universityRollNo?: string;
   internshipDomain: string;
   internshipMode?: string;
   loginLogs?: {

@@ -51,6 +51,7 @@ export default function Profile() {
     session: profile?.session || '',
     semester: profile?.semester || '',
     universityRoll: profile?.universityRoll || '',
+    universityRollNo: profile?.universityRollNo || '',
     university: profile?.university || 'Lalit Narayan Mithila University, Darbhanga',
     college: profile?.college || 'G. D. College, Begusarai'
   });
@@ -73,6 +74,7 @@ export default function Profile() {
       session: profile.session || '',
       semester: profile.semester || '',
       universityRoll: profile.universityRoll || '',
+      universityRollNo: profile.universityRollNo || '',
       university: profile.university || 'Lalit Narayan Mithila University, Darbhanga',
       college: profile.college || 'G. D. College, Begusarai'
     });
@@ -311,14 +313,25 @@ export default function Profile() {
                 </div>
               </div>
 
-              {/* University Roll */}
+              {/* University Registration Number */}
               <div className="bg-slate-50/45 border border-slate-100/70 rounded-2xl p-4 flex items-center gap-3.5 hover:bg-slate-50 transition md:col-span-2">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
                   <FileText size={16} />
                 </div>
                 <div>
-                  <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">University Roll Number</span>
+                  <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">University Registration Number</span>
                   <span className="text-xs font-black text-slate-800 mt-1 block">{profile?.universityRoll || 'Not provided'}</span>
+                </div>
+              </div>
+
+              {/* University Roll No */}
+              <div className="bg-slate-50/45 border border-slate-100/70 rounded-2xl p-4 flex items-center gap-3.5 hover:bg-slate-50 transition">
+                <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center flex-shrink-0">
+                  <FileText size={16} />
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">University Roll No</span>
+                  <span className="text-xs font-black text-slate-800 mt-1 block">{profile?.universityRollNo || 'Not provided'}</span>
                 </div>
               </div>
 
@@ -523,13 +536,24 @@ export default function Profile() {
                     </select>
                   </div>
 
-                  {/* Roll Number */}
+                  {/* Registration Number */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">University Roll Number</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">University Registration Number</label>
                     <input
                       type="text"
                       value={formData.universityRoll}
                       onChange={(e) => setFormData({ ...formData, universityRoll: e.target.value })}
+                      className="w-full bg-slate-50 text-slate-800 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold outline-none focus:border-blue-500 shadow-inner"
+                    />
+                  </div>
+
+                  {/* University Roll No */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">University Roll No</label>
+                    <input
+                      type="text"
+                      value={formData.universityRollNo}
+                      onChange={(e) => setFormData({ ...formData, universityRollNo: e.target.value })}
                       className="w-full bg-slate-50 text-slate-800 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold outline-none focus:border-blue-500 shadow-inner"
                     />
                   </div>

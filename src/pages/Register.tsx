@@ -175,6 +175,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
           internshipDomain: importedData.course || '',
           semester: importedData.semester || 'Semester 5',
           universityRoll: roll,
+          universityRollNo: importedData.universityRollNo || '',
           industrialRegNo: ind,
         }));
 
@@ -224,6 +225,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
       session: '2023-27',
       semester: 'Semester 5',
       universityRoll: '',
+      universityRollNo: '',
       internshipDomain: '',
       internshipMode: 'Online',
       password: '',
@@ -521,6 +523,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
             session: formData.session,
             semester: formData.semester,
             universityRoll: formData.universityRoll,
+            universityRollNo: formData.universityRollNo,
             internshipDomain: formData.internshipDomain,
             internshipMode: formData.internshipMode || 'Online',
             createdByEmitraId: isEmitraStudentMode ? currentUser?.uid || '' : null,
@@ -904,6 +907,11 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <div className="space-y-1.5 text-left">
                       <Label htmlFor="universityRoll" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">University Registration Number *</Label>
                       <Input id="universityRoll" name="universityRoll" value={formData.universityRoll} onChange={handleChange} placeholder="As per university record" className="h-12 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm" />
+                    </div>
+
+                    <div className="space-y-1.5 text-left">
+                      <Label htmlFor="universityRollNo" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">University Roll No</Label>
+                      <Input id="universityRollNo" name="universityRollNo" value={formData.universityRollNo} onChange={handleChange} placeholder="Enter university roll no" className="h-12 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm" />
                     </div>
 
                     <div className="space-y-1.5 text-left">
