@@ -149,17 +149,19 @@ function createOfferLetterPdf(profile, letterNumber) {
   y += 6;
 
   pdf.setFont('Helvetica', 'bold');
-  const urnLabel = 'University Reg. Number: ';
-  pdf.text(urnLabel, x, y);
+  const detailColonX = x + 45;
+  const detailValueX = detailColonX + 5;
+  pdf.text('University Reg. Number', x, y);
+  pdf.text(':', detailColonX, y);
   pdf.setFont('Helvetica', 'normal');
-  pdf.text(profile.universityRoll ? rollNumber : `[${rollNumber}]`, x + pdf.getTextWidth(urnLabel) + 1, y);
+  pdf.text(profile.universityRoll ? rollNumber : `[${rollNumber}]`, detailValueX, y);
   y += 6;
 
   pdf.setFont('Helvetica', 'bold');
-  const collegeLabel = 'College / Institution: ';
-  pdf.text(collegeLabel, x, y);
+  pdf.text('College / Institution', x, y);
+  pdf.text(':', detailColonX, y);
   pdf.setFont('Helvetica', 'normal');
-  pdf.text(profile.college ? college : `[${college}]`, x + pdf.getTextWidth(collegeLabel) + 1, y);
+  pdf.text(profile.college ? college : `[${college}]`, detailValueX, y);
   y += 12;
 
   pdf.setFont('Helvetica', 'normal');

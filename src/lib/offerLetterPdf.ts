@@ -159,17 +159,17 @@ export function createOfferLetterPdf(profile: OfferLetterProfile, letterNumber: 
   pdf.setFont('Helvetica', 'bold');
   pdf.text(profile.fullName ? studentName : `[${studentName}]`, x, y); y += 6;
   pdf.setFont('Helvetica', 'bold');
-  const urnL = 'University Reg. Number: ';
-  pdf.text(urnL, x, y);
-  const urnValueX = x + pdf.getTextWidth(urnL) + 1;
+  const detailColonX = x + 45;
+  const detailValueX = detailColonX + 5;
+  pdf.text('University Reg. Number', x, y);
+  pdf.text(':', detailColonX, y);
   pdf.setFont('Helvetica', 'normal');
-  pdf.text(profile.universityRoll ? rollNumber : `[${rollNumber}]`, urnValueX, y); y += 6;
+  pdf.text(profile.universityRoll ? rollNumber : `[${rollNumber}]`, detailValueX, y); y += 6;
   pdf.setFont('Helvetica', 'bold');
-  const ciL = 'College / Institution: ';
-  pdf.text(ciL, x, y);
-  const collegeValueX = x + pdf.getTextWidth(ciL) + 1;
+  pdf.text('College / Institution', x, y);
+  pdf.text(':', detailColonX, y);
   pdf.setFont('Helvetica', 'normal');
-  pdf.text(profile.college ? college : `[${college}]`, collegeValueX, y); y += 12;
+  pdf.text(profile.college ? college : `[${college}]`, detailValueX, y); y += 12;
 
   pdf.setFont('Helvetica', 'normal');
   pdf.setFontSize(9.5);
