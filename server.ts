@@ -520,6 +520,46 @@ app.post("/api/admin/college-users", requireAdmin, async (req, res) => {
   }
 });
 
+app.delete("/api/admin/sub-users/:uid", requireAdmin, async (req, res) => {
+  try {
+    const uid = String(req.params.uid || "").trim();
+
+    if (!uid) {
+      return res.status(400).json({ error: "Sub user id is required" });
+    }
+
+    const decodedToken = await getDecodedToken(req);
+
+    if (uid === decodedToken.uid) {
+      return res.status(400).json({ error: "You cannot delete your own admin account" });
+    }
+
+    const db = admin.firestore();
+    const subUserDoc = await db.collection("admins").doc(uid).get();
+
+    if (!subUserDoc.exists || !["sub_user", "district_user"].includes(String(subUserDoc.data()?.role || ""))) {
+      return res.status(404).json({ error: "Sub user not found" });
+    }
+
+    await Promise.all([
+      db.collection("admins").doc(uid).delete(),
+      admin.auth().deleteUser(uid).catch((error: any) => {
+        if (error?.code !== "auth/user-not-found") {
+          throw error;
+        }
+      }),
+    ]);
+
+    res.json({ status: "success" });
+  } catch (error: any) {
+    console.error("Sub user delete error:", error);
+    res.status(500).json({
+      error: "Error deleting sub user",
+      details: error?.message || "Unknown error",
+    });
+  }
+});
+
 app.get("/api/auth/college-profile", async (req, res) => {
   try {
     const decodedToken = await getDecodedToken(req);

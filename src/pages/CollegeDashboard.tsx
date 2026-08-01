@@ -46,52 +46,133 @@ interface ImportedStudent {
   importedAt?: string;
 }
 
+interface CollegeRecord {
+  id: string;
+  name: string;
+  districtId: string;
+  price?: number;
+}
+
+const chunkArray = <T,>(items: T[], size: number) => {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+};
+
+const formatListDate = (value?: string) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
 export default function CollegeDashboard() {
   const { collegeProfile } = useAuth();
   const navigate = useNavigate();
   const [students, setStudents] = useState<UserProfile[]>([]);
   const [importedStudents, setImportedStudents] = useState<ImportedStudent[]>([]);
   const [collegePrice, setCollegePrice] = useState(1000);
+  const [collegePriceMap, setCollegePriceMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'registered' | 'pending_reg'>('registered');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     const fetchCollegeData = async () => {
-      if (!collegeProfile?.collegeName) return;
+      if (!collegeProfile) return;
 
       setLoading(true);
       try {
-        // 1. Fetch Registered Students
-        const studentsQuery = query(
-          collection(db, 'users'),
-          where('college', '==', collegeProfile.collegeName)
-        );
-        const snapshot = await getDocs(studentsQuery);
-        const data = snapshot.docs
-          .map((doc) => ({ uid: doc.id, ...doc.data() } as UserProfile))
-          .sort((a, b) => (b.registrationDate || '').localeCompare(a.registrationDate || ''));
-        setStudents(data);
+        const isDistrictDashboard = collegeProfile.accessType === 'district';
 
-        // 2. Fetch Imported Students (Pre-registration)
-        const importedQuery = query(
-          collection(db, 'importedStudents'),
-          where('college', '==', collegeProfile.collegeName)
-        );
-        const importedSnapshot = await getDocs(importedQuery);
-        const importedData = importedSnapshot.docs.map(
-          (doc) => ({ id: doc.id, ...doc.data() } as ImportedStudent)
-        );
-        setImportedStudents(importedData);
+        if (isDistrictDashboard) {
+          const allowedDistrictNames = new Set((collegeProfile.districtNames || []).filter(Boolean));
+          const allowedDistrictIds = new Set((collegeProfile.districtIds || []).filter(Boolean));
 
-        // 3. Fetch College Price Settings
-        const collegesQuery = query(
-          collection(db, 'colleges'),
-          where('name', '==', collegeProfile.collegeName)
-        );
-        const collegeSnap = await getDocs(collegesQuery);
-        if (!collegeSnap.empty) {
-          setCollegePrice(collegeSnap.docs[0].data().price || 1000);
+          if (allowedDistrictNames.size === 0 && allowedDistrictIds.size === 0) {
+            setStudents([]);
+            setImportedStudents([]);
+            setCollegePriceMap({});
+            return;
+          }
+
+          const studentSnapshots = allowedDistrictNames.size > 0
+            ? await Promise.all(
+              chunkArray(Array.from(allowedDistrictNames), 30).map((districtChunk) =>
+                getDocs(query(collection(db, 'users'), where('district', 'in', districtChunk)))
+              )
+            )
+            : [];
+          const districtStudents = studentSnapshots
+            .flatMap((snapshot) => snapshot.docs.map((doc) => ({ uid: doc.id, ...doc.data() } as UserProfile)))
+            .sort((a, b) => (b.registrationDate || '').localeCompare(a.registrationDate || ''));
+          setStudents(districtStudents);
+
+          const collegesSnapshot = await getDocs(collection(db, 'colleges'));
+          const allowedColleges = collegesSnapshot.docs
+            .map((doc) => ({ id: doc.id, ...doc.data() } as CollegeRecord))
+            .filter((college) => allowedDistrictIds.has(college.districtId));
+          const allowedCollegeNames = allowedColleges.map((college) => college.name).filter(Boolean);
+
+          const priceMap = allowedColleges.reduce<Record<string, number>>((acc, college) => {
+            acc[college.name] = college.price || 1000;
+            return acc;
+          }, {});
+          setCollegePriceMap(priceMap);
+
+          const importedSnapshots = allowedCollegeNames.length > 0
+            ? await Promise.all(
+              chunkArray(allowedCollegeNames, 30).map((collegeChunk) =>
+                getDocs(query(collection(db, 'importedStudents'), where('college', 'in', collegeChunk)))
+              )
+            )
+            : [];
+          const districtImported = importedSnapshots.flatMap((snapshot) =>
+            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as ImportedStudent))
+          );
+          setImportedStudents(districtImported);
+        } else {
+          // 1. Fetch Registered Students
+          const studentsQuery = query(
+            collection(db, 'users'),
+            where('college', '==', collegeProfile.collegeName)
+          );
+          const snapshot = await getDocs(studentsQuery);
+          const data = snapshot.docs
+            .map((doc) => ({ uid: doc.id, ...doc.data() } as UserProfile))
+            .sort((a, b) => (b.registrationDate || '').localeCompare(a.registrationDate || ''));
+          setStudents(data);
+
+          // 2. Fetch Imported Students (Pre-registration)
+          const importedQuery = query(
+            collection(db, 'importedStudents'),
+            where('college', '==', collegeProfile.collegeName)
+          );
+          const importedSnapshot = await getDocs(importedQuery);
+          const importedData = importedSnapshot.docs.map(
+            (doc) => ({ id: doc.id, ...doc.data() } as ImportedStudent)
+          );
+          setImportedStudents(importedData);
+
+          // 3. Fetch College Price Settings
+          const collegesQuery = query(
+            collection(db, 'colleges'),
+            where('name', '==', collegeProfile.collegeName)
+          );
+          const collegeSnap = await getDocs(collegesQuery);
+          if (!collegeSnap.empty) {
+            const price = collegeSnap.docs[0].data().price || 1000;
+            setCollegePrice(price);
+            setCollegePriceMap({ [collegeProfile.collegeName]: price });
+          }
         }
       } catch (error) {
         console.error('Error fetching college dashboard data:', error);
@@ -101,54 +182,84 @@ export default function CollegeDashboard() {
     };
 
     fetchCollegeData();
-  }, [collegeProfile?.collegeName]);
+  }, [collegeProfile]);
+
+  const isDistrictDashboard = collegeProfile?.accessType === 'district';
+  const dashboardTitle = isDistrictDashboard
+    ? `${collegeProfile?.districtNames?.join(', ') || 'District'} Dashboard`
+    : collegeProfile?.collegeName || 'College Dashboard';
 
   const isPaymentComplete = (student: UserProfile) =>
     student.paymentStatus !== 'rejected' &&
     Boolean(student.isPaid || student.hasPaid || student.paymentStatus === 'success');
 
-  const paidCount = students.filter(isPaymentComplete).length;
+  const isWithinDateRange = (value?: string) => {
+    if (!dateFrom && !dateTo) return true;
+    if (!value) return false;
+
+    const timestamp = new Date(value).getTime();
+    if (Number.isNaN(timestamp)) return false;
+
+    const fromTime = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : null;
+    const toTime = dateTo ? new Date(`${dateTo}T23:59:59`).getTime() : null;
+
+    return (fromTime === null || timestamp >= fromTime) && (toTime === null || timestamp <= toTime);
+  };
+
+  const visibleStudents = useMemo(
+    () => students.filter((student) => isWithinDateRange(student.registrationDate)),
+    [students, dateFrom, dateTo]
+  );
+
+  const visibleImportedStudents = useMemo(
+    () => importedStudents.filter((student: any) => isWithinDateRange(student.importedAt || student.createdAt)),
+    [importedStudents, dateFrom, dateTo]
+  );
+
+  const paidCount = visibleStudents.filter(isPaymentComplete).length;
   
   // Total pending: All imported students minus those who have paid successfully
-  const pendingCount = Math.max(0, importedStudents.length - paidCount);
+  const pendingCount = Math.max(0, visibleImportedStudents.length - paidCount);
 
   // Total received revenue
-  const totalReceivedAmount = paidCount * collegePrice;
+  const totalReceivedAmount = visibleStudents
+    .filter(isPaymentComplete)
+    .reduce((total, student) => total + (collegePriceMap[student.college] || collegePrice), 0);
 
   // Gender counts from combined sources for completeness
   const maleCount = useMemo(() => {
-    const registeredMale = students.filter((s) => s.gender?.toLowerCase() === 'male').length;
-    const unregisteredImportedMale = importedStudents.filter(
+    const registeredMale = visibleStudents.filter((s) => s.gender?.toLowerCase() === 'male').length;
+    const unregisteredImportedMale = visibleImportedStudents.filter(
       (imp) =>
         imp.gender?.toLowerCase() === 'male' &&
-        !students.some((s) => s.universityRoll === imp.universityRoll)
+        !visibleStudents.some((s) => s.universityRoll === imp.universityRoll)
     ).length;
     return registeredMale + unregisteredImportedMale;
-  }, [students, importedStudents]);
+  }, [visibleStudents, visibleImportedStudents]);
 
   const femaleCount = useMemo(() => {
-    const registeredFemale = students.filter((s) => s.gender?.toLowerCase() === 'female').length;
-    const unregisteredImportedFemale = importedStudents.filter(
+    const registeredFemale = visibleStudents.filter((s) => s.gender?.toLowerCase() === 'female').length;
+    const unregisteredImportedFemale = visibleImportedStudents.filter(
       (imp) =>
         imp.gender?.toLowerCase() === 'female' &&
-        !students.some((s) => s.universityRoll === imp.universityRoll)
+        !visibleStudents.some((s) => s.universityRoll === imp.universityRoll)
     ).length;
     return registeredFemale + unregisteredImportedFemale;
-  }, [students, importedStudents]);
+  }, [visibleStudents, visibleImportedStudents]);
 
   // Unregistered imported students list
   const unregisteredStudents = useMemo(() => {
-    return importedStudents.filter(
-      (imp) => !students.some((s) => s.universityRoll === imp.universityRoll)
+    return visibleImportedStudents.filter(
+      (imp) => !visibleStudents.some((s) => s.universityRoll === imp.universityRoll)
     );
-  }, [students, importedStudents]);
+  }, [visibleStudents, visibleImportedStudents]);
 
   // Combined search filtering
   const filteredStudents = useMemo(() => {
     const value = search.trim().toLowerCase();
-    if (!value) return students;
+    if (!value) return visibleStudents;
 
-    return students.filter((student) =>
+    return visibleStudents.filter((student) =>
       [
         student.fullName,
         student.email,
@@ -158,7 +269,7 @@ export default function CollegeDashboard() {
         student.gender,
       ].join(' ').toLowerCase().includes(value)
     );
-  }, [search, students]);
+  }, [search, visibleStudents]);
 
   const filteredUnregistered = useMemo(() => {
     const value = search.trim().toLowerCase();
@@ -179,7 +290,7 @@ export default function CollegeDashboard() {
   // Course wise report calculations
   const courseReport = useMemo(() => {
     const counts: Record<string, number> = {};
-    students.forEach((s) => {
+    visibleStudents.forEach((s) => {
       const course = s.internshipDomain || 'Unspecified';
       counts[course] = (counts[course] || 0) + 1;
     });
@@ -194,12 +305,12 @@ export default function CollegeDashboard() {
       count,
       percentage: Math.round((count / total) * 100),
     })).sort((a, b) => b.count - a.count);
-  }, [students, unregisteredStudents]);
+  }, [visibleStudents, unregisteredStudents]);
 
   // Semester wise report calculations
   const semesterReport = useMemo(() => {
     const counts: Record<string, number> = {};
-    students.forEach((s) => {
+    visibleStudents.forEach((s) => {
       const sem = s.semester || 'Unspecified';
       counts[sem] = (counts[sem] || 0) + 1;
     });
@@ -214,12 +325,12 @@ export default function CollegeDashboard() {
       count,
       percentage: Math.round((count / total) * 100),
     })).sort((a, b) => b.count - a.count);
-  }, [students, unregisteredStudents]);
+  }, [visibleStudents, unregisteredStudents]);
 
   // Date-wise registration counts timeline
   const dateWiseReport = useMemo(() => {
     const counts: Record<string, number> = {};
-    students.forEach((s) => {
+    visibleStudents.forEach((s) => {
       if (s.registrationDate) {
         const dateStr = new Date(s.registrationDate).toLocaleDateString('en-IN', {
           day: '2-digit',
@@ -233,7 +344,7 @@ export default function CollegeDashboard() {
     return Object.entries(counts)
       .map(([date, count]) => ({ date, count }))
       .slice(0, 7); // Show latest 7 days
-  }, [students]);
+  }, [visibleStudents]);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -303,14 +414,16 @@ export default function CollegeDashboard() {
               <Building2 size={22} />
             </div>
             <div>
-              <h1 className="text-lg font-black tracking-tight sm:text-xl gradient-text">{collegeProfile?.collegeName || 'College Dashboard'}</h1>
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Teacher & Coordinator Console</p>
+              <h1 className="text-lg font-black tracking-tight sm:text-xl gradient-text">{dashboardTitle}</h1>
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                {isDistrictDashboard ? 'District Coordinator Console' : 'Teacher & Coordinator Console'}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden md:inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3.5 py-1.5 text-xs font-bold text-slate-500 ring-1 ring-slate-100">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-              Fee Rate: ₹{collegePrice}
+              {isDistrictDashboard ? `${collegeProfile?.districtNames?.length || 0} District Access` : `Fee Rate: ₹${collegePrice}`}
             </span>
             <Button onClick={handleLogout} className="h-11 rounded-xl bg-slate-900 hover:bg-slate-800 px-4 text-xs font-black uppercase tracking-wider text-white flex items-center gap-1.5 shadow-md transition active:scale-98 cursor-pointer">
               <LogOut size={16} />
@@ -321,6 +434,49 @@ export default function CollegeDashboard() {
       </header>
 
       <main className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <section className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-slate-800">
+                <Calendar size={16} className="text-indigo-500" />
+                Internship Month Filter
+              </h2>
+              <p className="mt-1 text-xs font-semibold text-slate-500">
+                Filter registrations and pending student imports by date.
+              </p>
+            </div>
+            <div className="grid w-full gap-3 sm:grid-cols-[1fr_1fr_auto] lg:w-auto">
+              <div>
+                <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-slate-400">From Date</label>
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(event) => setDateFrom(event.target.value)}
+                  className="h-11 rounded-xl border-slate-200 bg-white text-xs font-bold"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-slate-400">To Date</label>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(event) => setDateTo(event.target.value)}
+                  className="h-11 rounded-xl border-slate-200 bg-white text-xs font-bold"
+                />
+              </div>
+              <Button
+                type="button"
+                onClick={() => {
+                  setDateFrom('');
+                  setDateTo('');
+                }}
+                className="h-11 self-end rounded-xl bg-slate-100 px-4 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-200"
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+        </section>
         
         {/* STATS ANALYTICS GRID */}
         <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -332,7 +488,7 @@ export default function CollegeDashboard() {
               </div>
             </div>
             <div className="mt-4">
-              <h3 className="text-3xl font-black text-slate-900 tracking-tight">{students.length}</h3>
+              <h3 className="text-3xl font-black text-slate-900 tracking-tight">{visibleStudents.length}</h3>
               <p className="text-[10px] text-slate-450 font-bold mt-1">Students completed account creation</p>
             </div>
           </div>
@@ -372,7 +528,9 @@ export default function CollegeDashboard() {
             </div>
             <div className="mt-4">
               <h3 className="text-3xl font-black text-slate-900 tracking-tight">₹{totalReceivedAmount.toLocaleString('en-IN')}</h3>
-              <p className="text-[10px] text-blue-600 font-bold mt-1">Paid Accounts × Fee Rate</p>
+              <p className="text-[10px] text-blue-600 font-bold mt-1">
+                {isDistrictDashboard ? 'Paid accounts × college fee rate' : 'Paid Accounts × Fee Rate'}
+              </p>
             </div>
           </div>
         </section>
@@ -505,11 +663,11 @@ export default function CollegeDashboard() {
             <div>
               <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
                 <Sparkles className="text-indigo-500 size-5" />
-                College Student Directories
+                {isDistrictDashboard ? 'District Student Directories' : 'College Student Directories'}
               </h2>
               <p className="text-[11px] font-semibold text-slate-500">
-                {activeTab === 'registered' 
-                  ? `Showing ${filteredStudents.length} of ${students.length} registered students`
+                {activeTab === 'registered'
+                  ? `Showing ${filteredStudents.length} of ${visibleStudents.length} registered students`
                   : `Showing ${filteredUnregistered.length} of ${unregisteredStudents.length} pending registration students`
                 }
               </p>
@@ -547,7 +705,7 @@ export default function CollegeDashboard() {
               }`}
             >
               <UserCheck size={14} />
-              Registered Students ({students.length})
+              Registered Students ({visibleStudents.length})
             </button>
             <button
               onClick={() => { setActiveTab('pending_reg'); setSearch(''); }}
@@ -582,6 +740,9 @@ export default function CollegeDashboard() {
                     <th className="p-4 font-black uppercase tracking-wider text-slate-500">Gender</th>
                     <th className="p-4 font-black uppercase tracking-wider text-slate-500">University Roll</th>
                     <th className="p-4 font-black uppercase tracking-wider text-slate-500">Course Track</th>
+                    <th className="p-4 font-black uppercase tracking-wider text-slate-500">
+                      {activeTab === 'registered' ? 'Registration Date' : 'Import Date'}
+                    </th>
                     {activeTab === 'registered' ? (
                       <th className="p-4 font-black uppercase tracking-wider text-slate-500">Payment Status</th>
                     ) : (
@@ -615,6 +776,7 @@ export default function CollegeDashboard() {
                             <div className="font-black text-indigo-600">{student.internshipDomain || '-'}</div>
                             <div className="text-[10px] font-bold text-slate-400 mt-0.5">{student.semester}</div>
                           </td>
+                          <td className="p-4 text-slate-700 font-bold">{formatListDate(student.registrationDate)}</td>
                           <td className="p-4">
                             <span className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-wider border ${
                               paymentComplete
@@ -651,6 +813,7 @@ export default function CollegeDashboard() {
                           <div className="font-black text-indigo-600">{student.course || '-'}</div>
                           <div className="text-[10px] font-bold text-slate-400 mt-0.5">{student.semester}</div>
                         </td>
+                        <td className="p-4 text-slate-700 font-bold">{formatListDate(student.importedAt)}</td>
                         <td className="p-4">
                           <span className="font-mono text-indigo-600 font-bold bg-indigo-50/80 px-2.5 py-1.5 rounded-lg border border-indigo-100/50">
                             {student.industrialRegNo}

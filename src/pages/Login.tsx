@@ -84,6 +84,11 @@ export default function Login() {
       const adminData = adminDoc?.exists() ? adminDoc.data() : null;
 
       if (adminDoc?.exists()) {
+        if (adminData?.role === 'district_user') {
+          navigate('/college-dashboard', { replace: true });
+          return;
+        }
+
         navigate(adminData?.role === 'teacher' ? '/admin/daily-videos' : '/admin-dashboard', { replace: true });
         return;
       }

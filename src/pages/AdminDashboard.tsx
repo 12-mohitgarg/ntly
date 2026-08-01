@@ -68,6 +68,8 @@ interface TeacherProfile {
   email: string;
   role: string;
   course?: string;
+  districtIds?: string[];
+  districtNames?: string[];
   createdAt?: string;
   isActive: boolean;
 }
@@ -89,6 +91,11 @@ interface College {
   name: string;
   districtId: string;
   price?: number;
+}
+
+interface District {
+  id: string;
+  name: string;
 }
 
 interface Notification {
@@ -166,6 +173,7 @@ export default function AdminDashboard() {
   const [subUsers, setSubUsers] = useState<TeacherProfile[]>([]);
   const [emitras, setEmitras] = useState<EmitraProfile[]>([]);
   const [colleges, setColleges] = useState<College[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [courseReports, setCourseReports] = useState<CourseReport[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -198,7 +206,8 @@ export default function AdminDashboard() {
   const [subUserForm, setSubUserForm] = useState({
     fullName: '',
     email: '',
-    password: ''
+    password: '',
+    districtIds: [] as string[]
   });
   const [notificationForm, setNotificationForm] = useState({
     title: '',
@@ -228,6 +237,7 @@ export default function AdminDashboard() {
   const [assignmentFileInputKey, setAssignmentFileInputKey] = useState(0);
   const [savingTeacher, setSavingTeacher] = useState(false);
   const [savingSubUser, setSavingSubUser] = useState(false);
+  const [deletingSubUserId, setDeletingSubUserId] = useState<string | null>(null);
   const [savingEmitraId, setSavingEmitraId] = useState<string | null>(null);
   const [savingNotification, setSavingNotification] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
@@ -403,11 +413,12 @@ export default function AdminDashboard() {
       }
 
       const teachersQuery = query(collection(db, 'admins'), where('role', '==', 'teacher'));
-      const subUsersQuery = query(collection(db, 'admins'), where('role', '==', 'sub_user'));
+      const subUsersQuery = query(collection(db, 'admins'), where('role', 'in', ['sub_user', 'district_user']));
       const notificationsQuery = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
       const reportsQuery = query(collection(db, 'courseReports'), orderBy('uploadedAt', 'desc'));
       const assignmentsQuery = query(collection(db, 'assignments'), orderBy('createdAt', 'desc'));
       const collegesQuery = query(collection(db, 'colleges'));
+      const districtsQuery = query(collection(db, 'districts'), orderBy('name'));
 
       const [
         usersSnapshot,
@@ -416,6 +427,7 @@ export default function AdminDashboard() {
         subUsersSnapshot,
         emitrasSnapshot,
         collegesSnapshot,
+        districtsSnapshot,
         notificationsSnapshot,
         reportsSnapshot,
         assignmentsSnapshot,
@@ -430,6 +442,7 @@ export default function AdminDashboard() {
         getDocs(subUsersQuery),
         getDocs(collection(db, 'emitras')),
         getDocs(collegesQuery),
+        getDocs(districtsQuery),
         getDocs(notificationsQuery),
         getDocs(reportsQuery),
         getDocs(assignmentsQuery),
@@ -476,6 +489,11 @@ export default function AdminDashboard() {
         .map(doc => ({ id: doc.id, ...doc.data() } as College))
         .sort((a, b) => a.name.localeCompare(b.name));
       setColleges(collegesData);
+
+      const districtsData = districtsSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as District))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      setDistricts(districtsData);
 
       const notificationsData = notificationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
       setNotifications(notificationsData);
@@ -604,6 +622,10 @@ export default function AdminDashboard() {
     const fullName = subUserForm.fullName.trim();
     const email = subUserForm.email.trim().toLowerCase();
     const password = subUserForm.password;
+    const selectedDistricts = districts.filter((district) => subUserForm.districtIds.includes(district.id));
+    const districtIds = selectedDistricts.map((district) => district.id);
+    const districtNames = selectedDistricts.map((district) => district.name);
+    const role = districtIds.length > 0 ? 'district_user' : 'sub_user';
 
     if (!fullName || !email || !password) {
       alert('Please fill in sub user name, email, and password');
@@ -632,16 +654,18 @@ export default function AdminDashboard() {
         fullName,
         email,
         password: '',
-        role: 'sub_user',
+        role,
+        districtIds,
+        districtNames,
         isActive: true,
         createdAt: new Date().toISOString(),
         createdBy: user?.uid || adminProfile?.email || 'admin'
       });
 
       await signOut(subUserAuth);
-      setSubUserForm({ fullName: '', email: '', password: '' });
+      setSubUserForm({ fullName: '', email: '', password: '', districtIds: [] });
       fetchData();
-      alert('Sub user added successfully');
+      alert(role === 'district_user' ? 'District user added successfully' : 'Sub user added successfully');
     } catch (error: any) {
       if (createdSubUser) {
         await deleteUser(createdSubUser).catch((deleteError) => {
@@ -652,6 +676,53 @@ export default function AdminDashboard() {
       alert(error?.message || 'Error adding sub user');
     } finally {
       setSavingSubUser(false);
+    }
+  };
+
+  const handleDeleteSubUser = async (subUser: TeacherProfile) => {
+    if (!confirm(`Delete sub user "${subUser.fullName || subUser.email}"? This will revoke their login access.`)) return;
+
+    setDeletingSubUserId(subUser.uid);
+    try {
+      const token = await user?.getIdToken();
+      if (!token) throw new Error('Admin session expired. Please login again.');
+
+      const endpoints = [
+        `/api/admin/sub-users/${encodeURIComponent(subUser.uid)}`,
+        `/.netlify/functions/admin-sub-user?uid=${encodeURIComponent(subUser.uid)}`,
+      ];
+      let response: Response | null = null;
+      let result: any = null;
+
+      for (const endpoint of endpoints) {
+        response = await fetch(endpoint, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        result = await response.json().catch(() => null);
+
+        if (response.ok || response.status !== 404) {
+          break;
+        }
+      }
+
+      if (!response?.ok) {
+        if (response?.status === 404) {
+          await deleteDoc(doc(db, 'admins', subUser.uid));
+        } else {
+          throw new Error(result?.details || result?.error || 'Unable to delete sub user');
+        }
+      }
+
+      setSubUsers((prev) => prev.filter((item) => item.uid !== subUser.uid));
+      alert(response?.ok ? 'Sub user deleted successfully' : 'Sub user removed from dashboard access');
+    } catch (error: any) {
+      console.error('Error deleting sub user:', error);
+      alert(error?.message || 'Error deleting sub user');
+    } finally {
+      setDeletingSubUserId(null);
     }
   };
 
@@ -947,7 +1018,10 @@ export default function AdminDashboard() {
           await updateDoc(
             doc(db, 'payments', paymentDoc.id),
             {
-              status: 'success'
+              status: 'success',
+              paymentMethod: 'manual',
+              source: 'manual_admin',
+              verifiedBy: user?.uid || adminProfile?.email || 'admin'
             }
           );
 
@@ -997,6 +1071,9 @@ export default function AdminDashboard() {
             razorpayPaymentId: `manual_pay_${Date.now()}`,
             amount: amount,
             status: 'success',
+            paymentMethod: 'manual',
+            source: 'manual_admin',
+            verifiedBy: user?.uid || adminProfile?.email || 'admin',
             timestamp: new Date().toISOString()
           }
         );
@@ -1019,7 +1096,9 @@ export default function AdminDashboard() {
             isPaid: true,
             hasPaid: true,
             paymentStatus: 'success',
-            paymentVerifiedAt: new Date().toISOString()
+            paymentVerifiedAt: new Date().toISOString(),
+            paymentMethod: 'manual',
+            paymentSource: 'manual_admin'
           }
         );
 
@@ -3678,9 +3757,53 @@ export default function AdminDashboard() {
                     <div className="w-full">
                       <Button type="submit" disabled={savingSubUser} className="student-button-primary bg-emerald-600 hover:bg-emerald-700 text-white h-12 w-full px-5 min-h-[48px] shadow-emerald-500/10 cursor-pointer rounded-xl transition-all">
                         <UserPlus size={18} />
-                        {savingSubUser ? 'Adding...' : 'Add Sub User'}
+                        {savingSubUser
+                          ? 'Adding...'
+                          : subUserForm.districtIds.length > 0
+                            ? 'Add District User'
+                            : 'Add Sub User'}
                       </Button>
                     </div>
+                  </div>
+                  <div className="mt-5 border-t border-slate-100 pt-5">
+                    <Label className="student-label">District Dashboard Access</Label>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {districts.length === 0 ? (
+                        <div className="text-xs font-bold text-slate-400">No districts found</div>
+                      ) : (
+                        districts.map((district) => {
+                          const checked = subUserForm.districtIds.includes(district.id);
+                          return (
+                            <label
+                              key={district.id}
+                              className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-xs font-black transition-all ${
+                                checked
+                                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(event) => {
+                                  setSubUserForm((current) => ({
+                                    ...current,
+                                    districtIds: event.target.checked
+                                      ? [...current.districtIds, district.id]
+                                      : current.districtIds.filter((id) => id !== district.id),
+                                  }));
+                                }}
+                                className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                              />
+                              <span>{district.name}</span>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                    <p className="mt-2 text-[11px] font-semibold text-slate-500">
+                      Select districts to create a district dashboard user. Leave blank for a normal admin dashboard sub user.
+                    </p>
                   </div>
                 </form>
 
@@ -3701,6 +3824,7 @@ export default function AdminDashboard() {
                               <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Access</th>
                               <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
                               <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Created</th>
+                              <th className="text-right p-4 text-xs font-black uppercase tracking-wider text-slate-500">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -3716,7 +3840,11 @@ export default function AdminDashboard() {
                                     {subUser.email}
                                   </div>
                                 </td>
-                                <td className="p-4 text-slate-600 font-bold text-sm">Dashboard only</td>
+                                <td className="p-4 text-slate-600 font-bold text-sm">
+                                  {subUser.role === 'district_user'
+                                    ? `Districts: ${(subUser.districtNames || []).join(', ') || '-'}`
+                                    : 'Dashboard only'}
+                                </td>
                                 <td className="p-4">
                                   <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${subUser.isActive
                                     ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80'
@@ -3734,6 +3862,17 @@ export default function AdminDashboard() {
                                       year: 'numeric'
                                     })
                                     : '-'}
+                                </td>
+                                <td className="p-4 text-right">
+                                  <Button
+                                    type="button"
+                                    onClick={() => handleDeleteSubUser(subUser)}
+                                    disabled={deletingSubUserId === subUser.uid}
+                                    className="h-10 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm shadow-rose-600/10 transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
+                                  >
+                                    <Trash2 size={16} />
+                                    {deletingSubUserId === subUser.uid ? 'Deleting...' : 'Delete'}
+                                  </Button>
                                 </td>
                               </tr>
                             ))}
@@ -3764,7 +3903,11 @@ export default function AdminDashboard() {
                               </div>
                               <div className="flex items-center gap-2">
                                 <LayoutDashboard size={12} className="text-slate-400 shrink-0" />
-                                <span>Dashboard only</span>
+                                <span>
+                                  {subUser.role === 'district_user'
+                                    ? `Districts: ${(subUser.districtNames || []).join(', ') || '-'}`
+                                    : 'Dashboard only'}
+                                </span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <Clock size={12} className="text-slate-400 shrink-0" />
@@ -3779,6 +3922,15 @@ export default function AdminDashboard() {
                                 </span>
                               </div>
                             </div>
+                            <Button
+                              type="button"
+                              onClick={() => handleDeleteSubUser(subUser)}
+                              disabled={deletingSubUserId === subUser.uid}
+                              className="h-10 w-full bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm shadow-rose-600/10 transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              <Trash2 size={16} />
+                              {deletingSubUserId === subUser.uid ? 'Deleting...' : 'Delete Sub User'}
+                            </Button>
                           </div>
                         ))}
                       </div>

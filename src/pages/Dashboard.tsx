@@ -30,8 +30,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, auth } from '../lib/firebase';
-import { collection, doc, getDoc, getDocs, limit, query, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { jsPDF } from 'jspdf';
+import { Button } from '../components/ui/button';
 
 const MainDashboard = lazy(() => import('./dashboard/MainDashboard'));
 const OfferLetter = lazy(() => import('./dashboard/OfferLetter'));
@@ -60,6 +61,7 @@ export default function Dashboard() {
   const [paymentRecord, setPaymentRecord] = useState<any>(null);
   const [learningProgress, setLearningProgress] = useState(0);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [showManualPaymentOverlay, setShowManualPaymentOverlay] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
@@ -112,9 +114,21 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user) return;
     const fetchPayment = async () => {
-      const q = query(collection(db, 'payments'), where('userId', '==', user.uid), limit(1));
+      const q = query(collection(db, 'payments'), where('userId', '==', user.uid));
       const snap = await getDocs(q);
-      if (!snap.empty) setPaymentRecord({ id: snap.docs[0].id, ...snap.docs[0].data() });
+      if (!snap.empty) {
+        const records = snap.docs
+          .map((paymentDoc) => ({ id: paymentDoc.id, ...paymentDoc.data() } as any))
+          .sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')));
+        const razorpayRecord = records.find((record) =>
+          record.status === 'success' &&
+          record.paymentMethod !== 'manual' &&
+          record.source !== 'manual_admin' &&
+          !String(record.razorpayPaymentId || '').startsWith('manual_pay_') &&
+          !String(record.razorpayOrderId || '').startsWith('manual_order_')
+        );
+        setPaymentRecord(razorpayRecord || records[0]);
+      }
     };
     fetchPayment();
   }, [user]);
@@ -190,6 +204,17 @@ export default function Dashboard() {
   }, [user, profile?.internshipDomain, profile?.progress]);
 
   const downloadPaymentSlip = async () => {
+    const isManualPayment =
+      paymentRecord?.paymentMethod === 'manual' ||
+      paymentRecord?.source === 'manual_admin' ||
+      String(paymentRecord?.razorpayPaymentId || '').startsWith('manual_pay_') ||
+      String(paymentRecord?.razorpayOrderId || '').startsWith('manual_order_');
+
+    if (isManualPayment) {
+      setShowManualPaymentOverlay(true);
+      return;
+    }
+
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const W = 210, ML = 14, MR = 14;
 
@@ -622,6 +647,33 @@ export default function Dashboard() {
             >
               {sidebarContent(true)}
             </motion.aside>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showManualPaymentOverlay && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-2xl"
+            >
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 ring-4 ring-amber-50/70">
+                <Receipt size={26} />
+              </div>
+              <h2 className="mt-5 text-xl font-black text-slate-900">Payment Slip Not Available</h2>
+              <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+                This payment was verified manually by the admin team. Online Razorpay payment slips can be downloaded only for payments completed through Razorpay.
+              </p>
+              <Button
+                onClick={() => setShowManualPaymentOverlay(false)}
+                className="mt-6 h-11 w-full rounded-xl bg-slate-900 text-xs font-black uppercase tracking-wider text-white hover:bg-slate-800"
+              >
+                Close
+              </Button>
+            </motion.div>
           </div>
         )}
       </AnimatePresence>

@@ -33,6 +33,9 @@ interface CollegeProfile {
   collegeId: string;
   collegeName: string;
   districtId: string;
+  accessType?: 'college' | 'district';
+  districtIds?: string[];
+  districtNames?: string[];
   email: string;
   contactPerson?: string;
   isActive: boolean;
@@ -142,7 +145,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ]);
 
         if (adminDoc?.exists() && adminDoc.data().isActive === true) {
-          setAdminProfile({ uid: adminDoc.id, ...adminDoc.data() } as AdminProfile);
+          const adminData = adminDoc.data();
+          if (adminData.role === 'district_user') {
+            setCollegeProfile({
+              uid: adminDoc.id,
+              collegeId: '',
+              collegeName: adminData.fullName || 'District Dashboard',
+              districtId: '',
+              accessType: 'district',
+              districtIds: Array.isArray(adminData.districtIds) ? adminData.districtIds : [],
+              districtNames: Array.isArray(adminData.districtNames) ? adminData.districtNames : [],
+              email: adminData.email || user.email || '',
+              contactPerson: adminData.fullName || '',
+              isActive: true,
+              createdAt: adminData.createdAt || new Date().toISOString(),
+            });
+            setIsCollege(true);
+            setLoading(false);
+            return;
+          }
+
+          setAdminProfile({ uid: adminDoc.id, ...adminData } as AdminProfile);
           setIsAdmin(true);
           setLoading(false);
           return;
