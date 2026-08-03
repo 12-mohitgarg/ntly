@@ -13,13 +13,21 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { auth } from '../lib/firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { INTERNSHIP_DOMAINS } from '../lib/constants';
+import { CURRENT_INTERNSHIP_START_DATE, INTERNSHIP_DOMAINS } from '../lib/constants';
 import { jsPDF } from 'jspdf';
 import { backupFirestore } from "./backupFirestore";
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 import { QuizSubmission } from './dashboard/generateTestReport';
+
+const currentInternshipStartTime = new Date(`${CURRENT_INTERNSHIP_START_DATE}T00:00:00`).getTime();
+
+const isCurrentInternshipUser = (student: { registrationDate?: string }) => {
+  if (!student.registrationDate) return false;
+  const timestamp = new Date(student.registrationDate).getTime();
+  return Number.isFinite(timestamp) && timestamp >= currentInternshipStartTime;
+};
 
 interface UserProfile {
   uid: string;
@@ -185,6 +193,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [collegeFilter, setCollegeFilter] = useState('');
   const [domainFilter, setDomainFilter] = useState('');
+  const [userSearchFilter, setUserSearchFilter] = useState('');
+  const [userPaymentFilter, setUserPaymentFilter] = useState('');
   const [reportSearch, setReportSearch] = useState('');
   const [reportCollegeFilter, setReportCollegeFilter] = useState('');
   const [reportUniversityFilter, setReportUniversityFilter] = useState('');
@@ -276,7 +286,7 @@ export default function AdminDashboard() {
   // Reset pages when filters change
   useEffect(() => {
     setUsersPage(1);
-  }, [collegeFilter, domainFilter]);
+  }, [collegeFilter, domainFilter, userSearchFilter, userPaymentFilter]);
 
   useEffect(() => {
     setUsersPage(1);
@@ -407,8 +417,14 @@ export default function AdminDashboard() {
           getDocs(paymentsRef)
         ]);
 
-        setUsers(usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile)));
-        setPayments(paymentsSnapshot.docs.map(doc => doc.data() as Payment));
+        const usersData = usersSnapshot.docs
+          .map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile))
+          .filter(isCurrentInternshipUser);
+        const currentUserIds = new Set(usersData.map((student) => student.uid));
+        setUsers(usersData);
+        setPayments(paymentsSnapshot.docs
+          .map(doc => doc.data() as Payment)
+          .filter((payment) => currentUserIds.has(payment.userId)));
         return;
       }
 
@@ -464,10 +480,15 @@ export default function AdminDashboard() {
         })
       ]);
 
-      const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+      const usersData = usersSnapshot.docs
+        .map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile))
+        .filter(isCurrentInternshipUser);
+      const currentUserIds = new Set(usersData.map((student) => student.uid));
       setUsers(usersData);
 
-      const paymentsData = paymentsSnapshot.docs.map(doc => doc.data() as Payment);
+      const paymentsData = paymentsSnapshot.docs
+        .map(doc => doc.data() as Payment)
+        .filter((payment) => currentUserIds.has(payment.userId));
       setPayments(paymentsData);
 
       const teachersData = teachersSnapshot.docs
@@ -513,11 +534,15 @@ export default function AdminDashboard() {
       }
 
       setStudentReports(
-        studentReportsData.sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || ''))
+        studentReportsData
+          .filter((report) => currentUserIds.has(report.userId))
+          .sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || ''))
       );
 
       if (testSubmissionsResult) {
-        const testSubmissionsData = testSubmissionsResult.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        const testSubmissionsData = testSubmissionsResult.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as any))
+          .filter((submission) => currentUserIds.has(submission.userId));
         setTestSubmissions(testSubmissionsData);
       }
 
@@ -1278,6 +1303,20 @@ export default function AdminDashboard() {
   });
 
   const filteredUsers = users.filter(user => {
+    const searchValue = userSearchFilter.trim().toLowerCase();
+    const searchMatch =
+      !searchValue ||
+      [
+        user.fullName,
+        user.email,
+        user.contactNumber,
+        user.college,
+        user.department,
+        user.internshipDomain,
+        user.universityRoll,
+        user.universityRollNo,
+        user.createdByEmitraName,
+      ].join(' ').toLowerCase().includes(searchValue);
 
 
     const collegeMatch =
@@ -1288,7 +1327,11 @@ export default function AdminDashboard() {
       !domainFilter ||
       getGroupName(user.internshipDomain) === domainFilter;
 
-    return collegeMatch && domainMatch;
+    const paymentMatch =
+      !userPaymentFilter ||
+      (userPaymentFilter === 'success' ? isUserSuccessful(user) : !isUserSuccessful(user));
+
+    return searchMatch && collegeMatch && domainMatch && paymentMatch;
   });
   const successfulUsers = users.filter(isUserSuccessful);
 
@@ -2420,7 +2463,19 @@ export default function AdminDashboard() {
 
           <TabsContent value="dashboard" className="space-y-8 mt-4">
             {/* FILTERS */}
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
+            <div className="grid md:grid-cols-2 xl:grid-cols-5 gap-6 mb-8">
+
+              <div className="student-card p-6 bg-white/80 xl:col-span-2">
+                <h3 className="student-label mb-3">
+                  Search Students
+                </h3>
+                <Input
+                  value={userSearchFilter}
+                  onChange={(event) => setUserSearchFilter(event.target.value)}
+                  placeholder="Name, email, mobile, roll..."
+                  className="student-input"
+                />
+              </div>
 
               {/* COLLEGE FILTER */}
               <div className="student-card p-6 bg-white/80">
@@ -2488,6 +2543,39 @@ export default function AdminDashboard() {
 
                 </select>
 
+              </div>
+
+              <div className="student-card p-6 bg-white/80">
+                <h3 className="student-label mb-3">
+                  Filter By Payment
+                </h3>
+                <select
+                  value={userPaymentFilter}
+                  onChange={(event) => setUserPaymentFilter(event.target.value)}
+                  className="student-input"
+                >
+                  <option value="">All Payments</option>
+                  <option value="success">Paid</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+
+              <div className="student-card p-6 bg-white/80">
+                <h3 className="student-label mb-3">
+                  Reset Filters
+                </h3>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setUserSearchFilter('');
+                    setCollegeFilter('');
+                    setDomainFilter('');
+                    setUserPaymentFilter('');
+                  }}
+                  className="h-12 w-full rounded-xl bg-slate-100 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-200"
+                >
+                  Clear All
+                </Button>
               </div>
 
             </div>

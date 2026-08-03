@@ -84,8 +84,9 @@ let registrationConfigCache: {
 export default function Register({ mode = 'public' }: RegisterProps) {
   const { user: currentUser, emitraProfile } = useAuth();
   const isEmitraStudentMode = mode === 'emitraStudent';
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(2);
   const [error, setError] = useState<string | null>(null);
+  const [prefillNotice, setPrefillNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -99,69 +100,48 @@ export default function Register({ mode = 'public' }: RegisterProps) {
     const roll = (rollParam || inputUniversityRoll).trim();
     const ind = (indParam || inputIndustrialRegNo).trim();
 
-    if (!roll || !ind) {
-      setError("Please enter both Roll Number and Industrial Registration Number.");
+    if (!roll && !ind) {
+      setError("Enter Registration Number or Industrial Registration Number to fetch your details.");
       return;
     }
 
     setVerificationLoading(true);
     setError(null);
+    setPrefillNotice(null);
 
     try {
       const usersRef = collection(db, 'users');
-      // const registeredQuery = query(usersRef, where('universityRoll', '==', roll));
-      // const registeredSnap = await getDocs(registeredQuery);
+      const importedRef = collection(db, 'importedStudents');
+      const lookupQueries = [
+        roll ? getDocs(query(importedRef, where('universityRoll', '==', roll))) : Promise.resolve(null),
+        ind ? getDocs(query(importedRef, where('industrialRegNo', '==', ind))) : Promise.resolve(null),
+      ];
+      const [rollSnapshot, industrialSnapshot] = await Promise.all(lookupQueries);
+      const importedDocs = [
+        ...(rollSnapshot?.docs || []),
+        ...(industrialSnapshot?.docs || []),
+      ];
+      const uniqueDocs = importedDocs.filter((docSnap, index, list) =>
+        list.findIndex((item) => item.id === docSnap.id) === index
+      );
 
-      // if (!registeredSnap.empty) {
-      //   setError("This student is already registered! Please login to your account.");
-      //   setVerificationLoading(false);
-      //   return;
-      // }
+      if (uniqueDocs.length === 0) {
+        setError("No college record found. You can continue filling the form manually.");
+        setVerificationLoading(false);
+        return;
+      }
 
-      // const importedRef = collection(db, 'importedStudents');
-      // const q = query(
-      //   importedRef,
-      //   where('universityRoll', '==', roll),
-      //   where('industrialRegNo', '==', ind)
-      // );
+      const importedData = uniqueDocs[0].data();
+      const importedRegistrationNumber = importedData.universityRoll || roll;
+      const registeredSnap = importedRegistrationNumber
+        ? await getDocs(query(usersRef, where('universityRoll', '==', importedRegistrationNumber)))
+        : null;
 
-      // const snapshot = await getDocs(q);
-
-      // if (snapshot.empty) {
-      //   setError("Invalid Roll Number or Industrial Registration Number. Please check your credentials or contact college/admin.");
-      //   setVerificationLoading(false);
-      //   return;
-      // }
-
-      // const importedData = snapshot.docs[0].data();
-
-        const registeredQuery = query(usersRef, where('universityRoll', '==', roll));
-
-        const importedRef = collection(db, 'importedStudents');
-        const importedQuery = query(
-          importedRef,
-          where('universityRoll', '==', roll),
-          where('industrialRegNo', '==', ind)
-        );
-
-        const [registeredSnap, snapshot] = await Promise.all([
-          getDocs(registeredQuery),
-          getDocs(importedQuery)
-        ]);
-
-        if (!registeredSnap.empty) {
-          setError("This student is already registered! Please login to your account.");
-          setVerificationLoading(false);
-          return;
-        }
-
-        if (snapshot.empty) {
-          setError("Invalid Roll Number or Industrial Registration Number. Please check your credentials or contact college/admin.");
-          setVerificationLoading(false);
-          return;
-        }
-
-        const importedData = snapshot.docs[0].data();
+      if (registeredSnap && !registeredSnap.empty) {
+        setError("This student is already registered. Please login to your account.");
+        setVerificationLoading(false);
+        return;
+      }
 
         setFormData(prev => ({
           ...prev,
@@ -174,12 +154,13 @@ export default function Register({ mode = 'public' }: RegisterProps) {
           university: importedData.university || '',
           internshipDomain: importedData.course || '',
           semester: importedData.semester || 'Semester 5',
-          universityRoll: roll,
+          universityRoll: importedRegistrationNumber,
           universityRollNo: importedData.universityRollNo || '',
-          industrialRegNo: ind,
+          industrialRegNo: importedData.industrialRegNo || ind,
         }));
 
         setIsVerified(true);
+        setPrefillNotice("College record found. Available details have been filled automatically.");
         setStep(2);
       } catch (err: any) {
         console.error("Verification failed:", err);
@@ -192,7 +173,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
     useEffect(() => {
       const roll = searchParams.get('roll');
       const ind = searchParams.get('ind');
-      if (roll && ind) {
+      if (roll || ind) {
         handleVerify(roll, ind);
       }
     }, []);
@@ -226,6 +207,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
       semester: 'Semester 5',
       universityRoll: '',
       universityRollNo: '',
+      industrialRegNo: '',
       internshipDomain: '',
       internshipMode: 'Online',
       password: '',
@@ -524,6 +506,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
             semester: formData.semester,
             universityRoll: formData.universityRoll,
             universityRollNo: formData.universityRollNo,
+            industrialRegNo: formData.industrialRegNo,
             internshipDomain: formData.internshipDomain,
             internshipMode: formData.internshipMode || 'Online',
             createdByEmitraId: isEmitraStudentMode ? currentUser?.uid || '' : null,
@@ -556,7 +539,6 @@ export default function Register({ mode = 'public' }: RegisterProps) {
     };
 
     const stepsList = [
-      { title: 'Verify', sub: 'Identity Verification', icon: ShieldCheck },
       { title: 'Personal', sub: 'Basic Information', icon: User },
       { title: 'Academic', sub: 'Educational Details', icon: GraduationCap },
       { title: 'Security', sub: 'Account Security', icon: ShieldCheck },
@@ -575,23 +557,20 @@ export default function Register({ mode = 'public' }: RegisterProps) {
     }
 
     const getStepProgressText = () => {
-      if (step === 1) return "10% Completed";
-      if (step === 2) return "30% Completed";
-      if (step === 3) return "55% Completed";
+      if (step === 2) return "25% Completed";
+      if (step === 3) return "50% Completed";
       if (step === 4) return "75% Completed";
       return "95% Completed";
     };
 
     const getStepProgressPercent = () => {
-      if (step === 1) return 10;
-      if (step === 2) return 30;
-      if (step === 3) return 55;
+      if (step === 2) return 25;
+      if (step === 3) return 50;
       if (step === 4) return 75;
       return 95;
     };
 
     const getStepIcon = () => {
-      if (step === 1) return ShieldCheck;
       if (step === 2) return User;
       if (step === 3) return GraduationCap;
       if (step === 4) return ShieldCheck;
@@ -618,25 +597,26 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
         {/* STEPPER TIMELINE */}
         <section className="max-w-4xl mx-auto px-4 mb-10">
-          <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:overflow-visible sm:mx-0 sm:px-0">
-            <div className="flex items-start justify-start sm:justify-between min-w-[520px] sm:min-w-0 w-full relative z-0">
+          <div className="pb-2">
+            <div className="flex items-start justify-between w-full relative z-0 gap-1 sm:gap-2">
               {stepsList.map((s, i) => {
-                const isCompleted = step > i + 1;
-                const isActive = step === i + 1;
+                const visibleStep = step - 1;
+                const isCompleted = visibleStep > i + 1;
+                const isActive = visibleStep === i + 1;
 
                 return (
                   <React.Fragment key={i}>
                     {/* Horizontal connecting lines */}
                     {i > 0 && (
-                      <div className={`flex-1 h-0.5 mx-1 sm:mx-4 self-start mt-[18px] transition-colors duration-500 ${step > i
+                      <div className={`flex-1 h-0.5 mx-1 sm:mx-4 self-start mt-[18px] transition-colors duration-500 ${visibleStep > i
                         ? 'bg-blue-600'
                         : 'border-t-2 border-dashed border-slate-200'
                         }`} />
                     )}
 
                     {/* Step Circle & Description */}
-                    <div className="flex flex-col items-center space-y-2.5 z-10 shrink-0">
-                      <div className={`w-9.5 h-9.5 rounded-full flex items-center justify-center border-2 text-xs font-black shadow-sm transition-all duration-300 ${isCompleted
+                    <div className="flex flex-col items-center space-y-2 z-10 shrink-0 w-16 sm:w-auto">
+                      <div className={`w-8 h-8 sm:w-9.5 sm:h-9.5 rounded-full flex items-center justify-center border-2 text-xs font-black shadow-sm transition-all duration-300 ${isCompleted
                         ? 'bg-blue-600 border-blue-600 text-white'
                         : isActive
                           ? 'bg-blue-600 border-blue-600 text-white scale-105'
@@ -645,7 +625,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                         {i + 1}
                       </div>
                       <div className="text-center">
-                        <span className={`text-[10px] md:text-xs block font-black leading-none ${isActive ? 'text-blue-600' : 'text-slate-700'}`}>
+                        <span className={`text-[9px] sm:text-[10px] md:text-xs block font-black leading-tight ${isActive ? 'text-blue-600' : 'text-slate-700'}`}>
                           {s.title}
                         </span>
                         <span className="text-[9px] text-slate-400 font-bold tracking-tight hidden sm:block mt-0.5">
@@ -672,11 +652,10 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                 </div>
                 <div className="space-y-0.5">
                   <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">
-                    {step === 1 ? 'Verify Identity' : step === 2 ? 'Personal Information' : step === 3 ? 'Academic Details' : step === 4 ? 'Account Security' : 'Consent Letter'}
+                    {step === 2 ? 'Personal Information' : step === 3 ? 'Academic Details' : step === 4 ? 'Account Security' : 'Consent Letter'}
                   </h3>
                   <p className="text-xs text-slate-450 font-bold leading-none">
-                    {step === 1 && 'Enter your Roll Number and Industrial Reg Number to verify.'}
-                    {step === 2 && 'Review your basic details accurately.'}
+                    {step === 2 && 'Fill your basic details or fetch them from college data.'}
                     {step === 3 && 'Verify your educational track records.'}
                     {step === 4 && 'Choose a password for your account.'}
                     {step === 5 && 'Review your registration details and submit.'}
@@ -693,7 +672,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                   <div className="bg-blue-600 h-full transition-all duration-300" style={{ width: `${getStepProgressPercent()}%` }} />
                 </div>
                 <span className="bg-blue-50 text-blue-600 font-extrabold px-2.5 py-1 rounded text-xs leading-none">
-                  Step {step} of 5
+                  Step {step - 1} of 4
                 </span>
               </div>
             </div>
@@ -712,6 +691,13 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                   <div className="bg-red-50 border border-red-100 text-red-600 p-4.5 rounded-2xl flex items-center gap-3 text-xs font-bold uppercase tracking-tight">
                     <AlertCircle size={18} className="shrink-0" />
                     {error}
+                  </div>
+                )}
+
+                {prefillNotice && (
+                  <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 p-4.5 rounded-2xl flex items-center gap-3 text-xs font-bold uppercase tracking-tight">
+                    <CheckCircle2 size={18} className="shrink-0" />
+                    {prefillNotice}
                   </div>
                 )}
 
@@ -832,6 +818,84 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                         {emailCheckLoading && <div className="absolute right-4 top-4 w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />}
                       </div>
                       {emailError && <p className="text-[10px] text-red-500 font-bold pl-1">{emailError}</p>}
+                    </div>
+
+                    <div className="md:col-span-2 flex justify-end border-t border-slate-100 pt-5">
+                      <Button
+                        type="button"
+                        onClick={nextStep}
+                        disabled={loading}
+                        className="h-11 w-full sm:w-auto rounded-xl bg-blue-600 px-6 text-xs font-black uppercase tracking-wider text-white hover:bg-blue-700"
+                      >
+                        {loading ? 'Validating...' : 'Next'}
+                        <ChevronRight size={14} />
+                      </Button>
+                    </div>
+
+                    <div className="md:col-span-2 rounded-2xl border border-blue-100 bg-blue-50/60 p-4 text-left">
+                      <div className="mb-3">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-blue-800">Already shared by college?</h4>
+                        <p className="mt-1 text-[11px] font-semibold leading-relaxed text-blue-700">
+                          Choose only one option below. The other option will turn off automatically.
+                        </p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-stretch">
+                        <div className={`rounded-2xl border bg-white p-3 transition ${inputIndustrialRegNo.trim() ? 'border-slate-200 opacity-50' : 'border-blue-100 shadow-sm'}`}>
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <Label htmlFor="inputUniversityRoll" className="text-[10px] font-black text-blue-700 uppercase tracking-wider leading-tight">Option 1</Label>
+                            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-blue-700">Registration No.</span>
+                          </div>
+                          <Input
+                            id="inputUniversityRoll"
+                            value={inputUniversityRoll}
+                            disabled={Boolean(inputIndustrialRegNo.trim())}
+                            onChange={(e) => {
+                              setInputUniversityRoll(e.target.value);
+                              setInputIndustrialRegNo('');
+                              setFormData((prev) => ({ ...prev, universityRoll: e.target.value, industrialRegNo: '' }));
+                            }}
+                            placeholder="Enter registration number"
+                            className="h-11 rounded-xl bg-white border-blue-100 font-semibold text-xs disabled:cursor-not-allowed disabled:bg-slate-100"
+                          />
+                          {inputIndustrialRegNo.trim() && (
+                            <p className="mt-2 text-[10px] font-bold text-slate-400">Disabled because Option 2 is selected.</p>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-center">
+                          <span className="rounded-full border border-blue-100 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-blue-500 shadow-sm">
+                            OR
+                          </span>
+                        </div>
+                        <div className={`rounded-2xl border bg-white p-3 transition ${inputUniversityRoll.trim() ? 'border-slate-200 opacity-50' : 'border-blue-100 shadow-sm'}`}>
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <Label htmlFor="inputIndustrialRegNo" className="text-[10px] font-black text-blue-700 uppercase tracking-wider leading-tight">Option 2</Label>
+                            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-blue-700">Industrial No.</span>
+                          </div>
+                          <Input
+                            id="inputIndustrialRegNo"
+                            value={inputIndustrialRegNo}
+                            disabled={Boolean(inputUniversityRoll.trim())}
+                            onChange={(e) => {
+                              setInputIndustrialRegNo(e.target.value);
+                              setInputUniversityRoll('');
+                              setFormData((prev) => ({ ...prev, industrialRegNo: e.target.value, universityRoll: '' }));
+                            }}
+                            placeholder="Enter industrial reg number"
+                            className="h-11 rounded-xl bg-white border-blue-100 font-semibold text-xs disabled:cursor-not-allowed disabled:bg-slate-100"
+                          />
+                          {inputUniversityRoll.trim() && (
+                            <p className="mt-2 text-[10px] font-bold text-slate-400">Disabled because Option 1 is selected.</p>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        disabled={verificationLoading || (!inputUniversityRoll.trim() && !inputIndustrialRegNo.trim())}
+                        onClick={() => handleVerify()}
+                        className="mt-3 h-10 w-full sm:w-auto rounded-xl bg-blue-600 px-4 text-[10px] font-black uppercase tracking-wider text-white hover:bg-blue-700"
+                      >
+                        {verificationLoading ? 'Fetching...' : 'Fetch My Details'}
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -1006,7 +1070,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
             {/* Stepper Navigation Actions */}
             <div className="flex items-center justify-between gap-3 pt-5 border-t border-slate-100">
-              {step > 1 ? (
+              {step > 2 ? (
                 <Button
                   variant="outline"
                   onClick={prevStep}

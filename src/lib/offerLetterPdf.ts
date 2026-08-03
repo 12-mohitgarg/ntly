@@ -108,7 +108,8 @@ export function createOfferLetterPdf(profile: OfferLetterProfile, letterNumber: 
   const W = 210, H = 297, ML = 12;
 
   const studentName = profile.fullName || '[Student Full Name]';
-  const rollNumber = profile.universityRoll || '[Roll Number]';
+  const registrationNumber = profile.universityRoll || '[Registration Number]';
+  const rollNumber = profile.universityRollNo || '[Roll Number]';
   const college = profile.college || '[Name Of College]';
   const deptSemester = `${profile.department || 'B.A.(Pol. Sci.)'} - ${profile.semester || '5th Semester'}`;
   const domain = profile.internshipDomain || '[Domain as per Subject / Interest]';
@@ -164,7 +165,7 @@ export function createOfferLetterPdf(profile: OfferLetterProfile, letterNumber: 
   pdf.text('University Reg. Number', x, y);
   pdf.text(':', detailColonX, y);
   pdf.setFont('Helvetica', 'normal');
-  pdf.text(profile.universityRoll ? rollNumber : `[${rollNumber}]`, detailValueX, y); y += 6;
+  pdf.text(profile.universityRoll ? registrationNumber : `[${registrationNumber}]`, detailValueX, y); y += 6;
   pdf.setFont('Helvetica', 'bold');
   pdf.text('College / Institution', x, y);
   pdf.text(':', detailColonX, y);
@@ -190,7 +191,7 @@ export function createOfferLetterPdf(profile: OfferLetterProfile, letterNumber: 
   const colC = 78, colV = 82, rH = 6;
   const rows: [string, string][] = [
     ['Name of the Student', profile.fullName ? studentName : `[${studentName}]`],
-    ['University Roll Number', profile.universityRoll ? rollNumber : `[${rollNumber}]`],
+    ['University Roll Number', profile.universityRollNo ? rollNumber : `[${rollNumber}]`],
     ['College / Institution', profile.college ? college : `[${college}]`],
     ['Department & Semester', deptSemester],
     ['Internship Domain', profile.internshipDomain ? domain : `[${domain}]`],
