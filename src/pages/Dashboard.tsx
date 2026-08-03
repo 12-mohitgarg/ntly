@@ -65,6 +65,7 @@ export default function Dashboard() {
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const isSubUserAutoVerifiedStudent = Boolean(profile?.autoVerifiedBySubUser || profile?.createdBySubUserId);
 
   const fetchUnreadCount = async () => {
     if (!user?.uid) return;
@@ -204,6 +205,11 @@ export default function Dashboard() {
   }, [user, profile?.internshipDomain, profile?.progress]);
 
   const downloadPaymentSlip = async () => {
+    if (isSubUserAutoVerifiedStudent) {
+      setShowManualPaymentOverlay(true);
+      return;
+    }
+
     const isManualPayment =
       paymentRecord?.paymentMethod === 'manual' ||
       paymentRecord?.source === 'manual_admin' ||
@@ -569,7 +575,7 @@ export default function Dashboard() {
                     >
                       Profile
                     </Link>
-                    {paymentRecord && (
+                    {paymentRecord && !isSubUserAutoVerifiedStudent && (
                       <button
                         onClick={() => {
                           setIsProfileMenuOpen(false);
@@ -665,7 +671,7 @@ export default function Dashboard() {
               </div>
               <h2 className="mt-5 text-xl font-black text-slate-900">Payment Slip Not Available</h2>
               <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-                This payment was verified manually by the admin team. Online Razorpay payment slips can be downloaded only for payments completed through Razorpay.
+                This registration was verified without an online Razorpay payment. Payment slips can be downloaded only for payments completed through Razorpay.
               </p>
               <Button
                 onClick={() => setShowManualPaymentOverlay(false)}

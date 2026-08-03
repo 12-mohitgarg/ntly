@@ -53,7 +53,7 @@ interface Degree {
 }
 
 interface RegisterProps {
-  mode?: 'public' | 'emitraStudent';
+  mode?: 'public' | 'emitraStudent' | 'subUserStudent';
 }
 
 const WhatsAppIcon = ({ size = 20, className = "" }: { size?: number; className?: string }) => (
@@ -82,8 +82,10 @@ let registrationConfigCache: {
 } | null = null;
 
 export default function Register({ mode = 'public' }: RegisterProps) {
-  const { user: currentUser, emitraProfile } = useAuth();
+  const { user: currentUser, emitraProfile, adminProfile } = useAuth();
   const isEmitraStudentMode = mode === 'emitraStudent';
+  const isSubUserStudentMode = mode === 'subUserStudent';
+  const isAssistedRegistrationMode = isEmitraStudentMode || isSubUserStudentMode;
   const [step, setStep] = useState(2);
   const [error, setError] = useState<string | null>(null);
   const [prefillNotice, setPrefillNotice] = useState<string | null>(null);
@@ -478,10 +480,10 @@ export default function Register({ mode = 'public' }: RegisterProps) {
       try {
         const emailVal = normalizeEmail(formData.email);
         const phoneVal = normalizePhoneNumber(formData.contactNumber);
-        const studentAuth = isEmitraStudentMode
-          ? getAuth(getApps().some(app => app.name === 'emitra-student-create-app')
-            ? getApp('emitra-student-create-app')
-            : initializeApp(firebaseConfig, 'emitra-student-create-app'))
+        const studentAuth = isAssistedRegistrationMode
+          ? getAuth(getApps().some(app => app.name === 'assisted-student-create-app')
+            ? getApp('assisted-student-create-app')
+            : initializeApp(firebaseConfig, 'assisted-student-create-app'))
           : auth;
 
         const userCredential = await createUserWithEmailAndPassword(studentAuth, emailVal, formData.password);
@@ -511,7 +513,14 @@ export default function Register({ mode = 'public' }: RegisterProps) {
             internshipMode: formData.internshipMode || 'Online',
             createdByEmitraId: isEmitraStudentMode ? currentUser?.uid || '' : null,
             createdByEmitraName: isEmitraStudentMode ? emitraProfile?.centerName || '' : null,
-            isPaid: false,
+            createdBySubUserId: isSubUserStudentMode ? currentUser?.uid || '' : null,
+            createdBySubUserName: isSubUserStudentMode ? adminProfile?.fullName || adminProfile?.email || '' : null,
+            isPaid: isSubUserStudentMode,
+            hasPaid: isSubUserStudentMode,
+            paymentStatus: isSubUserStudentMode ? 'success' : 'pending',
+            paymentVerifiedAt: isSubUserStudentMode ? new Date().toISOString() : null,
+            paymentVerifiedBy: isSubUserStudentMode ? currentUser?.uid || '' : null,
+            autoVerifiedBySubUser: isSubUserStudentMode,
             registrationDate: new Date().toISOString(),
             learningHours: 0,
             progress: 0
@@ -520,9 +529,14 @@ export default function Register({ mode = 'public' }: RegisterProps) {
           handleFirestoreError(firestoreErr, OperationType.WRITE, path);
         }
 
-        if (isEmitraStudentMode) {
+        if (isAssistedRegistrationMode) {
           await signOut(studentAuth).catch(() => undefined);
+        }
+
+        if (isEmitraStudentMode) {
           navigate(`/emitra/payment/${user.uid}`);
+        } else if (isSubUserStudentMode) {
+          navigate('/admin-dashboard');
         } else {
           navigate('/payment');
         }
@@ -588,10 +602,12 @@ export default function Register({ mode = 'public' }: RegisterProps) {
             <FileText size={24} />
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-none">
-            Student <span className="text-blue-600">Registration</span>
+            {isSubUserStudentMode ? 'Register' : 'Student'} <span className="text-blue-600">{isSubUserStudentMode ? 'Student' : 'Registration'}</span>
           </h1>
           <p className="text-slate-500 font-semibold text-sm sm:text-base leading-relaxed">
-            Complete your registration for the UGC-mandated internship program
+            {isSubUserStudentMode
+              ? 'Create a student account from your dashboard. Payment will be marked verified automatically.'
+              : 'Complete your registration for the UGC-mandated internship program'}
           </p>
         </section>
 
@@ -1097,10 +1113,10 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                   className="h-10 sm:h-11 px-3 sm:px-8 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-wider text-[9px] sm:text-xs shadow-md shadow-blue-500/10 hover:scale-[1.01] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap"
                 >
                   <span className="sm:hidden">
-                    {loading ? 'Processing...' : isEmitraStudentMode ? 'Register' : 'Complete'}
+                    {loading ? 'Processing...' : isAssistedRegistrationMode ? 'Register' : 'Complete'}
                   </span>
                   <span className="hidden sm:inline">
-                    {loading ? 'Processing...' : isEmitraStudentMode ? 'Register Student' : 'Complete Register'}
+                    {loading ? 'Processing...' : isAssistedRegistrationMode ? 'Register Student' : 'Complete Register'}
                   </span>
                   <ArrowRight size={14} className="sm:w-4 sm:h-4" />
                 </Button>

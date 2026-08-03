@@ -30,6 +30,9 @@ export interface UserProfile {
   lastLoginAt?: string;
   createdByEmitraId?: string | null;
   createdByEmitraName?: string | null;
+  createdBySubUserId?: string | null;
+  createdBySubUserName?: string | null;
+  autoVerifiedBySubUser?: boolean;
   isPaid: boolean;
   hasPaid?: boolean;
   paymentStatus?: string;

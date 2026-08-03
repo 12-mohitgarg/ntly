@@ -66,7 +66,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   if (adminProfile?.role === 'teacher' && location.pathname !== '/admin/daily-videos') {
     return <Navigate to="/admin/daily-videos" replace />;
   }
-  if (adminProfile?.role === 'sub_user' && location.pathname !== '/admin-dashboard') {
+  if (location.pathname === '/admin/register-student' && adminProfile?.role !== 'sub_user') {
+    return <Navigate to="/admin-dashboard" replace />;
+  }
+  if (adminProfile?.role === 'sub_user' && !['/admin-dashboard', '/admin/register-student'].includes(location.pathname)) {
     return <Navigate to="/admin-dashboard" replace />;
   }
 
@@ -101,6 +104,7 @@ function AppContent() {
                      location.pathname.startsWith('/college-dashboard') ||
                      location.pathname.startsWith('/emitra/payment') ||
                      location.pathname.startsWith('/emitra/register-student') ||
+                     location.pathname.startsWith('/admin/register-student') ||
                      location.pathname === '/admin-dashboard';
 
   return (
@@ -119,6 +123,7 @@ function AppContent() {
           <Route path="/college-dashboard" element={<CollegeRoute><CollegeDashboard /></CollegeRoute>} />
           <Route path="/emitra/payment/:studentId" element={<EmitraRoute><EmitraPayment /></EmitraRoute>} />
           <Route path="/emitra/register-student" element={<EmitraRoute><Register mode="emitraStudent" /></EmitraRoute>} />
+          <Route path="/admin/register-student" element={<AdminRoute><Register mode="subUserStudent" /></AdminRoute>} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />

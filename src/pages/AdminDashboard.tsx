@@ -51,6 +51,8 @@ interface UserProfile {
   paymentStatus?: string;
   paymentVerifiedAt?: string;
   universityRoll?: string;
+  createdBySubUserId?: string | null;
+  createdBySubUserName?: string | null;
   registrationDate: string;
   createdByEmitraId?: string | null;
   createdByEmitraName?: string | null;
@@ -278,7 +280,7 @@ export default function AdminDashboard() {
   const [activeAdminTab, setActiveAdminTab] = useState('dashboard');
 
   useEffect(() => {
-    if (isSubUser && !['dashboard', 'cyber-cafe-summary'].includes(activeAdminTab)) {
+    if (isSubUser && activeAdminTab !== 'dashboard') {
       setActiveAdminTab('dashboard');
     }
   }, [activeAdminTab, isSubUser]);
@@ -412,16 +414,18 @@ export default function AdminDashboard() {
       const paymentsRef = collection(db, 'payments');
 
       if (isSubUser) {
-        const [usersSnapshot, paymentsSnapshot] = await Promise.all([
+        const [usersSnapshot, paymentsSnapshot, collegesSnapshot] = await Promise.all([
           getDocs(usersQuery),
-          getDocs(paymentsRef)
+          getDocs(paymentsRef),
+          getDocs(collection(db, 'colleges'))
         ]);
 
         const usersData = usersSnapshot.docs
           .map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile))
-          .filter(isCurrentInternshipUser);
+          .filter((student) => isCurrentInternshipUser(student) && student.createdBySubUserId === user.uid);
         const currentUserIds = new Set(usersData.map((student) => student.uid));
         setUsers(usersData);
+        setColleges(collegesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as College)));
         setPayments(paymentsSnapshot.docs
           .map(doc => doc.data() as Payment)
           .filter((payment) => currentUserIds.has(payment.userId)));
@@ -1316,6 +1320,7 @@ export default function AdminDashboard() {
         user.universityRoll,
         user.universityRollNo,
         user.createdByEmitraName,
+        user.createdBySubUserName,
       ].join(' ').toLowerCase().includes(searchValue);
 
 
@@ -1334,6 +1339,7 @@ export default function AdminDashboard() {
     return searchMatch && collegeMatch && domainMatch && paymentMatch;
   });
   const successfulUsers = users.filter(isUserSuccessful);
+  const subUserRegisteredUsers = isSubUser ? users : users.filter((student) => student.createdBySubUserId === adminProfile?.uid);
 
   const collegeCount = filteredUsers.reduce<Record<string, number>>(
     (acc, user) => {
@@ -1363,7 +1369,6 @@ export default function AdminDashboard() {
   // Calculate payment statistics
   const successfulUsersCount = successfulUsers.length;
   const pendingUsersCount = users.length - successfulUsersCount;
-  const totalAmount = payments.filter(p => p.status === 'success').reduce((sum, p) => sum + (p.amount || 0), 0);
   const formatCompactRupees = (amount: number) => {
     if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(amount >= 100000000 ? 1 : 2)} Cr`;
     if (amount >= 100000) return `₹${(amount / 100000).toFixed(amount >= 1000000 ? 1 : 2)} L`;
@@ -1385,6 +1390,7 @@ export default function AdminDashboard() {
     const matchedCollege = colleges.find((college) => college.name === student.college);
     return matchedCollege?.price || 0;
   };
+  const totalAmount = successfulUsers.reduce((sum, student) => sum + getUserSuccessfulPaymentAmount(student), 0);
 
   const reportFilteredUsers = users.filter((student) => {
     const paymentSuccess = isUserSuccessful(student);
@@ -1529,9 +1535,11 @@ export default function AdminDashboard() {
         Currency: successfulPayment?.currency || (studentRevenue > 0 ? 'INR' : ''),
         'Payment Verified At': formatExportDate(student.paymentVerifiedAt || successfulPayment?.timestamp),
         'Registration Date': formatExportDate(student.registrationDate),
-        Source: student.createdByEmitraId ? 'Cyber Cafe' : 'Direct',
+        Source: student.createdByEmitraId ? 'Cyber Cafe' : student.createdBySubUserId ? 'Sub User' : 'Direct',
         'Cyber Cafe ID': student.createdByEmitraId || '',
         'Cyber Cafe Name': student.createdByEmitraName || '',
+        'Sub User ID': student.createdBySubUserId || '',
+        'Sub User Name': student.createdBySubUserName || '',
       };
     });
 
@@ -1664,7 +1672,7 @@ export default function AdminDashboard() {
   // Get payment status for a user
   const getUserPaymentStatus = (userId: string) => {
     const tableUser = users.find((profile) => profile.uid === userId);
-    if (tableUser?.isPaid || successfulUserIds.has(userId)) {
+    if (tableUser && isUserSuccessful(tableUser)) {
       return { status: 'Success', class: 'bg-green-100 text-green-700' };
     }
 
@@ -2029,7 +2037,7 @@ export default function AdminDashboard() {
         <Tabs
           value={activeAdminTab}
           onValueChange={(value) => {
-            if (isSubUser && !['dashboard', 'cyber-cafe-summary'].includes(value)) {
+            if (isSubUser && value !== 'dashboard') {
               setActiveAdminTab('dashboard');
               return;
             }
@@ -2041,7 +2049,7 @@ export default function AdminDashboard() {
             <LayoutDashboard size={16} />
             Dashboard
           </TabsTrigger>
-            {canOperateDashboardPayments && (
+            {canOperateDashboardPayments && !isSubUser && (
               <TabsTrigger value="cyber-cafe-summary" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
                 <Building2 size={14} />
                 Cyber Cafe Summary
@@ -2086,6 +2094,26 @@ export default function AdminDashboard() {
           </TabsList >
 
           <TabsContent value="dashboard" className="space-y-8 mt-4">
+            {isSubUser && (
+              <div className="student-card p-5 bg-white/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Register Student</h3>
+                  <p className="text-xs font-semibold text-slate-500 mt-1">
+                    Add a student from your dashboard. These registrations are auto verified and do not need payment.
+                  </p>
+                  <p className="mt-2 text-xs font-black text-blue-700">
+                    Your registered students: {subUserRegisteredUsers.length}
+                  </p>
+                </div>
+                <Link to="/admin/register-student">
+                  <Button className="h-11 w-full sm:w-auto rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm transition">
+                    <UserPlus size={15} />
+                    Register Student
+                  </Button>
+                </Link>
+              </div>
+            )}
+
             {/* Stats Grid */}
             {canOperateDashboardPayments && (
               <div className="student-card p-4 bg-white/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -2132,7 +2160,9 @@ export default function AdminDashboard() {
                 >
                   {formatCompactRupees(totalAmount)}
                 </p>
-                <p className="text-[10px] text-slate-400 font-bold mt-1">{successfulUsersCount} successful payments</p>
+                <p className="text-[10px] text-slate-400 font-bold mt-1">
+                  {successfulUsersCount} {isSubUser ? 'successful registrations' : 'successful payments'}
+                </p>
                 <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-emerald-600/5 rounded-full" />
               </div>
 
@@ -2655,10 +2685,24 @@ export default function AdminDashboard() {
             {/* Users Table */}
             <div className="student-card bg-white/80 overflow-hidden">
               <div className="p-6 border-b border-slate-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h2 className="text-xl font-black text-slate-900 gradient-text">Registered Users</h2>
-                <span className="bg-slate-100 text-slate-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
-                  {filteredUsers.length} of {users.length} Users
-                </span>
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 gradient-text">Registered Users</h2>
+                  {isSubUser && (
+                    <p className="mt-1 text-xs font-bold text-slate-500">
+                      Showing only students registered by you.
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {isSubUser && (
+                    <span className="bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ring-1 ring-blue-100">
+                      My Students
+                    </span>
+                  )}
+                  <span className="bg-slate-100 text-slate-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
+                    {filteredUsers.length} of {users.length} Users
+                  </span>
+                </div>
               </div>
 
               {users.length === 0 ? (
@@ -2738,6 +2782,13 @@ export default function AdminDashboard() {
                                   Cyber cafe
                                 </span>
                                 <div className="mt-1 text-xs text-slate-500 font-bold">{user.createdByEmitraName || user.createdByEmitraId}</div>
+                              </div>
+                            ) : user.createdBySubUserId ? (
+                              <div>
+                                <span className="inline-flex px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-black uppercase tracking-wider ring-1 ring-blue-100">
+                                  Sub User
+                                </span>
+                                <div className="mt-1 text-xs text-slate-500 font-bold">{user.createdBySubUserName || user.createdBySubUserId}</div>
                               </div>
                             ) : (
                               <span className="inline-flex px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-black uppercase tracking-wider">

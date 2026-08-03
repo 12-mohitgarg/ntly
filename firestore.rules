@@ -107,7 +107,8 @@ service cloud.firestore {
   // Create own profile
   allow create: if isSignedIn() &&
                  (request.auth.uid == userId ||
-                  (isEmitra() && request.resource.data.createdByEmitraId == request.auth.uid));
+                  (isEmitra() && request.resource.data.createdByEmitraId == request.auth.uid) ||
+                  (isSubUser() && request.resource.data.createdBySubUserId == request.auth.uid));
 
   // Update own profile or admin
   allow update: if isSignedIn() &&
