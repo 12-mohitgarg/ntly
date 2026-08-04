@@ -48,7 +48,9 @@ const Progress = lazy(() => import('./dashboard/Progress'));
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="bg-white/80 backdrop-blur-md rounded-3xl p-8 border border-gray-200/80 shadow-sm min-h-[400px] flex flex-col items-center justify-center text-center">
-    <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-3xl mb-4">🚀</div>
+    <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4">
+      <Sparkles className="w-8 h-8 text-blue-600" />
+    </div>
     <h2 className="text-2xl font-bold text-gray-900 mb-2">{title} Page</h2>
     <p className="text-gray-500 max-w-sm">We are working hard to bring this feature to you. Please check back later!</p>
   </div>

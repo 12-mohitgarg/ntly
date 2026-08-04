@@ -18,7 +18,8 @@ import {
   FileText,
   User,
   Award,
-  Phone
+  Phone,
+  MessageSquare
 } from 'lucide-react';
 
 interface FaqItem {
@@ -210,7 +211,7 @@ export default function Support() {
         {/* Banner Left Details */}
         <div className="space-y-4 z-10 max-w-lg w-full">
           <h2 className="text-xl md:text-2xl font-black text-white leading-tight flex items-center gap-2">
-            How can we help today? 👋
+            How can we help today?
           </h2>
           <p className="text-[11px] text-indigo-100 font-semibold leading-relaxed">
             Explore guides, search frequently asked questions, or submit a support query directly to our tech helpdesk node.
@@ -341,7 +342,7 @@ export default function Support() {
             {/* WhatsApp Header Badge */}
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <span className="text-lg">💬</span>
+                <MessageSquare size={16} />
               </div>
               <h4 className="font-black text-sm text-slate-850 uppercase tracking-wider">Join WhatsApp Channel</h4>
             </div>

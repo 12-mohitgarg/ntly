@@ -21,7 +21,10 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ExternalLink,
-  HelpCircle
+  HelpCircle,
+  MapPin,
+  Bell,
+  BookOpen
 } from 'lucide-react';
 import { generateCertificate } from './generateCertificate';
 import { generateAttendanceReport, AttendanceEntry, AttendanceVideo } from './generateAttendanceReport';
@@ -252,7 +255,7 @@ export default function MainDashboard() {
           <div className="space-y-2 z-10">
             <p className="text-xs font-bold text-slate-400">Welcome back,</p>
             <h2 className="text-2xl font-black text-slate-900 leading-tight">
-              {profile?.fullName || 'Learner'}! 👋
+              {profile?.fullName || 'Learner'}!
             </h2>
             <p className="text-xs text-slate-500 max-w-[200px] leading-relaxed">
               Keep going! You're doing great in your internship journey.
@@ -342,7 +345,7 @@ export default function MainDashboard() {
         {/* Milestone Progress Card */}
         <div className="lg:col-span-5 bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm flex flex-col justify-between min-h-[220px]">
           <h3 className="text-sm font-black text-slate-900 flex items-center gap-2 mb-6">
-            <span className="text-blue-600">📍</span> Internship Milestone Progress
+            <MapPin size={16} className="text-blue-600" /> Internship Milestone Progress
           </h3>
           
           <div className="flex items-center justify-between relative px-2 mb-2">
@@ -391,7 +394,7 @@ export default function MainDashboard() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                <span>🔔</span> Announcements
+                <Bell size={16} className="text-amber-500" /> Announcements
               </h3>
               {announcements.length > 0 && (
                 <span className="bg-[#eff6ff] text-blue-600 border border-blue-100 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
@@ -474,8 +477,8 @@ export default function MainDashboard() {
         {/* Table Stats & Actions Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold">
-              📘
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <BookOpen size={20} />
             </div>
             <div>
               <h3 className="text-base font-black text-slate-900">Recorded Attendance</h3>

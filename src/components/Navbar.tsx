@@ -3,14 +3,34 @@ import { useAuth } from './AuthContext';
 import { auth } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
 import { motion } from 'motion/react';
-import { LogIn, User, LogOut, Menu, X } from 'lucide-react';
-import { useState } from 'react';
+import { LogIn, User, LogOut, Menu, X, Sun, Moon } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 
 export default function Navbar() {
   const { user, isAdmin, isEmitra } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') === 'dark' || document.documentElement.classList.contains('dark');
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDark]);
+
+  const toggleTheme = () => {
+    setIsDark((prev) => !prev);
+  };
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -26,7 +46,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100/80 shadow-sm">
+      <nav className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100/80 dark:border-slate-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center gap-3">
             <Link to="/" className="flex items-center gap-3 group flex-shrink-0">
@@ -100,14 +120,24 @@ export default function Navbar() {
 
             <div className="md:hidden flex items-center justify-end gap-2 shrink-0">
               {user ? (
-                <button
-                  type="button"
-                  onClick={() => setIsOpen((open) => !open)}
-                  aria-label={isOpen ? 'Close menu' : 'Open menu'}
-                  className="h-10 w-10 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 shadow-sm flex items-center justify-center active:scale-95 transition-all cursor-pointer"
-                >
-                  {isOpen ? <X size={18} /> : <Menu size={18} />}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    aria-label="Toggle theme"
+                    className="h-10 w-10 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-amber-400 shadow-sm flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+                  >
+                    {isDark ? <Sun size={18} /> : <Moon size={18} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen((open) => !open)}
+                    aria-label={isOpen ? 'Close menu' : 'Open menu'}
+                    className="h-10 w-10 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+                  >
+                    {isOpen ? <X size={18} /> : <Menu size={18} />}
+                  </button>
+                </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <Link to="/login">
@@ -131,8 +161,17 @@ export default function Navbar() {
 
                   <button
                     type="button"
+                    onClick={toggleTheme}
+                    aria-label="Toggle theme"
+                    className="h-10 w-10 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-amber-400 shadow-sm flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+                  >
+                    {isDark ? <Sun size={18} /> : <Moon size={18} />}
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => setIsOpen(true)}
-                    className="h-10 w-10 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 shadow-sm flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+                    className="h-10 w-10 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm flex items-center justify-center active:scale-95 transition-all cursor-pointer"
                   >
                     <Menu size={18} />
                   </button>

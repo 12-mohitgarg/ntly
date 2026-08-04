@@ -19,7 +19,9 @@ import {
   Eye,
   Check,
   Zap,
-  ChevronDown
+  ChevronDown,
+  Flag,
+  Video
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -252,8 +254,8 @@ export default function Progress() {
         </div>
 
         {/* Floating background graphics */}
-        <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-20 pointer-events-none flex items-center justify-center">
-          <span className="text-[160px] font-black leading-none text-white select-none">📈</span>
+        <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-10 pointer-events-none flex items-center justify-center text-white">
+          <TrendingUp size={160} />
         </div>
         <div className="absolute -top-10 -left-10 w-44 h-44 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
       </div>
@@ -358,7 +360,7 @@ export default function Progress() {
         {/* Milestone Vertical Checklist Dashboard */}
         <div className="lg:col-span-5 bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm select-none">
           <h3 className="text-base font-black text-slate-900 flex items-center gap-2 mb-6">
-            <span>🚩</span> Completion Milestones
+            <Flag size={18} className="text-blue-600" /> Completion Milestones
           </h3>
 
           <div className="space-y-6 relative border-l border-slate-100 pl-5 ml-2.5">
@@ -403,7 +405,7 @@ export default function Progress() {
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-100 pb-5">
             <div>
               <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                <span>🎥</span> Daily Lectures Log
+                <Video size={18} className="text-blue-600" /> Daily Lectures Log
               </h3>
               <p className="text-xs text-slate-400 font-medium mt-0.5">
                 Check status for each course lecture session

@@ -25,7 +25,8 @@ import {
   ChevronDown,
   ChevronUp,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  GraduationCap
 } from 'lucide-react';
 import { generateCertificate } from './generateCertificate';
 import { AttendanceEntry } from './generateAttendanceReport';
@@ -1031,8 +1032,8 @@ export default function LMS() {
             </div>
             
             <div className="space-y-2">
-              <div className="w-16 h-16 rounded-full bg-green-50 border border-green-200 text-green-600 flex items-center justify-center text-2xl font-bold mx-auto shadow-sm">
-                🎓
+              <div className="w-16 h-16 rounded-full bg-green-50 border border-green-200 text-green-600 flex items-center justify-center mx-auto shadow-sm">
+                <GraduationCap size={28} />
               </div>
               <h3 className="text-xl font-black text-slate-800">
                 You Scored: {testSubmission.scorePercentage}%

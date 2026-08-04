@@ -15,7 +15,8 @@ import {
   Star,
   Plus,
   X,
-  ExternalLink
+  ExternalLink,
+  BarChart2
 } from 'lucide-react';
 import { generateTestReport } from './generateTestReport';
 
@@ -446,8 +447,8 @@ export default function Reports() {
         {/* Section Header Action Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold">
-              📊
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <BarChart2 size={20} />
             </div>
             <div>
               <h3 className="text-base font-black text-slate-900">All Submitted Reports</h3>
