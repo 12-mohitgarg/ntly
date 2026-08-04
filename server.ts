@@ -408,7 +408,7 @@ app.patch("/api/admin/users/:uid/password", requireDashboardOperator, async (req
   }
 });
 
-app.post("/api/admin/college-users", requireAdmin, async (req, res) => {
+app.post("/api/admin/college-users", requireDashboardOperator, async (req, res) => {
   try {
     const collegeId = String(req.body.collegeId || "").trim();
     let collegeName = String(req.body.collegeName || "").trim();
@@ -509,6 +509,18 @@ app.post("/api/admin/college-users", requireAdmin, async (req, res) => {
       .collection("collegeUsers")
       .doc(authUser.uid)
       .set(hasExistingCollegeLogin ? profilePayload : { ...profilePayload, createdAt: now }, { merge: true });
+
+    // Also update colleges document with credentials info
+    await admin
+      .firestore()
+      .collection("colleges")
+      .doc(collegeId)
+      .set({
+        hasCredentials: true,
+        generatedEmail: email,
+        generatedPassword: password,
+        credentialsGeneratedAt: now,
+      }, { merge: true });
 
     res.json({ status: "success", created, uid: authUser.uid, email, password, collegeName });
   } catch (error: any) {

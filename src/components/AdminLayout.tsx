@@ -33,7 +33,10 @@ import {
   LogOut as LogOutIcon,
   HelpCircle,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  ClipboardList,
+  FileText,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -99,6 +102,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       items: [
         { title: 'College Wise Users', path: '/admin-dashboard?tab=college-wise', icon: GraduationCap },
         { title: 'Domain Wise Users', path: '/admin-dashboard?tab=domain-wise', icon: Layers }
+      ]
+    },
+    {
+      category: 'REPORTS & EXPORTS',
+      items: [
+        { title: 'Test Report', path: '/admin-dashboard?tab=test-report', icon: FileCheck },
+        { title: 'Assignment', path: '/admin-dashboard?tab=assignment', icon: ClipboardList },
+        { title: 'Internship Report', path: '/admin-dashboard?tab=internship-report', icon: FileText },
+        { title: 'College Export', path: '/admin-dashboard?tab=college-export', icon: Download }
       ]
     },
     {

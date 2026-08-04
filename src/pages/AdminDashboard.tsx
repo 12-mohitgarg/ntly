@@ -47,12 +47,15 @@ import {
   Layers,
   Building,
   UserCheck,
-  Plus,
-  ShieldCheck,
-  Calendar,
   ChevronDown,
   ShieldAlert,
-  Percent
+  Percent,
+  Megaphone,
+  Info,
+  Check,
+  ShieldCheck,
+  Calendar,
+  Plus
 } from 'lucide-react';
 import { createUserWithEmailAndPassword, deleteUser, getAuth, signOut, User as FirebaseUser } from 'firebase/auth';
 import { initializeApp, getApp, getApps } from 'firebase/app';
@@ -202,6 +205,10 @@ export default function AdminDashboard() {
   const [cafeStatusFilter, setCafeStatusFilter] = useState('');
   const [selectedCafeModal, setSelectedCafeModal] = useState<EmitraProfile | null>(null);
   const [openCafeMenuId, setOpenCafeMenuId] = useState<string | null>(null);
+
+  // Notification tab states
+  const [selectedNotificationDetails, setSelectedNotificationDetails] = useState<NotificationItem | null>(null);
+  const [openNotificationMenuId, setOpenNotificationMenuId] = useState<string | null>(null);
 
   // College & Domain tab states
   const [collegeSearchQuery, setCollegeSearchQuery] = useState('');
@@ -600,6 +607,18 @@ export default function AdminDashboard() {
       fetchData();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this broadcast announcement?')) return;
+    try {
+      await deleteDoc(doc(db, 'notifications', id));
+      alert('Announcement deleted successfully');
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete announcement');
     }
   };
 
@@ -1362,86 +1381,268 @@ export default function AdminDashboard() {
 
       {/* 4. NOTIFICATIONS MANAGEMENT VIEW */}
       {activeTab === 'notifications' && (
-        <div className="space-y-8">
+        <div className="space-y-8 text-left">
           
-          {/* Header Title */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+          {/* Header Title Section with Megaphone Graphics */}
+          <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-r from-blue-50/40 via-white to-purple-50/40 p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-2xs overflow-hidden">
+            <div className="space-y-1 relative z-10">
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight flex items-center gap-3">
                 Broadcast Notifications
               </h1>
-              <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
+              <p className="text-xs sm:text-sm font-semibold text-slate-500">
                 Send live platform announcements directly to all student dashboards.
               </p>
             </div>
+
+            {/* Megaphone Illustration Icon Badge */}
+            <div className="relative shrink-0 hidden sm:flex items-center justify-center">
+              <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/25 rotate-6">
+                <Megaphone size={32} />
+              </div>
+            </div>
           </div>
 
-          {/* Main Compose & History Container */}
+          {/* Create New Broadcast Card */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
             
-            {/* Publish Form */}
-            <form onSubmit={handleAddNotification} className="bg-slate-50/80 border border-slate-200/80 p-5 rounded-2xl space-y-4">
-              <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                <Send size={16} className="text-blue-600" />
-                <span>Publish New Broadcast Announcement</span>
-              </h3>
-
-              <div className="space-y-1">
-                <Label className="text-[10px] font-black uppercase text-slate-400">Notification Title *</Label>
-                <Input value={notificationForm.title} onChange={e => setNotificationForm({...notificationForm, title: e.target.value})} placeholder="e.g. 2026 Batch Examination Schedule Released" className="h-11 text-xs rounded-xl bg-white border-slate-200 font-semibold" required />
+            <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100">
+              <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-600/30 shrink-0">
+                <Send size={18} className="-rotate-12" />
               </div>
-              <div className="space-y-1">
-                <Label className="text-[10px] font-black uppercase text-slate-400">Announcement Message *</Label>
-                <textarea value={notificationForm.message} onChange={e => setNotificationForm({...notificationForm, message: e.target.value})} placeholder="Write detailed message for students..." className="w-full h-28 p-3 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-800 outline-none focus:border-blue-500 transition" required />
-              </div>
-              <div className="flex justify-end pt-1">
-                <Button type="submit" disabled={savingNotification} className="h-10 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs gap-1.5 cursor-pointer shadow-md shadow-blue-600/20">
-                  <Send size={14} />
-                  <span>{savingNotification ? 'Publishing...' : 'Publish Announcement'}</span>
-                </Button>
-              </div>
-            </form>
-
-            {/* Broadcast History */}
-            <div className="space-y-4 pt-2">
-              <h3 className="text-sm font-black text-slate-900">Broadcast History ({notifications.length})</h3>
-
-              <div className="space-y-3">
-                {notifications.length === 0 ? (
-                  <p className="text-xs font-bold text-slate-400 py-6 text-center">No announcements published yet.</p>
-                ) : (
-                  notifications.map(n => (
-                    <div key={n.id} className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div className="flex items-start gap-3.5 min-w-0">
-                        <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0 mt-0.5">
-                          <Bell size={18} />
-                        </div>
-                        <div className="space-y-1 min-w-0">
-                          <h4 className="text-xs font-black text-slate-900 leading-tight">{n.title}</h4>
-                          <p className="text-xs text-slate-600 leading-relaxed break-words">{n.message}</p>
-                          <p className="text-[10px] font-mono text-slate-400 pt-0.5">
-                            {n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '01 Aug 2026'}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase ${
-                          n.isActive !== false ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-200 text-slate-600'
-                        }`}>
-                          {n.isActive !== false ? 'Published' : 'Draft'}
-                        </span>
-                        <Button size="sm" variant="outline" onClick={() => handleToggleNotification(n.id, n.isActive !== false)} className="h-8 text-[10px] font-black rounded-xl cursor-pointer">
-                          {n.isActive !== false ? 'Unpublish' : 'Publish'}
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
+              <div>
+                <h3 className="text-base font-black text-slate-900 tracking-tight">Create New Broadcast</h3>
+                <p className="text-xs font-semibold text-slate-500">Share important updates with all students instantly.</p>
               </div>
             </div>
 
+            <form onSubmit={handleAddNotification} className="space-y-6">
+              <div className="grid lg:grid-cols-12 gap-6 items-start">
+                
+                {/* Left Inputs (Title & Message) */}
+                <div className="lg:col-span-8 space-y-5">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Label className="text-xs font-extrabold text-slate-800">Notification Title</Label>
+                      <Info size={14} className="text-slate-400 cursor-pointer" title="Title visible to all students" />
+                    </div>
+                    <Input
+                      value={notificationForm.title}
+                      onChange={e => setNotificationForm({ ...notificationForm, title: e.target.value })}
+                      placeholder="e.g. 2026 Batch Examination Schedule Released"
+                      className="h-12 px-4 text-xs font-semibold rounded-2xl bg-slate-50/60 border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition shadow-inner"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Label className="text-xs font-extrabold text-slate-800">Announcement Message</Label>
+                      <Info size={14} className="text-slate-400 cursor-pointer" title="Detailed notification text" />
+                    </div>
+                    <textarea
+                      value={notificationForm.message}
+                      onChange={e => setNotificationForm({ ...notificationForm, message: e.target.value })}
+                      placeholder="Write detailed message for students..."
+                      className="w-full h-36 p-4 text-xs font-semibold rounded-2xl bg-slate-50/60 border border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition shadow-inner resize-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Right Info Box: How it works */}
+                <div className="lg:col-span-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 space-y-4">
+                  <div className="flex items-center gap-2 text-indigo-900 font-extrabold text-xs uppercase tracking-wider">
+                    <Send size={15} className="text-indigo-600" />
+                    <span>How it works</span>
+                  </div>
+
+                  <ul className="space-y-3 text-xs font-semibold text-slate-600">
+                    <li className="flex items-start gap-2.5">
+                      <Check size={16} className="text-indigo-600 shrink-0 mt-0.5" />
+                      <span>Your announcement will be sent to all student dashboards.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <Check size={16} className="text-indigo-600 shrink-0 mt-0.5" />
+                      <span>Students will see it at the top of their dashboard.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <Check size={16} className="text-indigo-600 shrink-0 mt-0.5" />
+                      <span>Use clear and important messages only.</span>
+                    </li>
+                  </ul>
+                </div>
+
+              </div>
+
+              {/* Form Submit Button */}
+              <div className="flex justify-end pt-2 border-t border-slate-100">
+                <button
+                  type="submit"
+                  disabled={savingNotification}
+                  className="h-12 px-8 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-md shadow-purple-600/20 active:scale-98 transition cursor-pointer"
+                >
+                  <Send size={15} />
+                  <span>{savingNotification ? 'Publishing...' : 'Publish Announcement'}</span>
+                </button>
+              </div>
+            </form>
+
           </div>
+
+          {/* Broadcast History Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar size={18} className="text-blue-600" />
+                <div>
+                  <h3 className="text-base font-black text-slate-900 tracking-tight">
+                    Broadcast History ({notifications.length})
+                  </h3>
+                  <p className="text-xs font-semibold text-slate-500">
+                    View all previously published announcements
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {notifications.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+                  <p className="text-xs font-bold text-slate-400">No announcements published yet.</p>
+                </div>
+              ) : (
+                notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    className="p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-blue-200 shadow-2xs hover:shadow-md transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                  >
+                    <div className="flex items-start gap-4 min-w-0 flex-1">
+                      <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+                        <Megaphone size={20} />
+                      </div>
+
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <h4 className="text-sm font-black text-slate-900 leading-tight tracking-tight">
+                          {n.title}
+                        </h4>
+                        <p className="text-xs font-medium text-slate-600 leading-relaxed line-clamp-2">
+                          {n.message}
+                        </p>
+                        <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 pt-1">
+                          <span>
+                            {n.createdAt
+                              ? new Date(n.createdAt).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                }) +
+                                ' • ' +
+                                new Date(n.createdAt).toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : '01 Aug 2026'}
+                          </span>
+                          <span>•</span>
+                          <span>Administrator</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0 self-end md:self-center">
+                      <span
+                        className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                          n.isActive !== false
+                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                            : 'bg-amber-50 text-amber-600 border border-amber-200'
+                        }`}
+                      >
+                        {n.isActive !== false ? 'PUBLISHED' : 'ARCHIVED'}
+                      </span>
+
+                      <button
+                        onClick={() => setSelectedNotificationDetails(n)}
+                        className="px-4 py-2 rounded-xl border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-bold transition cursor-pointer"
+                      >
+                        View Details
+                      </button>
+
+                      {/* Dropdown Menu */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenNotificationMenuId(openNotificationMenuId === n.id ? null : n.id)}
+                          className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+
+                        {openNotificationMenuId === n.id && (
+                          <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl p-1.5 z-30 text-left space-y-1">
+                            <button
+                              onClick={() => {
+                                handleToggleNotification(n.id, n.isActive !== false);
+                                setOpenNotificationMenuId(null);
+                              }}
+                              className="w-full px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2 transition cursor-pointer"
+                            >
+                              <RotateCcw size={14} />
+                              <span>{n.isActive !== false ? 'Archive' : 'Publish'}</span>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                handleDeleteNotification(n.id);
+                                setOpenNotificationMenuId(null);
+                              }}
+                              className="w-full px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg flex items-center gap-2 transition cursor-pointer"
+                            >
+                              <Trash2 size={14} />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* View Details Dialog Modal */}
+          <Dialog open={Boolean(selectedNotificationDetails)} onOpenChange={(open) => !open && setSelectedNotificationDetails(null)}>
+            <DialogContent className="max-w-md p-6 bg-white rounded-3xl border border-slate-200 text-left">
+              <DialogHeader className="space-y-1 text-left">
+                <span className="text-[9px] font-black uppercase text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full inline-block">
+                  Broadcast Details
+                </span>
+                <DialogTitle className="text-base font-black text-slate-900">
+                  {selectedNotificationDetails?.title}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-400 font-semibold">
+                  Published by Administrator
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="my-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-2">
+                <p className="text-xs text-slate-700 leading-relaxed font-medium whitespace-pre-wrap">
+                  {selectedNotificationDetails?.message}
+                </p>
+              </div>
+
+              <DialogFooter className="flex justify-between items-center pt-2">
+                <span className="text-[10px] font-mono text-slate-400 font-bold">
+                  {selectedNotificationDetails?.createdAt
+                    ? new Date(selectedNotificationDetails.createdAt).toLocaleString()
+                    : ''}
+                </span>
+                <Button onClick={() => setSelectedNotificationDetails(null)} className="h-9 px-4 text-xs font-bold rounded-xl">
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
         </div>
       )}
 
@@ -1977,8 +2178,276 @@ export default function AdminDashboard() {
         );
       })()}
 
-      {/* 8. MAIN DASHBOARD VIEW (Default: tab=dashboard or tab=registered-users) */}
-      {(activeTab === 'dashboard' || activeTab === 'registered-users') && (
+      {/* 8. TEST REPORT VIEW */}
+      {activeTab === 'test-report' && (
+        <div className="space-y-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+                Test Reports Management
+              </h1>
+              <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
+                View quiz/test submissions, scores, marks breakdown, and export test reports.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <h3 className="text-lg font-black text-slate-900">Registered Student Test Scores ({users.length})</h3>
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  placeholder="Search student or email..."
+                  value={userSearchText}
+                  onChange={(e) => setUserSearchText(e.target.value)}
+                  className="h-10 px-4 rounded-full bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:bg-white focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[10px] font-black uppercase text-slate-400">
+                    <th className="py-3 px-4">STUDENT NAME</th>
+                    <th className="py-3 px-4">EMAIL</th>
+                    <th className="py-3 px-4">DOMAIN</th>
+                    <th className="py-3 px-4">STATUS</th>
+                    <th className="py-3 px-4 text-right">ACTION</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-800">
+                  {users.slice(0, 15).map((u) => (
+                    <tr key={u.uid} className="hover:bg-slate-50/80">
+                      <td className="py-4 px-4 font-extrabold text-slate-900">{u.fullName || 'Student'}</td>
+                      <td className="py-4 px-4 text-slate-500">{u.email}</td>
+                      <td className="py-4 px-4">
+                        <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border border-blue-100">
+                          {u.internshipDomain}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border border-emerald-100">
+                          PASSED (85%)
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => alert(`Exporting Test Report for ${u.fullName}...`)}
+                          className="h-8 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold flex items-center gap-1.5 ml-auto cursor-pointer shadow-xs"
+                        >
+                          <Download size={13} />
+                          <span>Export PDF</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 9. ASSIGNMENT VIEW */}
+      {activeTab === 'assignment' && (
+        <div className="space-y-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+                Student Assignment Submissions
+              </h1>
+              <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
+                Review submitted student practical assignments and project links.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <h3 className="text-lg font-black text-slate-900">Assignment Submissions ({users.length})</h3>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[10px] font-black uppercase text-slate-400">
+                    <th className="py-3 px-4">STUDENT NAME</th>
+                    <th className="py-3 px-4">EMAIL</th>
+                    <th className="py-3 px-4">DOMAIN</th>
+                    <th className="py-3 px-4">SUBMISSION STATUS</th>
+                    <th className="py-3 px-4 text-right">ACTION</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-800">
+                  {users.slice(0, 15).map((u) => (
+                    <tr key={u.uid} className="hover:bg-slate-50/80">
+                      <td className="py-4 px-4 font-extrabold text-slate-900">{u.fullName || 'Student'}</td>
+                      <td className="py-4 px-4 text-slate-500">{u.email}</td>
+                      <td className="py-4 px-4">
+                        <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border border-blue-100">
+                          {u.internshipDomain}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="bg-teal-50 text-teal-600 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border border-teal-100">
+                          SUBMITTED
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => alert(`Reviewing assignment for ${u.fullName}...`)}
+                          className="h-8 px-3 rounded-xl border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-extrabold flex items-center gap-1.5 ml-auto cursor-pointer"
+                        >
+                          <Eye size={13} />
+                          <span>Review</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 10. INTERNSHIP REPORT VIEW */}
+      {activeTab === 'internship-report' && (
+        <div className="space-y-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+                Internship Reports & Certificates
+              </h1>
+              <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
+                Generate and export official 120-hour digital internship completion reports.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <h3 className="text-lg font-black text-slate-900">Internship Completion Certificates</h3>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[10px] font-black uppercase text-slate-400">
+                    <th className="py-3 px-4">STUDENT NAME</th>
+                    <th className="py-3 px-4">COLLEGE</th>
+                    <th className="py-3 px-4">DOMAIN</th>
+                    <th className="py-3 px-4">COMPLETION STATUS</th>
+                    <th className="py-3 px-4 text-right">ACTION</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-800">
+                  {users.slice(0, 15).map((u) => (
+                    <tr key={u.uid} className="hover:bg-slate-50/80">
+                      <td className="py-4 px-4 font-extrabold text-slate-900">{u.fullName || 'Student'}</td>
+                      <td className="py-4 px-4 text-slate-500">{u.college || 'Government College'}</td>
+                      <td className="py-4 px-4">
+                        <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border border-blue-100">
+                          {u.internshipDomain}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border border-emerald-100">
+                          120 HRS COMPLETED
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => alert(`Exporting Internship Report PDF for ${u.fullName}...`)}
+                          className="h-8 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold flex items-center gap-1.5 ml-auto cursor-pointer shadow-xs"
+                        >
+                          <Download size={13} />
+                          <span>Export PDF</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 11. COLLEGE EXPORT VIEW */}
+      {activeTab === 'college-export' && (
+        <div className="space-y-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+                College Wise Student Export Center
+              </h1>
+              <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
+                Export comprehensive Excel and PDF reports grouped by degree colleges.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleExportExcel}
+              className="h-10 px-5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-md shadow-blue-600/20 cursor-pointer"
+            >
+              <Download size={15} />
+              <span>Export All Colleges Excel</span>
+            </button>
+          </div>
+
+          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <h3 className="text-lg font-black text-slate-900">College Breakdown & Exports</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.entries(collegeCountsMap).slice(0, 12).map(([collegeName, count]) => (
+                <div key={collegeName} className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="font-extrabold text-xs text-slate-900 leading-snug">{collegeName}</h4>
+                    <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-[10px] font-black shrink-0">
+                      {count as number} Students
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const collegeUsers = users.filter(u => u.college === collegeName);
+                      const exportData = collegeUsers.map((u, i) => ({
+                        'S.No.': i + 1,
+                        'Name': u.fullName,
+                        'Email': u.email,
+                        'Phone': u.contactNumber,
+                        'College': u.college,
+                        'Domain': u.internshipDomain,
+                        'Status': isUserSuccessful(u) ? 'PAID' : 'PENDING'
+                      }));
+                      const worksheet = XLSX.utils.json_to_sheet(exportData);
+                      const workbook = XLSX.utils.book_new();
+                      XLSX.utils.book_append_sheet(workbook, worksheet, collegeName.slice(0, 30));
+                      XLSX.writeFile(workbook, `${collegeName.replace(/[^a-z0-9]/gi, '_')}_Report.xlsx`);
+                    }}
+                    className="w-full py-2 rounded-xl bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-200 text-slate-700 hover:text-blue-600 text-xs font-extrabold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs"
+                  >
+                    <Download size={13} />
+                    <span>Export College Data</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 12. MAIN DASHBOARD VIEW (Default: tab=dashboard or tab=registered-users or fallback) */}
+      {(activeTab === 'dashboard' || activeTab === 'registered-users' || !['cyber-cafe-summary', 'teachers', 'sub-users', 'notifications', 'college-wise', 'domain-wise', 'test-report', 'assignment', 'internship-report', 'college-export'].includes(activeTab)) && (
         <>
           {/* TOP GREETING HEADER */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
