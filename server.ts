@@ -251,6 +251,56 @@ async function getCollegeAmount(collegeName?: string) {
   return Number.isFinite(Number(price)) && Number(price) > 0 ? Number(price) : 1000;
 }
 
+function normalizeImportedStudent(student: any) {
+  return {
+    fullName: String(student.fullName || "").trim(),
+    parentName: String(student.parentName || "").trim(),
+    contactNumber: String(student.contactNumber || "").replace(/\D/g, "").slice(-10),
+    email: String(student.email || "").trim().toLowerCase(),
+    gender: String(student.gender || "").trim(),
+    college: String(student.college || "").trim(),
+    university: String(student.university || "").trim(),
+    course: String(student.course || "").trim(),
+    semester: String(student.semester || "").trim(),
+    universityRoll: String(student.universityRoll || "").trim(),
+    universityRollNo: String(student.universityRollNo || "").trim(),
+    industrialRegNo: String(student.industrialRegNo || "").trim(),
+    academicDetails: String(student.academicDetails || "").trim(),
+  };
+}
+
+async function findExistingImportStudent(
+  db: admin.firestore.Firestore,
+  importedRef: admin.firestore.CollectionReference,
+  student: ReturnType<typeof normalizeImportedStudent>
+) {
+  if (!student.universityRoll) return "Missing Roll Number";
+
+  const [
+    existingRoll,
+    existingEmail,
+    existingPhone,
+    existingImported,
+    existingImportedEmail,
+    existingImportedPhone,
+  ] = await Promise.all([
+    db.collection("users").where("universityRoll", "==", student.universityRoll).limit(1).get(),
+    student.email ? db.collection("users").where("email", "==", student.email).limit(1).get() : Promise.resolve(null),
+    student.contactNumber ? db.collection("users").where("contactNumber", "==", student.contactNumber).limit(1).get() : Promise.resolve(null),
+    importedRef.where("universityRoll", "==", student.universityRoll).limit(1).get(),
+    student.email ? importedRef.where("email", "==", student.email).limit(1).get() : Promise.resolve(null),
+    student.contactNumber ? importedRef.where("contactNumber", "==", student.contactNumber).limit(1).get() : Promise.resolve(null),
+  ]);
+
+  if (!existingRoll.empty) return "Student already registered with this roll number";
+  if (existingEmail && !existingEmail.empty) return "Student already registered with this email";
+  if (existingPhone && !existingPhone.empty) return "Student already registered with this mobile number";
+  if (!existingImported.empty) return "Student already exists in imported list";
+  if (existingImportedEmail && !existingImportedEmail.empty) return "Student already exists in imported list with this email";
+  if (existingImportedPhone && !existingImportedPhone.empty) return "Student already exists in imported list with this mobile number";
+  return "";
+}
+
 // API Routes
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", environment: process.env.NODE_ENV });
@@ -267,44 +317,54 @@ app.post("/api/admin/import-students", requireAdmin, async (req, res) => {
     const importedRef = db.collection("importedStudents");
     
     let importedCount = 0;
+    const importedStudents: any[] = [];
+    const skippedStudents: any[] = [];
+    const seenRolls = new Set<string>();
+    const seenEmails = new Set<string>();
+    const seenPhones = new Set<string>();
     const CHUNK_SIZE = 400; // Batch limit is 500
 
     for (let i = 0; i < students.length; i += CHUNK_SIZE) {
       const chunk = students.slice(i, i + CHUNK_SIZE);
       const batch = db.batch();
 
-      for (const student of chunk) {
-        if (!student.universityRoll) continue;
+      for (const rawStudent of chunk) {
+        const student = normalizeImportedStudent(rawStudent);
 
-        const existingQuery = await importedRef.where("universityRoll", "==", student.universityRoll).limit(1).get();
+        if (student.universityRoll && seenRolls.has(student.universityRoll)) {
+          skippedStudents.push({ ...student, reason: "Duplicate roll number in uploaded file" });
+          continue;
+        }
+        if (student.email && seenEmails.has(student.email)) {
+          skippedStudents.push({ ...student, reason: "Duplicate email in uploaded file" });
+          continue;
+        }
+        if (student.contactNumber && seenPhones.has(student.contactNumber)) {
+          skippedStudents.push({ ...student, reason: "Duplicate mobile number in uploaded file" });
+          continue;
+        }
+        if (student.universityRoll) seenRolls.add(student.universityRoll);
+        if (student.email) seenEmails.add(student.email);
+        if (student.contactNumber) seenPhones.add(student.contactNumber);
+
+        const existingReason = await findExistingImportStudent(db, importedRef, student);
+        if (existingReason) {
+          skippedStudents.push({ ...student, reason: existingReason });
+          continue;
+        }
         
         const docData = {
-          fullName: student.fullName || "",
-          parentName: student.parentName || "",
-          contactNumber: student.contactNumber || "",
-          email: student.email || "",
-          gender: student.gender || "",
-          college: student.college || "",
-          university: student.university || "",
-          course: student.course || "",
-          semester: student.semester || "",
-          universityRoll: student.universityRoll || "",
-          industrialRegNo: student.industrialRegNo || "",
-          academicDetails: student.academicDetails || "",
+          ...student,
           importedAt: new Date().toISOString(),
           paymentStatus: "Pending",
           whatsappSent: false,
         };
 
-        if (!existingQuery.empty) {
-          const docId = existingQuery.docs[0].id;
-          batch.set(importedRef.doc(docId), docData, { merge: true });
-        } else {
-          const newRef = importedRef.doc();
-          batch.set(newRef, docData);
-        }
+        const newRef = importedRef.doc();
+        batch.set(newRef, docData);
         
         importedCount += 1;
+        importedStudents.push(docData);
       }
 
       await batch.commit();
@@ -313,10 +373,10 @@ app.post("/api/admin/import-students", requireAdmin, async (req, res) => {
     // Now, trigger WhatsApp messages asynchronously for imported students who are Pending
     setTimeout(async () => {
       try {
-        console.log(`[WhatsApp Notifications] Starting dispatch for ${students.length} students...`);
+        console.log(`[WhatsApp Notifications] Starting dispatch for ${importedStudents.length} imported students...`);
         const appUrl = process.env.APP_URL || "https://internmitra.com";
         
-        for (const student of students) {
+        for (const student of importedStudents) {
           if (!student.contactNumber || !student.universityRoll) continue;
 
           // Check if student is already registered & paid
@@ -377,7 +437,13 @@ app.post("/api/admin/import-students", requireAdmin, async (req, res) => {
       }
     }, 1000);
 
-    res.json({ status: "success", importedCount });
+    res.json({
+      status: "success",
+      importedCount,
+      skippedCount: skippedStudents.length,
+      importedStudents,
+      skippedStudents,
+    });
   } catch (error: any) {
     console.error("Excel Import Error:", error);
     res.status(500).json({ error: "Error occurred during Excel student import", details: error?.message || "Unknown error" });

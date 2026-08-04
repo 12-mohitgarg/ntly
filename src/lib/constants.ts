@@ -15,6 +15,7 @@ export const INTERNSHIP_DOMAINS = [
 ];
 
 export const COURSE_VIDEO_DAY_LIMIT = 20;
+export const CURRENT_INTERNSHIP_START_DATE = "2026-07-20";
 
 export const DEPARTMENTS: Record<string, string[]> = {
   "B.Sc.": ["Botany", "Chemistry", "Mathematics", "Physics", "Zoology", "Computer Science"],

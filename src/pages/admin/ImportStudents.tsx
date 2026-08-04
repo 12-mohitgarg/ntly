@@ -20,8 +20,20 @@ interface ParsedStudent {
   course: string;
   semester: string;
   universityRoll: string;
+  universityRollNo: string;
   industrialRegNo: string;
   academicDetails?: string;
+}
+
+interface ImportSkippedStudent extends ParsedStudent {
+  reason: string;
+}
+
+interface ImportSummary {
+  importedCount: number;
+  skippedCount: number;
+  importedStudents: ParsedStudent[];
+  skippedStudents: ImportSkippedStudent[];
 }
 
 export default function ImportStudents() {
@@ -35,6 +47,7 @@ export default function ImportStudents() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0] || null;
@@ -44,6 +57,7 @@ export default function ImportStudents() {
     setErrorMsg('');
     setSuccessMsg('');
     setWarnings([]);
+    setImportSummary(null);
 
     if (!selectedFile) return;
 
@@ -86,12 +100,13 @@ export default function ImportStudents() {
         const uniIdx = findColIndex(['University', 'university', 'University Name']);
         const courseIdx = findColIndex(['Course', 'Domain', 'Internship Domain', 'course', 'domain']);
         const semIdx = findColIndex(['Semester', 'semester', 'Year/Semester']);
-        const rollIdx = findColIndex(['Roll Number', 'Registration Number', 'Roll No', 'universityRoll', 'RegNo', 'RollNo']);
+        const rollIdx = findColIndex(['University Registration Number', 'Registration Number', 'Reg No', 'universityRoll', 'RegNo']);
+        const rollNoIdx = findColIndex(['University Roll No', 'University Roll Number', 'Roll Number', 'Roll No', 'universityRollNo', 'RollNo']);
         const indIdx = findColIndex(['Industrial Registration Number', 'Industrial Reg No', 'industrialRegNo', 'IndustrialRegNo']);
         const acadIdx = findColIndex(['Academic Details', 'Academic', 'academicDetails']);
 
         // Check required fields
-        if (rollIdx === -1) fileWarnings.push("Missing Roll/Registration Number column. Students won't be able to verify.");
+        if (rollIdx === -1) fileWarnings.push("Missing University Registration Number column. Students won't be able to verify.");
         if (indIdx === -1) fileWarnings.push("Missing Industrial Registration Number column. Students won't be able to verify.");
         if (nameIdx === -1) fileWarnings.push("Missing Student Name column.");
         if (phoneIdx === -1) fileWarnings.push("Missing Mobile Number column.");
@@ -124,6 +139,7 @@ export default function ImportStudents() {
             course: getVal(courseIdx),
             semester: getVal(semIdx),
             universityRoll: getVal(rollIdx),
+            universityRollNo: getVal(rollNoIdx),
             industrialRegNo: getVal(indIdx),
             academicDetails: getVal(acadIdx),
           });
@@ -151,7 +167,13 @@ export default function ImportStudents() {
 
   const importStudentsClientSide = async (students: ParsedStudent[]) => {
     const importedRef = collection(db, "importedStudents");
+    const usersRef = collection(db, "users");
     let importedCount = 0;
+    const importedStudents: ParsedStudent[] = [];
+    const skippedStudents: ImportSkippedStudent[] = [];
+    const seenRolls = new Set<string>();
+    const seenEmails = new Set<string>();
+    const seenPhones = new Set<string>();
     const CHUNK_SIZE = 100;
 
     for (let i = 0; i < students.length; i += CHUNK_SIZE) {
@@ -159,22 +181,77 @@ export default function ImportStudents() {
       const batch = writeBatch(db);
 
       for (const student of chunk) {
-        if (!student.universityRoll) continue;
+        const roll = student.universityRoll.trim();
+        const email = student.email.trim().toLowerCase();
+        const phone = student.contactNumber.replace(/\D/g, '').slice(-10);
 
-        const q = query(importedRef, where("universityRoll", "==", student.universityRoll), limit(1));
-        const querySnap = await getDocs(q);
+        if (!roll) {
+          skippedStudents.push({ ...student, reason: "Missing Roll Number" });
+          continue;
+        }
+
+        if (roll && seenRolls.has(roll)) {
+          skippedStudents.push({ ...student, reason: "Duplicate roll number in uploaded file" });
+          continue;
+        }
+        if (email && seenEmails.has(email)) {
+          skippedStudents.push({ ...student, reason: "Duplicate email in uploaded file" });
+          continue;
+        }
+        if (phone && seenPhones.has(phone)) {
+          skippedStudents.push({ ...student, reason: "Duplicate mobile number in uploaded file" });
+          continue;
+        }
+        if (roll) seenRolls.add(roll);
+        if (email) seenEmails.add(email);
+        if (phone) seenPhones.add(phone);
+
+        const existingChecks = await Promise.all([
+          getDocs(query(usersRef, where("universityRoll", "==", roll), limit(1))),
+          email ? getDocs(query(usersRef, where("email", "==", email), limit(1))) : Promise.resolve(null),
+          phone ? getDocs(query(usersRef, where("contactNumber", "==", phone), limit(1))) : Promise.resolve(null),
+          getDocs(query(importedRef, where("universityRoll", "==", roll), limit(1))),
+          email ? getDocs(query(importedRef, where("email", "==", email), limit(1))) : Promise.resolve(null),
+          phone ? getDocs(query(importedRef, where("contactNumber", "==", phone), limit(1))) : Promise.resolve(null),
+        ]);
+
+        if (!existingChecks[0].empty) {
+          skippedStudents.push({ ...student, reason: "Student already registered with this roll number" });
+          continue;
+        }
+        if (existingChecks[1] && !existingChecks[1].empty) {
+          skippedStudents.push({ ...student, reason: "Student already registered with this email" });
+          continue;
+        }
+        if (existingChecks[2] && !existingChecks[2].empty) {
+          skippedStudents.push({ ...student, reason: "Student already registered with this mobile number" });
+          continue;
+        }
+        if (!existingChecks[3].empty) {
+          skippedStudents.push({ ...student, reason: "Student already exists in imported list" });
+          continue;
+        }
+        if (existingChecks[4] && !existingChecks[4].empty) {
+          skippedStudents.push({ ...student, reason: "Student already exists in imported list with this email" });
+          continue;
+        }
+        if (existingChecks[5] && !existingChecks[5].empty) {
+          skippedStudents.push({ ...student, reason: "Student already exists in imported list with this mobile number" });
+          continue;
+        }
 
         const docData = {
           fullName: student.fullName || "",
           parentName: student.parentName || "",
-          contactNumber: student.contactNumber || "",
-          email: student.email || "",
+          contactNumber: phone || student.contactNumber || "",
+          email: email || "",
           gender: student.gender || "",
           college: student.college || "",
           university: student.university || "",
           course: student.course || "",
           semester: student.semester || "",
-          universityRoll: student.universityRoll || "",
+          universityRoll: roll,
+          universityRollNo: student.universityRollNo || "",
           industrialRegNo: student.industrialRegNo || "",
           academicDetails: student.academicDetails || "",
           importedAt: new Date().toISOString(),
@@ -182,21 +259,21 @@ export default function ImportStudents() {
           whatsappSent: false,
         };
 
-        if (!querySnap.empty) {
-          const docId = querySnap.docs[0].id;
-          batch.set(doc(db, "importedStudents", docId), docData, { merge: true });
-        } else {
-          const newRef = doc(collection(db, "importedStudents"));
-          batch.set(newRef, docData);
-        }
-
+        const newRef = doc(collection(db, "importedStudents"));
+        batch.set(newRef, docData);
         importedCount += 1;
+        importedStudents.push(docData);
       }
 
       await batch.commit();
     }
 
-    return importedCount;
+    return {
+      importedCount,
+      skippedCount: skippedStudents.length,
+      importedStudents,
+      skippedStudents,
+    };
   };
 
   const handleImportSubmit = async () => {
@@ -205,7 +282,7 @@ export default function ImportStudents() {
     // Additional check
     const hasUnverifiable = parsedData.some(s => !s.universityRoll || !s.industrialRegNo);
     if (hasUnverifiable) {
-      if (!confirm("Some rows are missing Roll Number or Industrial Registration Number. These students will not be able to complete their registration. Do you want to proceed?")) {
+      if (!confirm("Some rows are missing University Registration Number or Industrial Registration Number. These students will not be able to complete their registration. Do you want to proceed?")) {
         return;
       }
     }
@@ -213,6 +290,7 @@ export default function ImportStudents() {
     setImporting(true);
     setErrorMsg('');
     setSuccessMsg('');
+    setImportSummary(null);
 
     try {
       const token = await user.getIdToken();
@@ -261,14 +339,22 @@ export default function ImportStudents() {
         console.log("Attempting direct client-side Firestore import...");
         try {
           console.log("Current user:", user?.email, "Admin profile role:", adminProfile?.role);
-          const count = await importStudentsClientSide(parsedData);
-          setSuccessMsg(`Successfully imported ${count} students directly from the browser! (Backend credentials missing or server error, WhatsApp reminders were not queued)`);
+          const summary = await importStudentsClientSide(parsedData);
+          setImportSummary(summary);
+          setSuccessMsg(`Imported ${summary.importedCount} students and skipped ${summary.skippedCount} duplicate/existing rows directly from the browser. WhatsApp reminders were not queued.`);
         } catch (clientErr: any) {
           console.error("Client-side fallback import failed:", clientErr);
           throw new Error(`Direct database import failed: "${clientErr.message}". This usually means your logged-in user (${user?.email}) does not have an active 'admin' or 'super_admin' role in your Firestore 'admins' collection, or security rules are blocking it.`);
         }
       } else {
-        setSuccessMsg(`Successfully imported ${result.importedCount || parsedData.length} students! Automated WhatsApp payment reminder messages have been queued.`);
+        const summary: ImportSummary = {
+          importedCount: Number(result?.importedCount || 0),
+          skippedCount: Number(result?.skippedCount || 0),
+          importedStudents: Array.isArray(result?.importedStudents) ? result.importedStudents : [],
+          skippedStudents: Array.isArray(result?.skippedStudents) ? result.skippedStudents : [],
+        };
+        setImportSummary(summary);
+        setSuccessMsg(`Imported ${summary.importedCount} students and skipped ${summary.skippedCount} duplicate/existing rows. Automated WhatsApp payment reminders have been queued for imported students.`);
       }
 
       setFile(null);
@@ -326,7 +412,8 @@ export default function ImportStudents() {
               <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">University</code>
               <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">Course</code>
               <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">Semester</code>
-              <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">Roll Number</code>
+              <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">University Registration Number</code>
+              <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">University Roll No</code>
               <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">Industrial Registration Number</code>
             </p>
           </div>
@@ -357,6 +444,97 @@ export default function ImportStudents() {
           <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm font-bold flex items-center gap-2.5">
             <CheckCircle2 className="size-5 text-emerald-600 shrink-0" />
             {successMsg}
+          </div>
+        )}
+
+        {importSummary && (
+          <div className="space-y-4 border-t border-slate-100 pt-5">
+            <div>
+              <h3 className="text-base font-black text-slate-800 flex items-center gap-1.5">
+                <CheckCircle2 className="text-emerald-600 size-5" />
+                Import Result
+              </h3>
+              <p className="text-xs font-semibold text-slate-500">
+                Imported {importSummary.importedCount} new students. Skipped {importSummary.skippedCount} duplicate or already existing rows.
+              </p>
+            </div>
+
+            {importSummary.importedStudents.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-black uppercase tracking-widest text-emerald-700">Imported Students</h4>
+                <div className="overflow-x-auto border border-emerald-100 rounded-2xl">
+                  <table className="w-full text-left border-collapse table-auto text-xs min-w-[900px]">
+                    <thead className="bg-emerald-50">
+                      <tr className="border-b border-emerald-100">
+                        <th className="p-3 font-black text-emerald-800 uppercase tracking-wider">Student</th>
+                        <th className="p-3 font-black text-emerald-800 uppercase tracking-wider">Contact</th>
+                        <th className="p-3 font-black text-emerald-800 uppercase tracking-wider">College</th>
+                        <th className="p-3 font-black text-emerald-800 uppercase tracking-wider">Course</th>
+                        <th className="p-3 font-black text-emerald-800 uppercase tracking-wider">Roll / Industrial Reg</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-emerald-50 bg-white">
+                      {importSummary.importedStudents.map((student, idx) => (
+                        <tr key={`${student.universityRoll}-${idx}`} className="hover:bg-emerald-50/40">
+                          <td className="p-3">
+                            <div className="font-bold text-slate-900">{student.fullName || '-'}</div>
+                            <div className="text-[10px] font-semibold text-slate-400">S/o: {student.parentName || '-'}</div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-semibold text-slate-700">{student.email || '-'}</div>
+                            <div className="text-[10px] font-semibold text-slate-400">{student.contactNumber || '-'}</div>
+                          </td>
+                          <td className="p-3 font-semibold text-slate-700">{student.college || '-'}</td>
+                          <td className="p-3">
+                            <div className="font-bold text-indigo-600">{student.course || '-'}</div>
+                            <div className="text-[10px] font-semibold text-slate-400">{student.semester || '-'}</div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-bold text-slate-800">Reg: {student.universityRoll || '-'}</div>
+                            <div className="text-[10px] font-bold text-slate-500">Roll: {student.universityRollNo || '-'}</div>
+                            <div className="text-[10px] font-bold text-indigo-500">Ind. Reg: {student.industrialRegNo || '-'}</div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {importSummary.skippedStudents.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-black uppercase tracking-widest text-amber-700">Skipped Rows</h4>
+                <div className="overflow-x-auto border border-amber-100 rounded-2xl">
+                  <table className="w-full text-left border-collapse table-auto text-xs min-w-[900px]">
+                    <thead className="bg-amber-50">
+                      <tr className="border-b border-amber-100">
+                        <th className="p-3 font-black text-amber-800 uppercase tracking-wider">Student</th>
+                        <th className="p-3 font-black text-amber-800 uppercase tracking-wider">Contact</th>
+                          <th className="p-3 font-black text-amber-800 uppercase tracking-wider">Registration / Roll</th>
+                        <th className="p-3 font-black text-amber-800 uppercase tracking-wider">Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-50 bg-white">
+                      {importSummary.skippedStudents.map((student, idx) => (
+                        <tr key={`${student.universityRoll}-${idx}`} className="hover:bg-amber-50/40">
+                          <td className="p-3 font-bold text-slate-900">{student.fullName || '-'}</td>
+                          <td className="p-3">
+                            <div className="font-semibold text-slate-700">{student.email || '-'}</div>
+                            <div className="text-[10px] font-semibold text-slate-400">{student.contactNumber || '-'}</div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-bold text-slate-800">Reg: {student.universityRoll || '-'}</div>
+                            <div className="text-[10px] font-bold text-slate-500">Roll: {student.universityRollNo || '-'}</div>
+                          </td>
+                          <td className="p-3 font-bold text-amber-700">{student.reason}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -445,7 +623,8 @@ export default function ImportStudents() {
                         <div className="text-[10px] font-semibold text-slate-400">{student.semester}</div>
                       </td>
                       <td className="p-3">
-                        <div className="font-bold text-slate-800">Roll: {student.universityRoll || <span className="text-rose-500">Missing</span>}</div>
+                        <div className="font-bold text-slate-800">Reg: {student.universityRoll || <span className="text-rose-500">Missing</span>}</div>
+                        <div className="text-[10px] font-bold text-slate-500">Roll: {student.universityRollNo || '-'}</div>
                         <div className="text-[10px] font-bold text-indigo-500">Ind. Reg: {student.industrialRegNo || <span className="text-rose-500">Missing</span>}</div>
                       </td>
                     </tr>

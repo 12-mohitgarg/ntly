@@ -10,6 +10,8 @@ import {
 import { useAuth } from '../components/AuthContext';
 import { auth, db } from '../lib/firebase';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { CURRENT_INTERNSHIP_START_DATE } from '../lib/constants';
 
 interface EmitraStudent {
   uid: string;
@@ -18,6 +20,8 @@ interface EmitraStudent {
   contactNumber: string;
   college: string;
   internshipDomain: string;
+  gender?: string;
+  semester?: string;
   isPaid: boolean;
   registrationDate: string;
 }
@@ -47,6 +51,12 @@ export default function EmitraDashboard() {
   // Pagination states
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [collegeFilter, setCollegeFilter] = useState('');
+  const [domainFilter, setDomainFilter] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState(CURRENT_INTERNSHIP_START_DATE);
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     fetchStudents();
@@ -87,13 +97,56 @@ export default function EmitraDashboard() {
     [payments]
   );
 
-  const paidStudents = students.filter((student) => student.isPaid || successfulPaymentIds.has(student.uid));
+  const isStudentPaid = (student: EmitraStudent) => student.isPaid || successfulPaymentIds.has(student.uid);
+  const currentBatchStudents = useMemo(
+    () => students.filter((student) => {
+      if (!student.registrationDate) return false;
+      return new Date(student.registrationDate).getTime() >= new Date(`${CURRENT_INTERNSHIP_START_DATE}T00:00:00`).getTime();
+    }),
+    [students]
+  );
+  const currentBatchStudentIds = useMemo(
+    () => new Set(currentBatchStudents.map((student) => student.uid)),
+    [currentBatchStudents]
+  );
+  const paidStudents = currentBatchStudents.filter(isStudentPaid);
   const totalPaidAmount = payments
-    .filter((payment) => payment.status === 'success' && students.some((student) => student.uid === payment.userId))
+    .filter((payment) => payment.status === 'success' && currentBatchStudentIds.has(payment.userId))
     .reduce((sum, payment) => sum + (payment.amount || 0), 0);
   
   const commissionPercentage = emitraProfile?.commissionPercentage || DEFAULT_COMMISSION_PERCENTAGE;
   const estimatedCommission = Math.round(totalPaidAmount * (commissionPercentage / 100));
+
+  const uniqueColleges = useMemo(
+    () => Array.from(new Set(currentBatchStudents.map((student) => student.college).filter(Boolean))).sort(),
+    [currentBatchStudents]
+  );
+  const uniqueDomains = useMemo(
+    () => Array.from(new Set(currentBatchStudents.map((student) => student.internshipDomain).filter(Boolean))).sort(),
+    [currentBatchStudents]
+  );
+
+  const filteredStudents = useMemo(() => {
+    const value = search.trim().toLowerCase();
+    return currentBatchStudents.filter((student) => {
+      const searchMatch = !value || [
+        student.fullName,
+        student.email,
+        student.contactNumber,
+        student.college,
+        student.internshipDomain,
+      ].join(' ').toLowerCase().includes(value);
+      const collegeMatch = !collegeFilter || student.college === collegeFilter;
+      const domainMatch = !domainFilter || student.internshipDomain === domainFilter;
+      const paymentMatch =
+        !paymentFilter ||
+        (paymentFilter === 'success' ? isStudentPaid(student) : !isStudentPaid(student));
+      const timestamp = student.registrationDate ? new Date(student.registrationDate).getTime() : null;
+      const fromMatch = !dateFrom || (timestamp !== null && timestamp >= new Date(`${dateFrom}T00:00:00`).getTime());
+      const toMatch = !dateTo || (timestamp !== null && timestamp <= new Date(`${dateTo}T23:59:59`).getTime());
+      return searchMatch && collegeMatch && domainMatch && paymentMatch && fromMatch && toMatch;
+    });
+  }, [currentBatchStudents, search, collegeFilter, domainFilter, paymentFilter, dateFrom, dateTo, successfulPaymentIds]);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -101,16 +154,16 @@ export default function EmitraDashboard() {
   };
 
   const handleExportCSV = () => {
-    if (students.length === 0) return;
+    if (filteredStudents.length === 0) return;
     const headers = ['UID', 'Full Name', 'Email', 'Contact Number', 'College', 'Internship Domain', 'Payment Status', 'Registration Date'];
-    const rows = students.map(s => [
+    const rows = filteredStudents.map(s => [
       s.uid,
       s.fullName,
       s.email,
       s.contactNumber,
       s.college,
       s.internshipDomain,
-      s.isPaid || successfulPaymentIds.has(s.uid) ? 'Success' : 'Pending',
+      isStudentPaid(s) ? 'Success' : 'Pending',
       s.registrationDate ? new Date(s.registrationDate).toLocaleDateString('en-IN') : '-'
     ]);
     const csvContent = "data:text/csv;charset=utf-8," 
@@ -127,10 +180,10 @@ export default function EmitraDashboard() {
   // Pagination helper
   const paginatedStudents = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
-    return students.slice(startIndex, startIndex + pageSize);
-  }, [students, currentPage, pageSize]);
+    return filteredStudents.slice(startIndex, startIndex + pageSize);
+  }, [filteredStudents, currentPage, pageSize]);
 
-  const totalPages = Math.ceil(students.length / pageSize) || 1;
+  const totalPages = Math.ceil(filteredStudents.length / pageSize) || 1;
 
   if (loading) {
     return (
@@ -188,7 +241,7 @@ export default function EmitraDashboard() {
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Students</span>
               </div>
               <div>
-                <p className="text-4xl font-black text-slate-900 leading-none">{students.length}</p>
+                <p className="text-4xl font-black text-slate-900 leading-none">{currentBatchStudents.length}</p>
                 <p className="text-[10px] text-slate-400 font-bold mt-2 uppercase tracking-wide">All registered students</p>
               </div>
             </div>
@@ -279,12 +332,12 @@ export default function EmitraDashboard() {
 
             <div className="flex items-center gap-3 self-end sm:self-center">
               <span className="px-3.5 py-1.5 rounded-lg bg-slate-50 text-slate-500 text-[10px] font-black uppercase tracking-wider border border-slate-200/30">
-                {students.length} Total
+                {filteredStudents.length} of {currentBatchStudents.length} Total
               </span>
               
               <Button 
                 onClick={handleExportCSV} 
-                disabled={students.length === 0}
+                disabled={filteredStudents.length === 0}
                 variant="outline"
                 className="h-10 rounded-xl border-slate-200 text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5 transition active:scale-95 shadow-sm hover:bg-slate-50 cursor-pointer"
               >
@@ -294,15 +347,80 @@ export default function EmitraDashboard() {
             </div>
           </div>
 
+          <div className="border-b border-slate-100 bg-slate-50/30 p-5">
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-6">
+              <Input
+                value={search}
+                onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }}
+                placeholder="Search name, email, mobile..."
+                className="h-11 rounded-xl border-slate-200 bg-white text-xs font-bold lg:col-span-2"
+              />
+              <select
+                value={collegeFilter}
+                onChange={(event) => { setCollegeFilter(event.target.value); setCurrentPage(1); }}
+                className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"
+              >
+                <option value="">All Colleges</option>
+                {uniqueColleges.map((college) => <option key={college} value={college}>{college}</option>)}
+              </select>
+              <select
+                value={domainFilter}
+                onChange={(event) => { setDomainFilter(event.target.value); setCurrentPage(1); }}
+                className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"
+              >
+                <option value="">All Domains</option>
+                {uniqueDomains.map((domain) => <option key={domain} value={domain}>{domain}</option>)}
+              </select>
+              <select
+                value={paymentFilter}
+                onChange={(event) => { setPaymentFilter(event.target.value); setCurrentPage(1); }}
+                className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"
+              >
+                <option value="">All Payments</option>
+                <option value="success">Paid</option>
+                <option value="pending">Pending</option>
+              </select>
+              <Button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  setCollegeFilter('');
+                  setDomainFilter('');
+                  setPaymentFilter('');
+                  setDateFrom(CURRENT_INTERNSHIP_START_DATE);
+                  setDateTo('');
+                  setCurrentPage(1);
+                }}
+                className="h-11 rounded-xl bg-slate-100 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-200"
+              >
+                Clear
+              </Button>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:w-1/2">
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(event) => { setDateFrom(event.target.value); setCurrentPage(1); }}
+                className="h-11 rounded-xl border-slate-200 bg-white text-xs font-bold"
+              />
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(event) => { setDateTo(event.target.value); setCurrentPage(1); }}
+                className="h-11 rounded-xl border-slate-200 bg-white text-xs font-bold"
+              />
+            </div>
+          </div>
+
           {/* Table content list */}
-          {students.length === 0 ? (
+          {currentBatchStudents.length === 0 ? (
             <div className="p-16 text-center space-y-4">
               <div className="w-16 h-16 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center mx-auto text-slate-300">
                 <Users size={32} />
               </div>
               <div className="space-y-1">
-                <p className="font-extrabold text-sm text-slate-700">No students registered yet</p>
-                <p className="text-xs font-semibold text-slate-400">Click the button below to register your first student.</p>
+                <p className="font-extrabold text-sm text-slate-700">No current internship students yet</p>
+                <p className="text-xs font-semibold text-slate-400">Only registrations from 20 July 2026 onward appear here.</p>
               </div>
               <Link to="/emitra/register-student" className="inline-flex pt-2">
                 <Button className="h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs flex items-center gap-1.5 shadow-sm">
@@ -310,6 +428,11 @@ export default function EmitraDashboard() {
                   Register First Student
                 </Button>
               </Link>
+            </div>
+          ) : filteredStudents.length === 0 ? (
+            <div className="p-16 text-center space-y-2">
+              <p className="font-extrabold text-sm text-slate-700">No students match these filters</p>
+              <p className="text-xs font-semibold text-slate-400">Clear filters or adjust your search to see more records.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -428,7 +551,7 @@ export default function EmitraDashboard() {
           )}
 
           {/* Table pagination & footer controls */}
-          {students.length > 0 && (
+          {filteredStudents.length > 0 && (
             <div className="p-4.5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-slate-500">
               
               {/* Show Entries Dropdown */}
@@ -452,7 +575,7 @@ export default function EmitraDashboard() {
               {/* Pagination Controls */}
               <div className="flex items-center gap-4">
                 <span className="text-[11px] text-slate-450 font-bold">
-                  Showing {Math.min((currentPage - 1) * pageSize + 1, students.length)} to {Math.min(currentPage * pageSize, students.length)} of {students.length} entries
+                  Showing {Math.min((currentPage - 1) * pageSize + 1, filteredStudents.length)} to {Math.min(currentPage * pageSize, filteredStudents.length)} of {filteredStudents.length} entries
                 </span>
                 
                 <div className="flex items-center gap-1.5">

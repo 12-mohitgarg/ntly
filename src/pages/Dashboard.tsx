@@ -48,7 +48,9 @@ const Progress = lazy(() => import('./dashboard/Progress'));
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="bg-white/80 backdrop-blur-md rounded-3xl p-8 border border-gray-200/80 shadow-sm min-h-[400px] flex flex-col items-center justify-center text-center">
-    <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-3xl mb-4">🚀</div>
+    <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4">
+      <Sparkles className="w-8 h-8 text-blue-600" />
+    </div>
     <h2 className="text-2xl font-bold text-gray-900 mb-2">{title} Page</h2>
     <p className="text-gray-500 max-w-sm">We are working hard to bring this feature to you. Please check back later!</p>
   </div>
@@ -65,6 +67,7 @@ export default function Dashboard() {
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const isSubUserAutoVerifiedStudent = Boolean(profile?.autoVerifiedBySubUser || profile?.createdBySubUserId);
 
   const fetchUnreadCount = async () => {
     if (!user?.uid) return;
@@ -204,6 +207,11 @@ export default function Dashboard() {
   }, [user, profile?.internshipDomain, profile?.progress]);
 
   const downloadPaymentSlip = async () => {
+    if (isSubUserAutoVerifiedStudent) {
+      setShowManualPaymentOverlay(true);
+      return;
+    }
+
     const isManualPayment =
       paymentRecord?.paymentMethod === 'manual' ||
       paymentRecord?.source === 'manual_admin' ||
@@ -569,7 +577,7 @@ export default function Dashboard() {
                     >
                       Profile
                     </Link>
-                    {paymentRecord && (
+                    {paymentRecord && !isSubUserAutoVerifiedStudent && (
                       <button
                         onClick={() => {
                           setIsProfileMenuOpen(false);
@@ -665,7 +673,7 @@ export default function Dashboard() {
               </div>
               <h2 className="mt-5 text-xl font-black text-slate-900">Payment Slip Not Available</h2>
               <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-                This payment was verified manually by the admin team. Online Razorpay payment slips can be downloaded only for payments completed through Razorpay.
+                This registration was verified without an online Razorpay payment. Payment slips can be downloaded only for payments completed through Razorpay.
               </p>
               <Button
                 onClick={() => setShowManualPaymentOverlay(false)}

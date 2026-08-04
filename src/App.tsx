@@ -3,10 +3,25 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthContext';
 import Navbar from './components/Navbar';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [pathname]);
+
+  return null;
+}
 
 const Home = lazy(() => import('./pages/Home'));
 const About = lazy(() => import('./pages/About'));
@@ -66,7 +81,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   if (adminProfile?.role === 'teacher' && location.pathname !== '/admin/daily-videos') {
     return <Navigate to="/admin/daily-videos" replace />;
   }
-  if (adminProfile?.role === 'sub_user' && location.pathname !== '/admin-dashboard') {
+  if (location.pathname === '/admin/register-student' && adminProfile?.role !== 'sub_user') {
+    return <Navigate to="/admin-dashboard" replace />;
+  }
+  if (adminProfile?.role === 'sub_user' && !['/admin-dashboard', '/admin/register-student'].includes(location.pathname)) {
     return <Navigate to="/admin-dashboard" replace />;
   }
 
@@ -101,6 +119,7 @@ function AppContent() {
                      location.pathname.startsWith('/college-dashboard') ||
                      location.pathname.startsWith('/emitra/payment') ||
                      location.pathname.startsWith('/emitra/register-student') ||
+                     location.pathname.startsWith('/admin/register-student') ||
                      location.pathname === '/admin-dashboard';
 
   return (
@@ -119,6 +138,7 @@ function AppContent() {
           <Route path="/college-dashboard" element={<CollegeRoute><CollegeDashboard /></CollegeRoute>} />
           <Route path="/emitra/payment/:studentId" element={<EmitraRoute><EmitraPayment /></EmitraRoute>} />
           <Route path="/emitra/register-student" element={<EmitraRoute><Register mode="emitraStudent" /></EmitraRoute>} />
+          <Route path="/admin/register-student" element={<AdminRoute><Register mode="subUserStudent" /></AdminRoute>} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
@@ -150,6 +170,7 @@ function AppContent() {
 export default function App() {
   return (
     <Router>
+      <ScrollToTop />
       <AuthProvider>
         <AppContent />
       </AuthProvider>

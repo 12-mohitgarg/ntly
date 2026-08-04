@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext';
 import { auth } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, User, LogOut, Menu, X, Sparkles, LayoutDashboard, ShieldCheck, ArrowRight } from 'lucide-react';
+import { LogIn, User, LogOut, Menu, X, Sparkles, LayoutDashboard, ShieldCheck, ArrowRight, Sun, Moon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 

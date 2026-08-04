@@ -28,6 +28,7 @@ import { useAuth } from '../components/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { UserProfile } from '../types';
+import { CURRENT_INTERNSHIP_START_DATE } from '../lib/constants';
 
 interface ImportedStudent {
   id: string;
@@ -82,8 +83,13 @@ export default function CollegeDashboard() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'registered' | 'pending_reg'>('registered');
-  const [dateFrom, setDateFrom] = useState('');
+  const [dateFrom, setDateFrom] = useState(CURRENT_INTERNSHIP_START_DATE);
   const [dateTo, setDateTo] = useState('');
+  const [collegeFilter, setCollegeFilter] = useState('');
+  const [courseFilter, setCourseFilter] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState('');
+  const [genderFilter, setGenderFilter] = useState('');
+  const [semesterFilter, setSemesterFilter] = useState('');
 
   useEffect(() => {
     const fetchCollegeData = async () => {
@@ -194,16 +200,17 @@ export default function CollegeDashboard() {
     Boolean(student.isPaid || student.hasPaid || student.paymentStatus === 'success');
 
   const isWithinDateRange = (value?: string) => {
-    if (!dateFrom && !dateTo) return true;
     if (!value) return false;
 
     const timestamp = new Date(value).getTime();
     if (Number.isNaN(timestamp)) return false;
 
-    const fromTime = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : null;
+    const cutoffTime = new Date(`${CURRENT_INTERNSHIP_START_DATE}T00:00:00`).getTime();
+    const selectedFromTime = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : cutoffTime;
+    const fromTime = Math.max(cutoffTime, selectedFromTime);
     const toTime = dateTo ? new Date(`${dateTo}T23:59:59`).getTime() : null;
 
-    return (fromTime === null || timestamp >= fromTime) && (toTime === null || timestamp <= toTime);
+    return timestamp >= fromTime && (toTime === null || timestamp <= toTime);
   };
 
   const visibleStudents = useMemo(
@@ -254,38 +261,72 @@ export default function CollegeDashboard() {
     );
   }, [visibleStudents, visibleImportedStudents]);
 
+  const allDirectoryStudents = useMemo(
+    () => [
+      ...visibleStudents.map((student) => ({
+        college: student.college,
+        course: student.internshipDomain,
+        gender: student.gender,
+        semester: student.semester,
+      })),
+      ...unregisteredStudents.map((student) => ({
+        college: student.college,
+        course: student.course,
+        gender: student.gender,
+        semester: student.semester,
+      })),
+    ],
+    [visibleStudents, unregisteredStudents]
+  );
+
+  const uniqueFilterValues = (key: 'college' | 'course' | 'gender' | 'semester') =>
+    Array.from(new Set(allDirectoryStudents.map((student) => String(student[key] || '').trim()).filter(Boolean))).sort();
+
   // Combined search filtering
   const filteredStudents = useMemo(() => {
     const value = search.trim().toLowerCase();
-    if (!value) return visibleStudents;
 
-    return visibleStudents.filter((student) =>
-      [
+    return visibleStudents.filter((student) => {
+      const searchMatch = !value || [
         student.fullName,
         student.email,
         student.contactNumber,
         student.universityRoll,
         student.internshipDomain,
         student.gender,
-      ].join(' ').toLowerCase().includes(value)
-    );
-  }, [search, visibleStudents]);
+      ].join(' ').toLowerCase().includes(value);
+      const collegeMatch = !collegeFilter || student.college === collegeFilter;
+      const courseMatch = !courseFilter || student.internshipDomain === courseFilter;
+      const genderMatch = !genderFilter || student.gender === genderFilter;
+      const semesterMatch = !semesterFilter || student.semester === semesterFilter;
+      const paymentMatch =
+        !paymentFilter ||
+        (paymentFilter === 'success' ? isPaymentComplete(student) : !isPaymentComplete(student));
+      return searchMatch && collegeMatch && courseMatch && genderMatch && semesterMatch && paymentMatch;
+    });
+  }, [search, visibleStudents, collegeFilter, courseFilter, genderFilter, semesterFilter, paymentFilter]);
 
   const filteredUnregistered = useMemo(() => {
     const value = search.trim().toLowerCase();
-    if (!value) return unregisteredStudents;
 
-    return unregisteredStudents.filter((student) =>
-      [
+    return unregisteredStudents.filter((student) => {
+      const searchMatch = !value || [
         student.fullName,
         student.email,
         student.contactNumber,
         student.universityRoll,
         student.course,
         student.gender,
-      ].join(' ').toLowerCase().includes(value)
-    );
-  }, [search, unregisteredStudents]);
+      ].join(' ').toLowerCase().includes(value);
+      const collegeMatch = !collegeFilter || student.college === collegeFilter;
+      const courseMatch = !courseFilter || student.course === courseFilter;
+      const genderMatch = !genderFilter || student.gender === genderFilter;
+      const semesterMatch = !semesterFilter || student.semester === semesterFilter;
+      const paymentStatus = String(student.paymentStatus || 'Pending').toLowerCase();
+      const paymentMatch = !paymentFilter || paymentStatus === paymentFilter;
+      return searchMatch && collegeMatch && courseMatch && genderMatch && semesterMatch && paymentMatch;
+    });
+  }, [search, unregisteredStudents, collegeFilter, courseFilter, genderFilter, semesterFilter, paymentFilter]);
 
   // Course wise report calculations
   const courseReport = useMemo(() => {
@@ -467,14 +508,43 @@ export default function CollegeDashboard() {
               <Button
                 type="button"
                 onClick={() => {
-                  setDateFrom('');
+                  setDateFrom(CURRENT_INTERNSHIP_START_DATE);
                   setDateTo('');
+                  setCollegeFilter('');
+                  setCourseFilter('');
+                  setPaymentFilter('');
+                  setGenderFilter('');
+                  setSemesterFilter('');
+                  setSearch('');
                 }}
                 className="h-11 self-end rounded-xl bg-slate-100 px-4 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-200"
               >
-                Clear
+                Clear All
               </Button>
             </div>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <select value={collegeFilter} onChange={(event) => setCollegeFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700">
+              <option value="">All Colleges</option>
+              {uniqueFilterValues('college').map((college) => <option key={college} value={college}>{college}</option>)}
+            </select>
+            <select value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700">
+              <option value="">All Courses</option>
+              {uniqueFilterValues('course').map((course) => <option key={course} value={course}>{course}</option>)}
+            </select>
+            <select value={paymentFilter} onChange={(event) => setPaymentFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700">
+              <option value="">All Payments</option>
+              <option value="success">Paid</option>
+              <option value="pending">Pending</option>
+            </select>
+            <select value={genderFilter} onChange={(event) => setGenderFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700">
+              <option value="">All Genders</option>
+              {uniqueFilterValues('gender').map((gender) => <option key={gender} value={gender}>{gender}</option>)}
+            </select>
+            <select value={semesterFilter} onChange={(event) => setSemesterFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700">
+              <option value="">All Semesters</option>
+              {uniqueFilterValues('semester').map((semester) => <option key={semester} value={semester}>{semester}</option>)}
+            </select>
           </div>
         </section>
         

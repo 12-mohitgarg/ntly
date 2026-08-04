@@ -50,7 +50,8 @@ export default function OfferLetter() {
 
   const details = [
     { label: 'Student Identity', value: profile?.fullName, icon: User },
-    { label: 'Academic Roll', value: profile?.universityRoll, icon: Hash },
+    { label: 'Registration No.', value: profile?.universityRoll, icon: Hash },
+    { label: 'Roll No.', value: profile?.universityRollNo, icon: Hash },
     { label: 'Campus/College', value: profile?.college, icon: Building2 },
     { label: 'Internship Path', value: profile?.internshipDomain, icon: ShieldCheck },
   ];
@@ -71,7 +72,7 @@ export default function OfferLetter() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {details.map((item, i) => (
           <motion.div
             key={item.label}
@@ -98,7 +99,7 @@ export default function OfferLetter() {
           </div>
           <h2 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">Generate Official Offer Letter</h2>
           <p className="mx-auto mb-8 mt-4 max-w-2xl text-sm font-semibold leading-7 text-slate-600 sm:text-base">
-            Your PDF uses verified registration records. Please confirm your name, roll number, college, and domain before downloading.
+            Your PDF uses verified registration records. Please confirm your name, registration number, roll number, college, and domain before downloading.
           </p>
 
           <div className="flex flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center">

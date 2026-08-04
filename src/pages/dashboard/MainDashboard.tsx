@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../components/AuthContext';
 import { db } from '../../lib/firebase';
-import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import {
   FileText,
   Award,
@@ -21,11 +21,22 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ExternalLink,
-  HelpCircle
+  HelpCircle,
+  MapPin,
+  Bell,
+  BookOpen
 } from 'lucide-react';
 import { generateCertificate } from './generateCertificate';
 import { generateAttendanceReport, AttendanceEntry, AttendanceVideo } from './generateAttendanceReport';
 import { generateTestReport } from './generateTestReport';
+
+interface DashboardNotification {
+  id: string;
+  title: string;
+  message: string;
+  createdAt?: string;
+  isActive?: boolean;
+}
 
 export default function MainDashboard() {
   const { user, profile } = useAuth();
@@ -34,6 +45,7 @@ export default function MainDashboard() {
   const [attendanceEntries, setAttendanceEntries] = useState<AttendanceEntry[]>([]);
   const [dailyVideos, setDailyVideos] = useState<AttendanceVideo[]>([]);
   const [testSubmission, setTestSubmission] = useState<any>(null);
+  const [announcements, setAnnouncements] = useState<DashboardNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalHours, setTotalHours] = useState(0);
 
@@ -128,6 +140,20 @@ export default function MainDashboard() {
         if (subSnap.exists()) {
           setTestSubmission(subSnap.data());
         }
+
+        const notificationsQuery = query(
+          collection(db, 'notifications'),
+          orderBy('createdAt', 'desc'),
+          limit(2)
+        );
+        const notificationsSnapshot = await getDocs(notificationsQuery);
+        const notificationData = notificationsSnapshot.docs
+          .map((notificationDoc) => ({
+            id: notificationDoc.id,
+            ...notificationDoc.data()
+          } as DashboardNotification))
+          .filter((notification) => notification.isActive !== false);
+        setAnnouncements(notificationData);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
       } finally {
@@ -229,7 +255,7 @@ export default function MainDashboard() {
           <div className="space-y-2 z-10">
             <p className="text-xs font-bold text-slate-400">Welcome back,</p>
             <h2 className="text-2xl font-black text-slate-900 leading-tight">
-              {profile?.fullName || 'Learner'}! 👋
+              {profile?.fullName || 'Learner'}!
             </h2>
             <p className="text-xs text-slate-500 max-w-[200px] leading-relaxed">
               Keep going! You're doing great in your internship journey.
@@ -319,7 +345,7 @@ export default function MainDashboard() {
         {/* Milestone Progress Card */}
         <div className="lg:col-span-5 bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm flex flex-col justify-between min-h-[220px]">
           <h3 className="text-sm font-black text-slate-900 flex items-center gap-2 mb-6">
-            <span className="text-blue-600">📍</span> Internship Milestone Progress
+            <MapPin size={16} className="text-blue-600" /> Internship Milestone Progress
           </h3>
           
           <div className="flex items-center justify-between relative px-2 mb-2">
@@ -368,36 +394,42 @@ export default function MainDashboard() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                <span>🔔</span> Announcements
+                <Bell size={16} className="text-amber-500" /> Announcements
               </h3>
-              <span className="bg-[#eff6ff] text-blue-600 border border-blue-100 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
-                New
-              </span>
+              {announcements.length > 0 && (
+                <span className="bg-[#eff6ff] text-blue-600 border border-blue-100 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Latest
+                </span>
+              )}
             </div>
             
             <div className="space-y-3">
-              <div className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-bold text-[11px] text-slate-800 leading-tight">Live session on React Basics</h4>
-                  <p className="text-[9px] text-slate-400 mt-0.5">Today at 4:00 PM</p>
+              {announcements.length > 0 ? (
+                announcements.map((announcement, index) => (
+                  <React.Fragment key={announcement.id}>
+                    <div className="flex items-start gap-2">
+                      <div className={`w-1.5 h-1.5 rounded-full ${index === 0 ? 'bg-blue-500' : 'bg-green-500'} mt-1.5 flex-shrink-0`} />
+                      <div>
+                        <h4 className="font-bold text-[11px] text-slate-800 leading-tight">{announcement.title || 'Admin Announcement'}</h4>
+                        <p className="text-[9px] text-slate-400 mt-0.5 line-clamp-2">
+                          {announcement.message || 'Open messages to view the full announcement.'}
+                        </p>
+                      </div>
+                    </div>
+                    {index < announcements.length - 1 && <div className="h-px bg-slate-100" />}
+                  </React.Fragment>
+                ))
+              ) : (
+                <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
+                  <h4 className="font-bold text-[11px] text-slate-800 leading-tight">No announcements right now</h4>
+                  <p className="text-[9px] text-slate-400 mt-1">New admin updates will appear here automatically.</p>
                 </div>
-              </div>
-              
-              <div className="h-px bg-slate-100" />
-              
-              <div className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-bold text-[11px] text-slate-800 leading-tight">Submission deadline extended</h4>
-                  <p className="text-[9px] text-slate-400 mt-0.5">New deadline: 25 May 2025</p>
-                </div>
-              </div>
+              )}
             </div>
           </div>
           
           <button
-            onClick={() => navigate('/dashboard/notifications')}
+            onClick={() => navigate('/dashboard/messages')}
             className="w-full mt-4 py-2 bg-slate-50 hover:bg-slate-100 text-[10px] font-black text-slate-600 rounded-xl transition border border-slate-100 hover:border-slate-200 cursor-pointer text-center uppercase tracking-wider"
           >
             View All
@@ -445,8 +477,8 @@ export default function MainDashboard() {
         {/* Table Stats & Actions Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold">
-              📘
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <BookOpen size={20} />
             </div>
             <div>
               <h3 className="text-base font-black text-slate-900">Recorded Attendance</h3>
