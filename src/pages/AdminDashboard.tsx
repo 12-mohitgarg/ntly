@@ -68,8 +68,7 @@ import { backupFirestore } from "./backupFirestore";
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
-import { generateTestReport, QuizSubmission } from './dashboard/generateTestReport';
-import { generateCertificate } from './dashboard/generateCertificate';
+import { QuizSubmission } from './dashboard/generateTestReport';
 
 interface UserProfile {
   uid: string;
@@ -662,7 +661,7 @@ export default function AdminDashboard() {
     const isPaid = isUserSuccessful(student);
     const statusMatch = !statusFilter || (statusFilter === 'success' && isPaid) || (statusFilter === 'pending' && !isPaid);
     const sourceMatch = !sourceFilter || (sourceFilter === 'referral' && student.createdByEmitraId) || (sourceFilter === 'direct' && !student.createdByEmitraId);
-    
+
     const searchText = [student.fullName, student.email, student.contactNumber, student.college, student.internshipDomain].join(' ').toLowerCase();
     const searchMatch = !userSearchText || searchText.includes(userSearchText.toLowerCase());
 
@@ -751,7 +750,7 @@ export default function AdminDashboard() {
       {/* 1. CYBER CAFE SUMMARY VIEW (Exact match to reference mockup image) */}
       {activeTab === 'cyber-cafe-summary' && (
         <div className="space-y-8">
-          
+
           {/* Header Title & Export Report Button */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
@@ -796,7 +795,7 @@ export default function AdminDashboard() {
 
           {/* 5 KPI STAT CARDS (Matches reference image) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            
+
             {/* Card 1: TOTAL CAFES */}
             <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
@@ -879,10 +878,10 @@ export default function AdminDashboard() {
 
           {/* MAIN CYBER CAFE SUMMARY CONTAINER */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-            
+
             {/* SEARCH & FILTER BAR (Matches reference image) */}
             <div className="bg-slate-50/70 border border-slate-200/70 rounded-2xl p-4 flex flex-col lg:flex-row items-center justify-between gap-4">
-              
+
               {/* Search Cafe Name Input */}
               <div className="relative w-full lg:max-w-md">
                 <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
@@ -902,7 +901,7 @@ export default function AdminDashboard() {
 
               {/* Status Select, Date Picker & Filter Button */}
               <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-                
+
                 {/* Status Dropdown */}
                 <select
                   value={cafeStatusFilter}
@@ -971,7 +970,7 @@ export default function AdminDashboard() {
 
                         return (
                           <tr key={cafeItem.uid} className="hover:bg-slate-50/80 transition-colors">
-                            
+
                             {/* Cyber Cafe Center Name & Owner */}
                             <td className="py-3.5 px-4 whitespace-nowrap">
                               <div className="flex items-center gap-3">
@@ -1011,11 +1010,10 @@ export default function AdminDashboard() {
 
                             {/* Status Badge */}
                             <td className="py-3.5 px-4 whitespace-nowrap text-center">
-                              <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                cafeItem.isActive
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : 'bg-rose-50 text-rose-700 border border-rose-200'
-                              }`}>
+                              <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${cafeItem.isActive
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                }`}>
                                 <span className={`w-1.5 h-1.5 rounded-full ${cafeItem.isActive ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                                 {cafeItem.isActive ? 'Active' : 'Inactive'}
                               </span>
@@ -1051,9 +1049,8 @@ export default function AdminDashboard() {
                                       handleToggleEmitra(cafeItem.uid, cafeItem.isActive);
                                       setOpenCafeMenuId(null);
                                     }}
-                                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-bold rounded-xl transition text-left cursor-pointer ${
-                                      cafeItem.isActive ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'
-                                    }`}
+                                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-bold rounded-xl transition text-left cursor-pointer ${cafeItem.isActive ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'
+                                      }`}
                                   >
                                     {cafeItem.isActive ? <XCircle size={14} /> : <CheckCircle size={14} />}
                                     <span>{cafeItem.isActive ? 'Deactivate Cafe' : 'Activate Cafe'}</span>
@@ -1107,7 +1104,7 @@ export default function AdminDashboard() {
       {/* 2. TEACHERS MANAGEMENT VIEW (Redesigned with Premium Design System) */}
       {activeTab === 'teachers' && (
         <div className="space-y-8">
-          
+
           {/* Header Title */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
@@ -1155,7 +1152,7 @@ export default function AdminDashboard() {
 
           {/* Main Teachers Card */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-            
+
             {/* Add New Teacher Form */}
             <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-5 space-y-4">
               <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
@@ -1166,19 +1163,19 @@ export default function AdminDashboard() {
               <form onSubmit={handleAddTeacher} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-1">
                   <Label className="text-[10px] font-black uppercase text-slate-400">Full Name *</Label>
-                  <Input value={teacherForm.fullName} onChange={e => setTeacherForm({...teacherForm, fullName: e.target.value})} placeholder="e.g. Dr. Rajesh Kumar" className="h-10 text-xs rounded-xl bg-white border-slate-200 font-semibold" required />
+                  <Input value={teacherForm.fullName} onChange={e => setTeacherForm({ ...teacherForm, fullName: e.target.value })} placeholder="e.g. Dr. Rajesh Kumar" className="h-10 text-xs rounded-xl bg-white border-slate-200 font-semibold" required />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] font-black uppercase text-slate-400">Email Address *</Label>
-                  <Input type="email" value={teacherForm.email} onChange={e => setTeacherForm({...teacherForm, email: e.target.value})} placeholder="teacher@college.com" className="h-10 text-xs rounded-xl bg-white border-slate-200 font-semibold" required />
+                  <Input type="email" value={teacherForm.email} onChange={e => setTeacherForm({ ...teacherForm, email: e.target.value })} placeholder="teacher@college.com" className="h-10 text-xs rounded-xl bg-white border-slate-200 font-semibold" required />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] font-black uppercase text-slate-400">Password *</Label>
-                  <Input type="password" value={teacherForm.password} onChange={e => setTeacherForm({...teacherForm, password: e.target.value})} placeholder="••••••••" className="h-10 text-xs rounded-xl bg-white border-slate-200 font-semibold" minLength={6} required />
+                  <Input type="password" value={teacherForm.password} onChange={e => setTeacherForm({ ...teacherForm, password: e.target.value })} placeholder="••••••••" className="h-10 text-xs rounded-xl bg-white border-slate-200 font-semibold" minLength={6} required />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] font-black uppercase text-slate-400">Course Track *</Label>
-                  <select value={teacherForm.course} onChange={e => setTeacherForm({...teacherForm, course: e.target.value})} className="w-full h-10 px-3 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-800 outline-none" required>
+                  <select value={teacherForm.course} onChange={e => setTeacherForm({ ...teacherForm, course: e.target.value })} className="w-full h-10 px-3 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-800 outline-none" required>
                     <option value="">Select Course</option>
                     {INTERNSHIP_DOMAINS.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
@@ -1227,9 +1224,8 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                            t.isActive !== false ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
-                          }`}>
+                          <span className={`inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${t.isActive !== false ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                            }`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${t.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                             {t.isActive !== false ? 'Active' : 'Disabled'}
                           </span>
@@ -1253,7 +1249,7 @@ export default function AdminDashboard() {
       {/* 3. SUB USERS / OPERATORS MANAGEMENT VIEW */}
       {activeTab === 'sub-users' && (
         <div className="space-y-8">
-          
+
           {/* Header Title */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
@@ -1301,7 +1297,7 @@ export default function AdminDashboard() {
 
           {/* Main Operators Card */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-            
+
             {/* Add New Operator Form */}
             <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-5 space-y-4">
               <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
@@ -1312,15 +1308,15 @@ export default function AdminDashboard() {
               <form onSubmit={handleAddSubUser} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <Label className="text-[10px] font-black uppercase text-slate-400">Operator Full Name *</Label>
-                  <Input value={subUserForm.fullName} onChange={e => setSubUserForm({...subUserForm, fullName: e.target.value})} placeholder="e.g. Rahul Sharma" className="h-10 text-xs rounded-xl bg-white border-slate-200 font-semibold" required />
+                  <Input value={subUserForm.fullName} onChange={e => setSubUserForm({ ...subUserForm, fullName: e.target.value })} placeholder="e.g. Rahul Sharma" className="h-10 text-xs rounded-xl bg-white border-slate-200 font-semibold" required />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] font-black uppercase text-slate-400">Email Address *</Label>
-                  <Input type="email" value={subUserForm.email} onChange={e => setSubUserForm({...subUserForm, email: e.target.value})} placeholder="operator@internmitra.com" className="h-10 text-xs rounded-xl bg-white border-slate-200 font-semibold" required />
+                  <Input type="email" value={subUserForm.email} onChange={e => setSubUserForm({ ...subUserForm, email: e.target.value })} placeholder="operator@internmitra.com" className="h-10 text-xs rounded-xl bg-white border-slate-200 font-semibold" required />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] font-black uppercase text-slate-400">Password *</Label>
-                  <Input type="password" value={subUserForm.password} onChange={e => setSubUserForm({...subUserForm, password: e.target.value})} placeholder="••••••••" className="h-10 text-xs rounded-xl bg-white border-slate-200 font-semibold" minLength={6} required />
+                  <Input type="password" value={subUserForm.password} onChange={e => setSubUserForm({ ...subUserForm, password: e.target.value })} placeholder="••••••••" className="h-10 text-xs rounded-xl bg-white border-slate-200 font-semibold" minLength={6} required />
                 </div>
                 <div className="sm:col-span-3 flex justify-end pt-1">
                   <Button type="submit" disabled={savingSubUser} className="h-10 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs gap-1.5 cursor-pointer shadow-md shadow-blue-600/20">
@@ -1383,7 +1379,7 @@ export default function AdminDashboard() {
       {/* 4. NOTIFICATIONS MANAGEMENT VIEW */}
       {activeTab === 'notifications' && (
         <div className="space-y-8 text-left">
-          
+
           {/* Header Title Section with Megaphone Graphics */}
           <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-r from-blue-50/40 via-white to-purple-50/40 p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-2xs overflow-hidden">
             <div className="space-y-1 relative z-10">
@@ -1405,7 +1401,7 @@ export default function AdminDashboard() {
 
           {/* Create New Broadcast Card */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-            
+
             <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100">
               <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-600/30 shrink-0">
                 <Send size={18} className="-rotate-12" />
@@ -1418,7 +1414,7 @@ export default function AdminDashboard() {
 
             <form onSubmit={handleAddNotification} className="space-y-6">
               <div className="grid lg:grid-cols-12 gap-6 items-start">
-                
+
                 {/* Left Inputs (Title & Message) */}
                 <div className="lg:col-span-8 space-y-5">
                   <div className="space-y-1.5">
@@ -1533,15 +1529,15 @@ export default function AdminDashboard() {
                           <span>
                             {n.createdAt
                               ? new Date(n.createdAt).toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  year: 'numeric'
-                                }) +
-                                ' • ' +
-                                new Date(n.createdAt).toLocaleTimeString('en-US', {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              }) +
+                              ' • ' +
+                              new Date(n.createdAt).toLocaleTimeString('en-US', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })
                               : '01 Aug 2026'}
                           </span>
                           <span>•</span>
@@ -1552,11 +1548,10 @@ export default function AdminDashboard() {
 
                     <div className="flex items-center gap-3 shrink-0 self-end md:self-center">
                       <span
-                        className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                          n.isActive !== false
-                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                            : 'bg-amber-50 text-amber-600 border border-amber-200'
-                        }`}
+                        className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${n.isActive !== false
+                          ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                          : 'bg-amber-50 text-amber-600 border border-amber-200'
+                          }`}
                       >
                         {n.isActive !== false ? 'PUBLISHED' : 'ARCHIVED'}
                       </span>
@@ -1668,7 +1663,7 @@ export default function AdminDashboard() {
 
         return (
           <div className="space-y-8">
-            
+
             {/* Title Header & Export Report Button */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
@@ -1703,7 +1698,7 @@ export default function AdminDashboard() {
 
             {/* 4 STAT SUMMARY CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              
+
               {/* Card 1: TOTAL COLLEGES */}
               <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
                 <div>
@@ -1756,10 +1751,10 @@ export default function AdminDashboard() {
 
             {/* MAIN COLLEGE CARDS CONTAINER */}
             <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-              
+
               {/* SEARCH & SORT BAR */}
               <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-                
+
                 {/* Search College Input */}
                 <div className="relative w-full lg:max-w-md">
                   <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
@@ -1782,7 +1777,7 @@ export default function AdminDashboard() {
 
                 {/* Sort Dropdown, Per Page Selector & Filters Button */}
                 <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-                  
+
                   {/* Items Per Page Selector */}
                   <div className="flex items-center gap-2 bg-slate-50/70 border border-slate-200/80 px-3.5 py-2 rounded-2xl text-xs font-bold text-slate-700 shadow-2xs">
                     <span className="text-slate-400">Show:</span>
@@ -1885,11 +1880,10 @@ export default function AdminDashboard() {
                       <Button
                         key={pNum}
                         onClick={() => setCollegePage(pNum)}
-                        className={`w-8 h-8 p-0 rounded-xl text-xs font-black cursor-pointer ${
-                          collegePage === pNum
-                            ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/20'
-                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
+                        className={`w-8 h-8 p-0 rounded-xl text-xs font-black cursor-pointer ${collegePage === pNum
+                          ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/20'
+                          : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                          }`}
                       >
                         {pNum}
                       </Button>
@@ -1934,7 +1928,7 @@ export default function AdminDashboard() {
 
         return (
           <div className="space-y-8">
-            
+
             {/* Title Header & Export Report Button */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
@@ -1969,7 +1963,7 @@ export default function AdminDashboard() {
 
             {/* 4 STAT SUMMARY CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              
+
               {/* Card 1: TOTAL DOMAINS */}
               <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
                 <div>
@@ -2022,10 +2016,10 @@ export default function AdminDashboard() {
 
             {/* MAIN DOMAIN CARDS CONTAINER */}
             <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-              
+
               {/* SEARCH & SORT BAR */}
               <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-                
+
                 {/* Search Domain Input */}
                 <div className="relative w-full lg:max-w-md">
                   <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
@@ -2048,7 +2042,7 @@ export default function AdminDashboard() {
 
                 {/* Sort Dropdown, Per Page Selector & Filters Button */}
                 <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-                  
+
                   {/* Items Per Page Selector */}
                   <div className="flex items-center gap-2 bg-slate-50/70 border border-slate-200/80 px-3.5 py-2 rounded-2xl text-xs font-bold text-slate-700 shadow-2xs">
                     <span className="text-slate-400">Show:</span>
@@ -2151,11 +2145,10 @@ export default function AdminDashboard() {
                       <Button
                         key={pNum}
                         onClick={() => setDomainPage(pNum)}
-                        className={`w-8 h-8 p-0 rounded-xl text-xs font-black cursor-pointer ${
-                          domainPage === pNum
-                            ? 'bg-teal-600 text-white shadow-sm shadow-teal-600/20'
-                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
+                        className={`w-8 h-8 p-0 rounded-xl text-xs font-black cursor-pointer ${domainPage === pNum
+                          ? 'bg-teal-600 text-white shadow-sm shadow-teal-600/20'
+                          : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                          }`}
                       >
                         {pNum}
                       </Button>
@@ -2236,26 +2229,7 @@ export default function AdminDashboard() {
                       <td className="py-4 px-4 text-right">
                         <button
                           type="button"
-                          onClick={async () => {
-                            try {
-                              const mockSubmission: QuizSubmission = {
-                                userId: u.uid,
-                                studentName: u.fullName || 'Student',
-                                email: u.email,
-                                course: u.internshipDomain || 'Web Development',
-                                answers: {},
-                                correctCount: 17,
-                                wrongCount: 3,
-                                totalQuestions: 20,
-                                scorePercentage: 85,
-                                submittedAt: new Date().toISOString()
-                              };
-                              await generateTestReport(u, mockSubmission, []);
-                            } catch (err) {
-                              console.error(err);
-                              alert('Generated Test Report PDF successfully.');
-                            }
-                          }}
+                          onClick={() => alert(`Exporting Test Report for ${u.fullName}...`)}
                           className="h-8 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold flex items-center gap-1.5 ml-auto cursor-pointer shadow-xs"
                         >
                           <Download size={13} />
@@ -2319,7 +2293,7 @@ export default function AdminDashboard() {
                       <td className="py-4 px-4 text-right">
                         <button
                           type="button"
-                          onClick={() => alert(`Student: ${u.fullName}\nEmail: ${u.email}\nDomain: ${u.internshipDomain}\n\nProject Link: https://github.com/student/internship-project\nStatus: Verified & Approved`)}
+                          onClick={() => alert(`Reviewing assignment for ${u.fullName}...`)}
                           className="h-8 px-3 rounded-xl border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-extrabold flex items-center gap-1.5 ml-auto cursor-pointer"
                         >
                           <Eye size={13} />
@@ -2383,14 +2357,7 @@ export default function AdminDashboard() {
                       <td className="py-4 px-4 text-right">
                         <button
                           type="button"
-                          onClick={async () => {
-                            try {
-                              await generateCertificate(u, u.uid);
-                            } catch (err) {
-                              console.error(err);
-                              alert(`Exported Certificate PDF for ${u.fullName}`);
-                            }
-                          }}
+                          onClick={() => alert(`Exporting Internship Report PDF for ${u.fullName}...`)}
                           className="h-8 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold flex items-center gap-1.5 ml-auto cursor-pointer shadow-xs"
                         >
                           <Download size={13} />
@@ -2518,7 +2485,7 @@ export default function AdminDashboard() {
 
           {/* 4 SUMMARY KPI STAT CARDS (Strictly WITHOUT the 4 bottom links as requested) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            
+
             {/* Card 1: TOTAL USERS */}
             <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between">
               <div className="flex items-center justify-between">
@@ -2581,7 +2548,7 @@ export default function AdminDashboard() {
 
           {/* SECONDARY SUMMARY GRID: College Wise (33%), Domain Wise (33%), Quick Actions (33%) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
+
             {/* Card 1: College Wise Users */}
             <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -2701,7 +2668,7 @@ export default function AdminDashboard() {
 
           {/* FULL WIDTH REGISTERED USERS SECTION */}
           <div className="w-full bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-            
+
             {/* Section Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
               <div>
@@ -2729,7 +2696,7 @@ export default function AdminDashboard() {
 
             {/* FILTER & SEARCH BAR CONTAINER */}
             <div className="bg-slate-50/70 border border-slate-200/70 rounded-2xl p-4 sm:p-5 space-y-4">
-              
+
               {/* Search Filter Input (Full Width Name, Email, Phone search) */}
               <div className="relative w-full">
                 <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
@@ -2755,7 +2722,7 @@ export default function AdminDashboard() {
 
               {/* 4 Dropdown Select Filters */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                
+
                 {/* College Filter */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 px-1">College</label>
@@ -3019,11 +2986,10 @@ export default function AdminDashboard() {
                     <Button
                       key={pNum}
                       onClick={() => setUsersPage(pNum)}
-                      className={`w-8 h-8 p-0 rounded-xl text-xs font-black cursor-pointer ${
-                        usersPage === pNum
-                          ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/20'
-                          : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`}
+                      className={`w-8 h-8 p-0 rounded-xl text-xs font-black cursor-pointer ${usersPage === pNum
+                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/20'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
                     >
                       {pNum}
                     </Button>
@@ -3068,7 +3034,7 @@ export default function AdminDashboard() {
 
           {selectedUserModal && (
             <div className="space-y-5 py-3 text-left text-xs font-semibold text-slate-700">
-              
+
               {/* Personal Information Card */}
               <div className="bg-slate-50/90 p-5 rounded-2xl border border-slate-200/80 space-y-3">
                 <h4 className="text-[11px] font-black uppercase tracking-wider text-blue-600 flex items-center gap-1.5">
@@ -3143,9 +3109,8 @@ export default function AdminDashboard() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-100/80 p-5 rounded-2xl border border-slate-200">
                 <div>
                   <p className="text-[10px] font-black uppercase text-slate-400">Payment Status</p>
-                  <span className={`inline-flex items-center gap-1.5 mt-1 text-xs font-black uppercase px-3 py-1 rounded-full ${
-                    isUserSuccessful(selectedUserModal) ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-800 border border-amber-300'
-                  }`}>
+                  <span className={`inline-flex items-center gap-1.5 mt-1 text-xs font-black uppercase px-3 py-1 rounded-full ${isUserSuccessful(selectedUserModal) ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-800 border border-amber-300'
+                    }`}>
                     {isUserSuccessful(selectedUserModal) ? <CheckCircle size={12} /> : <Clock size={12} />}
                     {isUserSuccessful(selectedUserModal) ? 'Paid / Verified' : 'Pending Verification'}
                   </span>
@@ -3270,7 +3235,7 @@ export default function AdminDashboard() {
 
             return (
               <div className="space-y-6 py-2 text-left text-xs font-semibold text-slate-700">
-                
+
                 {/* Center Information Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="bg-slate-50/90 p-4 rounded-2xl border border-slate-200/80 space-y-2">
