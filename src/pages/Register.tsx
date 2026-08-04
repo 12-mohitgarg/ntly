@@ -217,14 +217,79 @@ export default function Register({ mode = 'public' }: RegisterProps) {
       terms: false
     });
 
+    const [hasAutoFilledDefaults, setHasAutoFilledDefaults] = useState(false);
+
+    const saveSubUserAcademicDefaults = (dataToSave: typeof formData) => {
+      if (!isSubUserStudentMode && !isEmitraStudentMode) return;
+      try {
+        const subUserId = currentUser?.uid || 'default';
+        const academicDefaults = {
+          university: dataToSave.university || '',
+          district: dataToSave.district || '',
+          college: dataToSave.college || '',
+          degree: dataToSave.degree || '',
+          department: dataToSave.department || '',
+          subject: dataToSave.subject || '',
+          session: dataToSave.session || '2023-27',
+          semester: dataToSave.semester || 'Semester 5',
+          internshipDomain: dataToSave.internshipDomain || '',
+          internshipMode: dataToSave.internshipMode || 'Online',
+        };
+        localStorage.setItem(`subuser_academic_defaults_${subUserId}`, JSON.stringify(academicDefaults));
+        localStorage.setItem('subuser_academic_defaults', JSON.stringify(academicDefaults));
+      } catch (e) {
+        console.warn("Failed to save sub-user academic defaults:", e);
+      }
+    };
+
+    useEffect(() => {
+      if (isSubUserStudentMode || isEmitraStudentMode) {
+        try {
+          const subUserId = currentUser?.uid || 'default';
+          const savedRaw = localStorage.getItem(`subuser_academic_defaults_${subUserId}`) || localStorage.getItem('subuser_academic_defaults');
+          if (savedRaw) {
+            const saved = JSON.parse(savedRaw);
+            setFormData(prev => ({
+              ...prev,
+              university: saved.university || prev.university,
+              district: saved.district || prev.district,
+              college: saved.college || prev.college,
+              degree: saved.degree || prev.degree,
+              department: saved.department || prev.department,
+              subject: saved.subject || prev.subject,
+              session: saved.session || prev.session,
+              semester: saved.semester || prev.semester,
+              internshipDomain: saved.internshipDomain || prev.internshipDomain,
+              internshipMode: saved.internshipMode || prev.internshipMode,
+            }));
+            setHasAutoFilledDefaults(true);
+          }
+        } catch (e) {
+          console.warn("Failed to load sub-user academic defaults:", e);
+        }
+      }
+    }, [isSubUserStudentMode, isEmitraStudentMode, currentUser?.uid]);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       const { name, value, type } = e.target;
       const normalizedValue = name === 'contactNumber' ? normalizePhoneNumber(value) : value;
 
-      setFormData(prev => ({
-        ...prev,
-        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : normalizedValue
-      }));
+      setFormData(prev => {
+        const updated = {
+          ...prev,
+          [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : normalizedValue
+        };
+        if (name === 'district' && prev.district !== value) {
+          updated.college = '';
+        }
+        if (name === 'department' && prev.department !== value) {
+          updated.subject = '';
+        }
+        if (isSubUserStudentMode || isEmitraStudentMode) {
+          saveSubUserAcademicDefaults(updated);
+        }
+        return updated;
+      });
       setError(null);
       if (name === 'email') setEmailError(null);
       if (name === 'contactNumber') setPhoneError(null);
@@ -474,6 +539,10 @@ export default function Register({ mode = 'public' }: RegisterProps) {
       if (!formData.terms) {
         setError("You must agree to the Terms and Privacy Policy.");
         return;
+      }
+
+      if (isSubUserStudentMode || isEmitraStudentMode) {
+        saveSubUserAcademicDefaults(formData);
       }
 
       setLoading(true);
@@ -919,6 +988,19 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                 {/* STEP 3: ACADEMIC DETAILS */}
                 {step === 3 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-h-[50vh] overflow-y-auto pr-1">
+
+                    {(isSubUserStudentMode || isEmitraStudentMode) && (
+                      <div className="md:col-span-2 rounded-xl bg-blue-50 border border-blue-200/80 p-3 flex items-center justify-between gap-3 text-blue-900 shadow-sm">
+                        <div className="flex items-center gap-2.5 text-xs font-semibold">
+                          <Sparkles size={16} className="text-blue-600 flex-shrink-0" />
+                          <span>
+                            {hasAutoFilledDefaults 
+                              ? "Academic fields auto-selected from your previous registration. You can change any field if needed." 
+                              : "Selections made here will be auto-selected by default for your next student registration."}
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="space-y-1.5 text-left md:col-span-2">
                       <Label htmlFor="university" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">University *</Label>
