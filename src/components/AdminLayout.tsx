@@ -143,8 +143,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   // Ultra-Premium Dark Sidebar Design
   const renderSidebar = () => (
-    <div className="flex h-full flex-col justify-between bg-[#060a16] text-slate-300 font-sans select-none border-r border-[#121a2d]">
+    <div className="flex h-full flex-col justify-between bg-[#060a16] text-slate-300 font-sans select-none border-r border-[#121a2d] relative">
       
+      {/* Mobile Sidebar Navigation Close Header */}
+      <div className="lg:hidden flex items-center justify-between p-4 border-b border-slate-800/80 bg-[#0b1120]">
+        <div className="flex items-center gap-2.5">
+          <img src="/logo-new.jpeg" alt="InternMitra Logo" className="h-8 w-auto rounded-lg bg-white p-0.5" />
+          <span className="text-xs font-black text-white tracking-wide">Menu Navigation</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsSidebarOpen(false)}
+          className="w-8 h-8 rounded-xl bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+        >
+          <X size={16} />
+        </button>
+      </div>
+
       <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6 scrollbar-thin scrollbar-thumb-slate-800">
         
         {/* Administrator Profile Glassmorphism Card */}
@@ -241,58 +256,32 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <Menu size={18} />
             </button>
 
-            <Link to="/admin-dashboard" className="flex items-center gap-2 group">
+            <Link to="/admin-dashboard" className="flex items-center gap-2.5 group">
               <img
                 src="/logo-new.jpeg"
                 alt="InternMitra Logo"
-                className="h-9 w-auto object-contain rounded-xl bg-white p-1 border border-slate-200 shadow-2xs"
+                className="h-10 w-auto object-contain rounded-xl bg-white p-1 border border-slate-200 shadow-2xs"
               />
-              <span className="hidden sm:inline-block text-sm font-black tracking-wider leading-none uppercase italic text-slate-900 font-sans">
-                Console<span className="text-blue-600">Center</span>
+              <span className="hidden sm:inline-block text-sm font-black tracking-tight text-slate-900 font-sans">
+                Intern<span className="text-blue-600">Mitra</span>
               </span>
             </Link>
           </div>
 
-          {/* Center Search Bar */}
-          <div className="hidden md:flex items-center flex-1 max-w-md mx-6">
-            <div className="relative w-full">
-              <Search size={15} className="absolute left-3.5 top-2.5 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search users, colleges, domains..."
-                className="w-full h-10 pl-10 pr-16 bg-slate-100/70 border border-slate-200/80 rounded-full text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all"
-              />
-              <kbd className="absolute right-3 top-2 px-1.5 py-0.5 text-[9px] font-mono text-slate-400 bg-white border border-slate-200 rounded shadow-2xs pointer-events-none">
-                Ctrl + K
-              </kbd>
-            </div>
-          </div>
-
           {/* Right Section Controls */}
           <div className="flex items-center gap-3 shrink-0">
-            {/* Notification Bell Badge */}
-            <button className="relative p-2 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer">
-              <Bell size={18} />
-              <span className="absolute top-1 right-1 bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full border-2 border-white shadow-2xs">
-                12
-              </span>
-            </button>
 
-            {/* Dark / Light Mode Toggle */}
-            <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-2 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
-            >
-              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-
-            {/* Date Pill Picker */}
-            <div className="hidden xl:flex items-center gap-2 bg-slate-100/80 border border-slate-200/80 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 shadow-2xs">
+            {/* Dynamic Real-time Date Badge */}
+            <div className="flex items-center gap-2 bg-slate-100/80 border border-slate-200/80 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 shadow-2xs">
               <Calendar size={14} className="text-blue-600" />
-              <span>01 Aug 2026, Friday</span>
-              <ChevronDown size={12} className="text-slate-400 ml-1" />
+              <span>
+                {new Date().toLocaleDateString('en-GB', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  weekday: 'long'
+                })}
+              </span>
             </div>
 
             {/* Administrator Profile Pill */}
