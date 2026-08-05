@@ -27,7 +27,10 @@ import {
   Star,
   ExternalLink,
   Zap,
-  GraduationCap
+  GraduationCap,
+  Landmark,
+  Palette,
+  FileText
 } from "lucide-react";
 import { generateCertificate } from "./dashboard/generateCertificate";
 
@@ -71,8 +74,8 @@ export default function Home() {
 
   const domainCourses = [
     {
-      title: "Web Development & Full Stack",
-      desc: "Master HTML5, CSS3, React, Node.js, and MongoDB with 120 hours of hands-on project building.",
+      title: "Web Development",
+      desc: "Master HTML5, CSS3, JavaScript, React, and modern web application development with 120 hours of hands-on training.",
       icon: Code2,
       duration: "120 Hours",
       badge: "Most Popular",
@@ -80,26 +83,8 @@ export default function Home() {
       accent: "bg-blue-50 text-blue-600 border-blue-100"
     },
     {
-      title: "Data Science & Python Analytics",
-      desc: "Analyze datasets, build predictive models, and learn Pandas, NumPy, and Data Visualization.",
-      icon: Database,
-      duration: "120 Hours",
-      badge: "In Demand",
-      color: "from-purple-600 to-indigo-600",
-      accent: "bg-purple-50 text-purple-600 border-purple-100"
-    },
-    {
-      title: "AI & Machine Learning",
-      desc: "Build neural networks, Computer Vision models, and NLP applications using Python & TensorFlow.",
-      icon: BrainCircuit,
-      duration: "120 Hours",
-      badge: "Trending",
-      color: "from-emerald-600 to-teal-600",
-      accent: "bg-emerald-50 text-emerald-600 border-emerald-100"
-    },
-    {
-      title: "Cyber Security & Ethical Hacking",
-      desc: "Learn penetration testing, network defense, vulnerability assessment, and security auditing.",
+      title: "Cyber Security",
+      desc: "Learn ethical hacking concepts, network security fundamentals, cyber defense, and vulnerability assessment.",
       icon: Lock,
       duration: "120 Hours",
       badge: "Industry Focus",
@@ -107,20 +92,38 @@ export default function Home() {
       accent: "bg-rose-50 text-rose-600 border-rose-100"
     },
     {
-      title: "Digital Marketing & Branding",
-      desc: "Master SEO, Google Ads, Meta Ads, Content Marketing, and Analytics dashboard tracking.",
+      title: "Digital Literacy",
+      desc: "Essential digital productivity skills, computer fundamentals, office suites, and internet safety practices.",
       icon: Laptop,
       duration: "120 Hours",
       badge: "High Growth",
+      color: "from-purple-600 to-indigo-600",
+      accent: "bg-purple-50 text-purple-600 border-purple-100"
+    },
+    {
+      title: "Financial Literacy",
+      desc: "Understand personal finance management, banking operations, investment basics, taxes, and digital payment systems.",
+      icon: Landmark,
+      duration: "120 Hours",
+      badge: "In Demand",
+      color: "from-emerald-600 to-teal-600",
+      accent: "bg-emerald-50 text-emerald-600 border-emerald-100"
+    },
+    {
+      title: "Graphics and Content Creation",
+      desc: "Learn graphic design concepts, visual branding, content drafting, image editing, and digital media production.",
+      icon: Palette,
+      duration: "120 Hours",
+      badge: "Trending",
       color: "from-amber-600 to-orange-600",
       accent: "bg-amber-50 text-amber-600 border-amber-100"
     },
     {
-      title: "Core Java & Software Engineering",
-      desc: "Object-oriented programming, data structures, algorithms, and enterprise Java applications.",
+      title: "Skill and Personality Development",
+      desc: "Professional communication, resume building, interview techniques, soft skills, and workplace readiness.",
       icon: GraduationCap,
       duration: "120 Hours",
-      badge: "Classic",
+      badge: "Essential",
       color: "from-cyan-600 to-blue-600",
       accent: "bg-cyan-50 text-cyan-600 border-cyan-100"
     }
@@ -379,13 +382,13 @@ export default function Home() {
                       💻 Web Development
                     </span>
                     <span className="bg-purple-500/20 text-purple-200 border border-purple-500/30 px-3 py-1 rounded-xl text-xs font-bold">
-                      📊 Data Science
+                      🔒 Cyber Security
                     </span>
                     <span className="bg-emerald-500/20 text-emerald-200 border border-emerald-500/30 px-3 py-1 rounded-xl text-xs font-bold">
-                      🤖 AI & ML
+                      📄 Digital Literacy
                     </span>
                     <span className="bg-rose-500/20 text-rose-200 border border-rose-500/30 px-3 py-1 rounded-xl text-xs font-bold">
-                      🔒 Cyber Security
+                      🏦 Financial Literacy
                     </span>
                   </div>
                 </div>
@@ -794,11 +797,11 @@ export default function Home() {
               <div className="space-y-2 text-xs font-semibold text-slate-400">
                 <div className="flex items-center gap-2">
                   <Phone className="w-3.5 h-3.5 text-blue-400" />
-                  <span>+91 98765 43210</span>
+                  <a href="tel:+919693921517" className="hover:text-white transition">+91 9693921517</a>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="w-3.5 h-3.5 text-blue-400" />
-                  <span>support@internmitra.com</span>
+                  <a href="mailto:info@internmitra.com" className="hover:text-white transition">info@internmitra.com</a>
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-3.5 h-3.5 text-blue-400" />

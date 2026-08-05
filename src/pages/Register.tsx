@@ -18,7 +18,7 @@ import {
 } from '../lib/constants';
 import {
   ChevronRight, ChevronLeft, GraduationCap, ArrowRight, ShieldCheck, User,
-  School, AlertCircle, Handshake, Mail, Phone, Lock, FileText, CheckCircle2,
+  School, AlertCircle, Handshake, Mail, Phone, MapPin, Lock, FileText, CheckCircle2,
   Users, BookOpen, Clock, ThumbsUp, Sparkles, Building2, Facebook,
   Instagram, Twitter, Linkedin, Youtube, Check, Award, Headset
 } from 'lucide-react';
@@ -1326,12 +1326,22 @@ export default function Register({ mode = 'public' }: RegisterProps) {
             </div>
 
             <div>
-              <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-300 mb-6">Support</h3>
-              <ul className="space-y-3.5 text-slate-400 text-xs font-semibold">
-                <li className="hover:text-blue-400 cursor-pointer transition-colors">FAQs</li>
+              <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-300 mb-6">Support & Contact</h3>
+              <ul className="space-y-3 text-slate-400 text-xs font-semibold">
                 <li><Link to="/about" className="hover:text-blue-400 transition-colors">About Us</Link></li>
-                <li><Link to="/contact" className="hover:text-blue-400 transition-colors">Contact us</Link></li>
-                <li className="hover:text-blue-400 cursor-pointer transition-colors">Credentials</li>
+                <li><Link to="/contact" className="hover:text-blue-400 transition-colors">Contact Us</Link></li>
+                <li className="flex items-center gap-2 pt-1 text-slate-300">
+                  <Phone className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <a href="tel:+919693921517" className="hover:text-blue-400 transition-colors">+91 9693921517</a>
+                </li>
+                <li className="flex items-center gap-2 text-slate-300">
+                  <Mail className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <a href="mailto:info@internmitra.com" className="hover:text-blue-400 transition-colors">info@internmitra.com</a>
+                </li>
+                <li className="flex items-center gap-2 text-slate-300">
+                  <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span>Patna, Bihar, India</span>
+                </li>
               </ul>
             </div>
 
