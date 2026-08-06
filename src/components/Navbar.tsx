@@ -133,7 +133,7 @@ export default function Navbar() {
                   </Link>
                   <Link to="/register">
                     <Button className="bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl px-6 h-10 font-black uppercase text-xs tracking-wider shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5 transition-all cursor-pointer flex items-center gap-1.5">
-                      <span>Join Now</span>
+                      <span>Register</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </Button>
                   </Link>
@@ -144,14 +144,24 @@ export default function Navbar() {
             {/* Mobile Hamburger Button */}
             <div className="md:hidden flex items-center gap-2">
               {!user && (
-                <Link to="/register">
-                  <button
-                    type="button"
-                    className="h-9 px-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black text-[11px] uppercase tracking-wider shadow-sm active:scale-95 transition-all cursor-pointer"
-                  >
-                    Join
-                  </button>
-                </Link>
+                <div className="flex items-center gap-1.5">
+                  <Link to="/login">
+                    <button
+                      type="button"
+                      className="h-9 px-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-black text-[10px] uppercase tracking-wider shadow-sm active:scale-95 transition-all cursor-pointer"
+                    >
+                      Login
+                    </button>
+                  </Link>
+                  <Link to="/register">
+                    <button
+                      type="button"
+                      className="h-9 px-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black text-[10px] uppercase tracking-wider shadow-sm active:scale-95 transition-all cursor-pointer"
+                    >
+                      Register
+                    </button>
+                  </Link>
+                </div>
               )}
               <button
                 type="button"
