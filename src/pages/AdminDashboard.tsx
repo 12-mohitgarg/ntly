@@ -209,6 +209,9 @@ export default function AdminDashboard() {
   const [passwordUser, setPasswordUser] = useState<UserProfile | null>(null);
   const [passwordForm, setPasswordForm] = useState({ password: '', confirmPassword: '' });
   const [savingPassword, setSavingPassword] = useState(false);
+  const [emailUser, setEmailUser] = useState<UserProfile | null>(null);
+  const [emailForm, setEmailForm] = useState({ email: '' });
+  const [savingEmail, setSavingEmail] = useState(false);
   const [teacherForm, setTeacherForm] = useState({
     fullName: '',
     email: '',
@@ -1220,6 +1223,11 @@ export default function AdminDashboard() {
     setPasswordForm({ password: '', confirmPassword: '' });
   };
 
+  const openEmailModal = (student: UserProfile) => {
+    setEmailUser(student);
+    setEmailForm({ email: student.email || '' });
+  };
+
   const handleUpdateUserPassword = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -1261,6 +1269,51 @@ export default function AdminDashboard() {
       alert(error?.message || 'Error updating password');
     } finally {
       setSavingPassword(false);
+    }
+  };
+
+  const handleUpdateUserEmail = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!emailUser || !user) return;
+
+    const nextEmail = emailForm.email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+      alert('Enter a valid email address');
+      return;
+    }
+
+    setSavingEmail(true);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/admin/users/${emailUser.uid}/email`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ uid: emailUser.uid, email: nextEmail }),
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(result?.details || result?.error || 'Error updating email');
+      }
+
+      setUsers((currentUsers) =>
+        currentUsers.map((student) =>
+          student.uid === emailUser.uid ? { ...student, email: nextEmail } : student
+        )
+      );
+      setEmailUser(null);
+      setEmailForm({ email: '' });
+      alert('Email updated successfully');
+    } catch (error: any) {
+      console.error('Error updating email:', error);
+      alert(error?.message || 'Error updating email');
+    } finally {
+      setSavingEmail(false);
     }
   };
 
@@ -1805,6 +1858,55 @@ export default function AdminDashboard() {
               </Button>
               <Button type="submit" disabled={savingPassword} className="bg-slate-900 hover:bg-blue-700 text-white font-black">
                 {savingPassword ? 'Updating...' : 'Update Password'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(emailUser)}
+        onOpenChange={(open) => {
+          if (!open && !savingEmail) {
+            setEmailUser(null);
+            setEmailForm({ email: '' });
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md bg-white">
+          <form onSubmit={handleUpdateUserEmail} className="space-y-5">
+            <DialogHeader>
+              <DialogTitle className="font-black text-slate-900">Change Email</DialogTitle>
+              <DialogDescription>
+                Update login email for {emailUser?.fullName || emailUser?.email || 'selected user'}.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <Label className="text-slate-500 text-xs font-black uppercase">New Email</Label>
+              <Input
+                type="email"
+                value={emailForm.email}
+                onChange={(event) => setEmailForm({ email: event.target.value })}
+                className="h-12 rounded-xl font-bold"
+                required
+              />
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={savingEmail}
+                onClick={() => {
+                  setEmailUser(null);
+                  setEmailForm({ email: '' });
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={savingEmail} className="bg-slate-900 hover:bg-blue-700 text-white font-black">
+                {savingEmail ? 'Updating...' : 'Update Email'}
               </Button>
             </DialogFooter>
           </form>
@@ -2823,6 +2925,15 @@ export default function AdminDashboard() {
                                 >
                                   <KeyRound size={14} />
                                   Change Password
+                                </button>
+
+                                <button
+                                  onClick={() => openEmailModal(user)}
+                                  className="inline-flex items-center gap-1 px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-lg text-xs font-bold hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                                  title="Update email"
+                                >
+                                  <Mail size={14} />
+                                  Change Email
                                 </button>
 
                               </div>

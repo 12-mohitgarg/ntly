@@ -474,6 +474,38 @@ app.patch("/api/admin/users/:uid/password", requireDashboardOperator, async (req
   }
 });
 
+app.patch("/api/admin/users/:uid/email", requireDashboardOperator, async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const email = String(req.body?.email || "").trim().toLowerCase();
+
+    if (!uid) {
+      return res.status(400).json({ error: "User id is required" });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "Enter a valid email address" });
+    }
+
+    await admin.auth().updateUser(uid, { email, emailVerified: false });
+    await admin.firestore().collection("users").doc(uid).set(
+      {
+        email,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    res.json({ status: "success", email });
+  } catch (error: any) {
+    console.error("Email update error:", error);
+    res.status(500).json({
+      error: "Error updating user email",
+      details: error?.message || "Unknown error",
+    });
+  }
+});
+
 app.post("/api/admin/college-users", requireAdmin, async (req, res) => {
   try {
     const collegeId = String(req.body.collegeId || "").trim();

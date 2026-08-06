@@ -218,6 +218,26 @@ export default function Navbar() {
                     );
                   })}
                 </div>
+
+                {!user && (
+                  <div className="mt-6 grid grid-cols-2 gap-3">
+                    <Link
+                      to="/login"
+                      onClick={() => setIsOpen(false)}
+                      className="flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition-all text-center"
+                    >
+                      <LogIn size={15} />
+                      Login
+                    </Link>
+                    <Link
+                      to="/register"
+                      onClick={() => setIsOpen(false)}
+                      className="flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-xs font-black uppercase tracking-wider text-white shadow-md hover:opacity-95 transition-all text-center"
+                    >
+                      Register
+                    </Link>
+                  </div>
+                )}
               </div>
 
               <div className="pt-6 border-t border-slate-100 flex flex-col gap-3">
