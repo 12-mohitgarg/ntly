@@ -1286,18 +1286,27 @@ export default function AdminDashboard() {
     setSavingEmail(true);
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`/api/admin/users/${emailUser.uid}/email`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ uid: emailUser.uid, email: nextEmail }),
-      });
+      const endpoints = [
+        `/api/admin/users/${emailUser.uid}/email`,
+        `/.netlify/functions/admin-user-email?uid=${encodeURIComponent(emailUser.uid)}`,
+      ];
+      let response: Response | null = null;
+      let result: any = null;
 
-      const result = await response.json().catch(() => null);
+      for (const endpoint of endpoints) {
+        response = await fetch(endpoint, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ uid: emailUser.uid, email: nextEmail }),
+        });
+        result = await response.json().catch(() => null);
+        if (response.ok || response.status !== 404) break;
+      }
 
-      if (!response.ok) {
+      if (!response?.ok) {
         throw new Error(result?.details || result?.error || 'Error updating email');
       }
 
