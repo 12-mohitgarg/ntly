@@ -72,6 +72,35 @@ const normalizePhoneNumber = (value: string) => {
   if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
   return digits.slice(0, 10);
 };
+const normalizeAcademicValue = (value: string) =>
+  value
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/[.,]/g, '')
+    .trim()
+    .toLowerCase();
+
+const normalizeImportedSubject = (value: string) => {
+  const cleaned = value
+    .replace(/\u00a0/g, ' ')
+    .replace(/^Major\s*:\s*/i, '')
+    .trim();
+  const bracketMatch = cleaned.match(/^[A-Z]\.[A-Z][A-Za-z.]*\s*\((.+)\)$/i);
+  return bracketMatch ? bracketMatch[1].trim() : cleaned;
+};
+
+const matchOptionValue = (value: string, options: string[]) => {
+  const cleaned = value.replace(/\u00a0/g, ' ').trim();
+  if (!cleaned) return '';
+
+  const normalized = normalizeAcademicValue(cleaned);
+  return options.find(option => normalizeAcademicValue(option) === normalized) || cleaned;
+};
+
+const hasOptionValue = (value: string, options: string[]) => {
+  const normalized = normalizeAcademicValue(value);
+  return Boolean(normalized && options.some(option => normalizeAcademicValue(option) === normalized));
+};
 
 let registrationConfigCache: {
   districts: District[];
@@ -94,16 +123,14 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
   const [searchParams] = useSearchParams();
   const [inputUniversityRoll, setInputUniversityRoll] = useState(searchParams.get('roll') || '');
-  const [inputIndustrialRegNo, setInputIndustrialRegNo] = useState(searchParams.get('ind') || '');
   const [verificationLoading, setVerificationLoading] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
 
-  const handleVerify = async (rollParam?: string, indParam?: string) => {
+  const handleVerify = async (rollParam?: string) => {
     const roll = (rollParam || inputUniversityRoll).trim();
-    const ind = (indParam || inputIndustrialRegNo).trim();
 
-    if (!roll && !ind) {
-      setError("Enter Registration Number or Industrial Registration Number to fetch your details.");
+    if (!roll) {
+      setError("Enter Registration Number to fetch your details.");
       return;
     }
 
@@ -114,18 +141,8 @@ export default function Register({ mode = 'public' }: RegisterProps) {
     try {
       const usersRef = collection(db, 'users');
       const importedRef = collection(db, 'importedStudents');
-      const lookupQueries = [
-        roll ? getDocs(query(importedRef, where('universityRoll', '==', roll))) : Promise.resolve(null),
-        ind ? getDocs(query(importedRef, where('industrialRegNo', '==', ind))) : Promise.resolve(null),
-      ];
-      const [rollSnapshot, industrialSnapshot] = await Promise.all(lookupQueries);
-      const importedDocs = [
-        ...(rollSnapshot?.docs || []),
-        ...(industrialSnapshot?.docs || []),
-      ];
-      const uniqueDocs = importedDocs.filter((docSnap, index, list) =>
-        list.findIndex((item) => item.id === docSnap.id) === index
-      );
+      const rollSnapshot = await getDocs(query(importedRef, where('universityRoll', '==', roll)));
+      const uniqueDocs = rollSnapshot.docs;
 
       if (uniqueDocs.length === 0) {
         setError("No college record found. You can continue filling the form manually.");
@@ -152,13 +169,19 @@ export default function Register({ mode = 'public' }: RegisterProps) {
         email: importedData.email || '',
         contactNumber: importedData.contactNumber || '',
         gender: importedData.gender || '',
+        district: importedData.district || '',
         college: importedData.college || '',
         university: importedData.university || '',
-        internshipDomain: importedData.course || '',
-        semester: importedData.semester || 'Semester 5',
+        degree: importedData.degree || '',
+        department: importedData.department || '',
+        subject: normalizeImportedSubject(importedData.subject || ''),
+        session: importedData.session || prev.session,
+        internshipDomain: importedData.internshipDomain || importedData.course || '',
+        internshipMode: importedData.internshipMode || prev.internshipMode,
+        semester: importedData.semester || prev.semester,
         universityRoll: importedRegistrationNumber,
         universityRollNo: importedData.universityRollNo || '',
-        industrialRegNo: importedData.industrialRegNo || ind,
+        industrialRegNo: importedData.industrialRegNo || '',
       }));
 
       setIsVerified(true);
@@ -174,9 +197,8 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
   useEffect(() => {
     const roll = searchParams.get('roll');
-    const ind = searchParams.get('ind');
-    if (roll || ind) {
-      handleVerify(roll, ind);
+    if (roll) {
+      handleVerify(roll);
     }
   }, []);
 
@@ -433,6 +455,38 @@ export default function Register({ mode = 'public' }: RegisterProps) {
     return degree?.subjects || [];
   };
 
+  const getUniversityOptions = () => universities.map(university => university.name);
+  const getCollegeOptions = () => formData.district ? getCollegesForDistrict(formData.district).map(college => college.name) : [];
+  const getDepartmentOptions = () => degrees.map(degree => degree.name);
+  const getSubjectOptions = () => formData.department ? getSubjectsForDegree(formData.department) : [];
+  const getDomainOptions = () => courses.map(course => course.name);
+
+  useEffect(() => {
+    if (dataLoading) return;
+
+    setFormData(prev => {
+      const departmentOptions = degrees.map(degree => degree.name);
+      const matchedDepartment = matchOptionValue(prev.department, departmentOptions);
+      const subjects = matchedDepartment ? getSubjectsForDegree(matchedDepartment) : [];
+      const matchedSubject = matchOptionValue(normalizeImportedSubject(prev.subject), subjects);
+      const matchedDistrict = matchOptionValue(prev.district, districts.map(district => district.name));
+      const collegeOptions = matchedDistrict
+        ? getCollegesForDistrict(matchedDistrict).map(college => college.name)
+        : [];
+
+      return {
+        ...prev,
+        university: matchOptionValue(prev.university, universities.map(university => university.name)),
+        district: matchedDistrict,
+        college: matchOptionValue(prev.college, collegeOptions),
+        degree: matchOptionValue(prev.degree, DEGREES),
+        department: matchedDepartment,
+        subject: matchedSubject,
+        internshipDomain: matchOptionValue(prev.internshipDomain, courses.map(course => course.name)),
+      };
+    });
+  }, [dataLoading, universities, districts, colleges, degrees, courses]);
+
   const nextStep = async () => {
     if (step === 1) {
       // Step 1 verification is optional; if not verified, proceed as manual registration
@@ -508,7 +562,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
     }
 
     if (step === 3) {
-      if (!formData.district || !formData.college || !formData.university || !formData.degree || !formData.department || !formData.subject || !formData.session || !formData.semester || !formData.universityRoll || !formData.internshipDomain) {
+      if (!formData.district || !formData.college || !formData.university || !formData.degree || !formData.department || !formData.subject || !formData.session || !formData.semester || !formData.universityRoll || !formData.universityRollNo || !formData.internshipDomain) {
         setError("Please fill all academic details.");
         return;
       }
@@ -791,31 +845,18 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-left">
                   <div className="space-y-1.5 md:col-span-2">
                     <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-xs font-semibold text-blue-800 leading-relaxed">
-                      <strong>Optional:</strong> If your college has pre-registered/imported your details, enter your Roll Number and Industrial Registration Number below to verify and pre-fill the form. Otherwise, you can skip and register manually.
+                      <strong>Optional:</strong> If your college has pre-registered/imported your details, enter your Registration Number below to verify and pre-fill the form. Otherwise, you can skip and register manually.
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="inputUniversityRoll" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Registration Number / Roll Number *</Label>
+                  <div className="space-y-1.5 md:col-span-2">
+                    <Label htmlFor="inputUniversityRoll" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Registration Number *</Label>
                     <div className="relative">
                       <GraduationCap size={16} className="absolute left-4 top-3.5 text-slate-400" />
                       <Input
                         id="inputUniversityRoll"
                         value={inputUniversityRoll}
                         onChange={(e) => setInputUniversityRoll(e.target.value)}
-                        placeholder="e.g. 23UGCO01"
-                        className="pl-11 h-12 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 font-semibold text-xs sm:text-sm"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="inputIndustrialRegNo" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Industrial Registration Number *</Label>
-                    <div className="relative">
-                      <ShieldCheck size={16} className="absolute left-4 top-3.5 text-slate-400" />
-                      <Input
-                        id="inputIndustrialRegNo"
-                        value={inputIndustrialRegNo}
-                        onChange={(e) => setInputIndustrialRegNo(e.target.value)}
-                        placeholder="e.g. IM-23-4567"
+                        placeholder="Enter university registration number"
                         className="pl-11 h-12 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 font-semibold text-xs sm:text-sm"
                       />
                     </div>
@@ -921,61 +962,30 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <div className="mb-3">
                       <h4 className="text-xs font-black uppercase tracking-wider text-blue-800">Already shared by college?</h4>
                       <p className="mt-1 text-[11px] font-semibold leading-relaxed text-blue-700">
-                        Choose only one option below. The other option will turn off automatically.
+                        Enter your university registration number to fetch imported college details.
                       </p>
                     </div>
-                    <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-stretch">
-                      <div className={`rounded-2xl border bg-white p-3 transition ${inputIndustrialRegNo.trim() ? 'border-slate-200 opacity-50' : 'border-blue-100 shadow-sm'}`}>
+                    <div className="grid gap-3">
+                      <div className="rounded-2xl border border-blue-100 bg-white p-3 shadow-sm transition">
                         <div className="mb-2 flex items-center justify-between gap-2">
-                          <Label htmlFor="inputUniversityRoll" className="text-[10px] font-black text-blue-700 uppercase tracking-wider leading-tight">Option 1</Label>
+                          <Label htmlFor="inputUniversityRoll" className="text-[10px] font-black text-blue-700 uppercase tracking-wider leading-tight">Registration Number</Label>
                           <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-blue-700">Registration No.</span>
                         </div>
                         <Input
                           id="inputUniversityRoll"
                           value={inputUniversityRoll}
-                          disabled={Boolean(inputIndustrialRegNo.trim())}
                           onChange={(e) => {
                             setInputUniversityRoll(e.target.value);
-                            setInputIndustrialRegNo('');
                             setFormData((prev) => ({ ...prev, universityRoll: e.target.value, industrialRegNo: '' }));
                           }}
                           placeholder="Enter registration number"
-                          className="h-11 rounded-xl bg-white border-blue-100 font-semibold text-xs disabled:cursor-not-allowed disabled:bg-slate-100"
+                          className="h-11 rounded-xl bg-white border-blue-100 font-semibold text-xs"
                         />
-                        {inputIndustrialRegNo.trim() && (
-                          <p className="mt-2 text-[10px] font-bold text-slate-400">Disabled because Option 2 is selected.</p>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-center">
-                        <span className="rounded-full border border-blue-100 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-blue-500 shadow-sm">
-                          OR
-                        </span>
-                      </div>
-                      <div className={`rounded-2xl border bg-white p-3 transition ${inputUniversityRoll.trim() ? 'border-slate-200 opacity-50' : 'border-blue-100 shadow-sm'}`}>
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                          <Label htmlFor="inputIndustrialRegNo" className="text-[10px] font-black text-blue-700 uppercase tracking-wider leading-tight">Option 2</Label>
-                          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-blue-700">Industrial No.</span>
-                        </div>
-                        <Input
-                          id="inputIndustrialRegNo"
-                          value={inputIndustrialRegNo}
-                          disabled={Boolean(inputUniversityRoll.trim())}
-                          onChange={(e) => {
-                            setInputIndustrialRegNo(e.target.value);
-                            setInputUniversityRoll('');
-                            setFormData((prev) => ({ ...prev, industrialRegNo: e.target.value, universityRoll: '' }));
-                          }}
-                          placeholder="Enter industrial reg number"
-                          className="h-11 rounded-xl bg-white border-blue-100 font-semibold text-xs disabled:cursor-not-allowed disabled:bg-slate-100"
-                        />
-                        {inputUniversityRoll.trim() && (
-                          <p className="mt-2 text-[10px] font-bold text-slate-400">Disabled because Option 1 is selected.</p>
-                        )}
                       </div>
                     </div>
                     <Button
                       type="button"
-                      disabled={verificationLoading || (!inputUniversityRoll.trim() && !inputIndustrialRegNo.trim())}
+                      disabled={verificationLoading || !inputUniversityRoll.trim()}
                       onClick={() => handleVerify()}
                       className="mt-3 h-10 w-full sm:w-auto rounded-xl bg-blue-600 px-4 text-[10px] font-black uppercase tracking-wider text-white hover:bg-blue-700"
                     >
@@ -1006,6 +1016,9 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="university" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">University *</Label>
                     <select name="university" value={formData.university} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Select University</option>
+                      {formData.university && !hasOptionValue(formData.university, getUniversityOptions()) && (
+                        <option value={formData.university}>{formData.university}</option>
+                      )}
                       {universities.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
                     </select>
                   </div>
@@ -1014,6 +1027,9 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="district" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">District *</Label>
                     <select name="district" value={formData.district} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Select District</option>
+                      {formData.district && !hasOptionValue(formData.district, districts.map(d => d.name)) && (
+                        <option value={formData.district}>{formData.district}</option>
+                      )}
                       {districts.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
                     </select>
                   </div>
@@ -1022,7 +1038,10 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="college" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">College Affiliate *</Label>
                     <select name="college" value={formData.college} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Select College</option>
-                      {formData.district ? getCollegesForDistrict(formData.district).map(c => <option key={c.id} value={c.name}>{c.name}</option>) : <option value={formData.college}>{formData.college}</option>}
+                      {formData.college && !hasOptionValue(formData.college, getCollegeOptions()) && (
+                        <option value={formData.college}>{formData.college}</option>
+                      )}
+                      {formData.district ? getCollegesForDistrict(formData.district).map(c => <option key={c.id} value={c.name}>{c.name}</option>) : null}
                     </select>
                   </div>
 
@@ -1030,6 +1049,9 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="degree" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Degree *</Label>
                     <select name="degree" value={formData.degree} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Degree</option>
+                      {formData.degree && !hasOptionValue(formData.degree, DEGREES) && (
+                        <option value={formData.degree}>{formData.degree}</option>
+                      )}
                       {DEGREES.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
@@ -1038,6 +1060,9 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="department" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Department *</Label>
                     <select name="department" value={formData.department} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Select Department</option>
+                      {formData.department && !hasOptionValue(formData.department, getDepartmentOptions()) && (
+                        <option value={formData.department}>{formData.department}</option>
+                      )}
                       {degrees.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
                     </select>
                   </div>
@@ -1046,7 +1071,10 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="subject" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Subject *</Label>
                     <select name="subject" value={formData.subject} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Subject</option>
-                      {formData.department ? getSubjectsForDegree(formData.department).map(s => <option key={s} value={s}>{s}</option>) : <option value={formData.subject}>{formData.subject}</option>}
+                      {formData.subject && !hasOptionValue(formData.subject, getSubjectOptions()) && (
+                        <option value={formData.subject}>{formData.subject}</option>
+                      )}
+                      {formData.department ? getSubjectsForDegree(formData.department).map(s => <option key={s} value={s}>{s}</option>) : null}
                     </select>
                   </div>
 
@@ -1072,7 +1100,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                   </div>
 
                   <div className="space-y-1.5 text-left">
-                    <Label htmlFor="universityRollNo" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">University Roll No</Label>
+                    <Label htmlFor="universityRollNo" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">University Roll No *</Label>
                     <Input id="universityRollNo" name="universityRollNo" value={formData.universityRollNo} onChange={handleChange} placeholder="Enter university roll no" className="h-12 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm" />
                   </div>
 
@@ -1080,6 +1108,9 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="internshipDomain" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Internship Domain Track *</Label>
                     <select name="internshipDomain" value={formData.internshipDomain} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Select Domain</option>
+                      {formData.internshipDomain && !hasOptionValue(formData.internshipDomain, getDomainOptions()) && (
+                        <option value={formData.internshipDomain}>{formData.internshipDomain}</option>
+                      )}
                       {courses.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                     </select>
                   </div>

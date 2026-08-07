@@ -56,6 +56,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/auth/student-login-identifier"
+  to = "/.netlify/functions/auth-student-login-identifier"
+  status = 200
+
+[[redirects]]
   from = "/api/auth/college-profile"
   to = "/.netlify/functions/auth-college-profile"
   status = 200

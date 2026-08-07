@@ -74,6 +74,18 @@ function cleanEnvValue(value?: string) {
     .trim();
 }
 
+function normalizeLoginIdentifier(value: unknown) {
+  return String(value || "").trim();
+}
+
+function uniqueIdentifierValues(value: string) {
+  return Array.from(new Set([
+    value,
+    value.toUpperCase(),
+    value.toLowerCase(),
+  ].filter(Boolean)));
+}
+
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: getFirebaseAdminCredential(),
@@ -252,19 +264,61 @@ async function getCollegeAmount(collegeName?: string) {
 }
 
 function normalizeImportedStudent(student: any) {
+  const normalizeDepartment = (value: any) => {
+    const cleaned = String(value || "").replace(/\u00a0/g, " ").trim();
+    const match = cleaned.match(/^(B\.A\.|B\.Sc\.|B\.Com\.|M\.A\.|M\.Sc\.|M\.Com\.)/i);
+    return match ? match[1] : cleaned;
+  };
+  const normalizeSubject = (value: any) => {
+    const cleaned = String(value || "")
+      .replace(/\u00a0/g, " ")
+      .replace(/^Major\s*:\s*/i, "")
+      .trim();
+    const bracketMatch = cleaned.match(/^[A-Z]\.[A-Z][A-Za-z.]*\s*\((.+)\)$/i);
+    return bracketMatch ? bracketMatch[1].trim() : cleaned;
+  };
+  const normalizeSemester = (value: any) => {
+    const cleaned = String(value || "").replace(/\u00a0/g, " ").trim();
+    const romanMap: Record<string, string> = {
+      I: "Semester 1",
+      II: "Semester 2",
+      III: "Semester 3",
+      IV: "Semester 4",
+      V: "Semester 5",
+      VI: "Semester 6",
+      VII: "Semester 7",
+      VIII: "Semester 8",
+    };
+    const upper = cleaned.toUpperCase();
+    if (romanMap[upper]) return romanMap[upper];
+    if (/^\d+$/.test(cleaned)) return `Semester ${cleaned}`;
+    return cleaned;
+  };
+  const rawDepartment = student.department || student.academicDetails || student.degree;
+  const rawSubject = student.subject || student.academicDetails;
+
   return {
     fullName: String(student.fullName || "").trim(),
     parentName: String(student.parentName || "").trim(),
     contactNumber: String(student.contactNumber || "").replace(/\D/g, "").slice(-10),
     email: String(student.email || "").trim().toLowerCase(),
     gender: String(student.gender || "").trim(),
+    district: String(student.district || "").trim(),
     college: String(student.college || "").trim(),
     university: String(student.university || "").trim(),
+    degree: String(student.degree || "").trim(),
+    department: normalizeDepartment(rawDepartment),
+    subject: normalizeSubject(rawSubject),
+    session: String(student.session || "").trim(),
     course: String(student.course || "").trim(),
-    semester: String(student.semester || "").trim(),
+    semester: normalizeSemester(student.semester),
     universityRoll: String(student.universityRoll || "").trim(),
     universityRollNo: String(student.universityRollNo || "").trim(),
     industrialRegNo: String(student.industrialRegNo || "").trim(),
+    internshipDomain: String(student.internshipDomain || student.course || "").trim(),
+    internshipMode: String(student.internshipMode || "Online").trim(),
+    motherName: String(student.motherName || "").trim(),
+    dateOfBirth: String(student.dateOfBirth || "").trim(),
     academicDetails: String(student.academicDetails || "").trim(),
   };
 }
@@ -278,32 +332,64 @@ async function findExistingImportStudent(
 
   const [
     existingRoll,
-    existingEmail,
-    existingPhone,
     existingImported,
-    existingImportedEmail,
-    existingImportedPhone,
   ] = await Promise.all([
     db.collection("users").where("universityRoll", "==", student.universityRoll).limit(1).get(),
-    student.email ? db.collection("users").where("email", "==", student.email).limit(1).get() : Promise.resolve(null),
-    student.contactNumber ? db.collection("users").where("contactNumber", "==", student.contactNumber).limit(1).get() : Promise.resolve(null),
     importedRef.where("universityRoll", "==", student.universityRoll).limit(1).get(),
-    student.email ? importedRef.where("email", "==", student.email).limit(1).get() : Promise.resolve(null),
-    student.contactNumber ? importedRef.where("contactNumber", "==", student.contactNumber).limit(1).get() : Promise.resolve(null),
   ]);
 
   if (!existingRoll.empty) return "Student already registered with this roll number";
-  if (existingEmail && !existingEmail.empty) return "Student already registered with this email";
-  if (existingPhone && !existingPhone.empty) return "Student already registered with this mobile number";
   if (!existingImported.empty) return "Student already exists in imported list";
-  if (existingImportedEmail && !existingImportedEmail.empty) return "Student already exists in imported list with this email";
-  if (existingImportedPhone && !existingImportedPhone.empty) return "Student already exists in imported list with this mobile number";
   return "";
 }
 
 // API Routes
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", environment: process.env.NODE_ENV });
+});
+
+app.post("/api/auth/student-login-identifier", async (req, res) => {
+  try {
+    const identifier = normalizeLoginIdentifier(req.body?.identifier);
+
+    if (!identifier) {
+      return res.status(400).json({ error: "Login ID is required" });
+    }
+
+    if (identifier.includes("@")) {
+      return res.json({ email: identifier.toLowerCase() });
+    }
+
+    const db = admin.firestore();
+    const usersRef = db.collection("users");
+    const phone = identifier.replace(/\D/g, "").slice(-10);
+    const lookups: Promise<FirebaseFirestore.QuerySnapshot>[] = [];
+
+    if (phone.length === 10) {
+      lookups.push(usersRef.where("contactNumber", "==", phone).limit(1).get());
+    }
+
+    for (const value of uniqueIdentifierValues(identifier)) {
+      lookups.push(usersRef.where("universityRoll", "==", value).limit(1).get());
+      lookups.push(usersRef.where("universityRollNo", "==", value).limit(1).get());
+    }
+
+    const snapshots = await Promise.all(lookups);
+    const matchedDoc = snapshots.find((snapshot) => !snapshot.empty)?.docs[0];
+    const email = String(matchedDoc?.data()?.email || "").trim().toLowerCase();
+
+    if (!matchedDoc || !email) {
+      return res.status(404).json({ error: "No student account found for this login ID" });
+    }
+
+    res.json({ email });
+  } catch (error: any) {
+    console.error("Student login identifier lookup error:", error);
+    res.status(500).json({
+      error: "Unable to verify login ID",
+      details: error?.message || "Unknown error",
+    });
+  }
 });
 
 app.post("/api/admin/import-students", requireAdmin, async (req, res) => {
@@ -320,8 +406,6 @@ app.post("/api/admin/import-students", requireAdmin, async (req, res) => {
     const importedStudents: any[] = [];
     const skippedStudents: any[] = [];
     const seenRolls = new Set<string>();
-    const seenEmails = new Set<string>();
-    const seenPhones = new Set<string>();
     const CHUNK_SIZE = 400; // Batch limit is 500
 
     for (let i = 0; i < students.length; i += CHUNK_SIZE) {
@@ -335,17 +419,7 @@ app.post("/api/admin/import-students", requireAdmin, async (req, res) => {
           skippedStudents.push({ ...student, reason: "Duplicate roll number in uploaded file" });
           continue;
         }
-        if (student.email && seenEmails.has(student.email)) {
-          skippedStudents.push({ ...student, reason: "Duplicate email in uploaded file" });
-          continue;
-        }
-        if (student.contactNumber && seenPhones.has(student.contactNumber)) {
-          skippedStudents.push({ ...student, reason: "Duplicate mobile number in uploaded file" });
-          continue;
-        }
         if (student.universityRoll) seenRolls.add(student.universityRoll);
-        if (student.email) seenEmails.add(student.email);
-        if (student.contactNumber) seenPhones.add(student.contactNumber);
 
         const existingReason = await findExistingImportStudent(db, importedRef, student);
         if (existingReason) {
@@ -392,7 +466,7 @@ app.post("/api/admin/import-students", requireAdmin, async (req, res) => {
           const collegeAmount = await getCollegeAmount(student.college);
           
           // Formulate Secure Payment Link
-          const securePaymentLink = `${appUrl}/register?roll=${encodeURIComponent(student.universityRoll)}&ind=${encodeURIComponent(student.industrialRegNo)}`;
+          const securePaymentLink = `${appUrl}/register?roll=${encodeURIComponent(student.universityRoll)}`;
           
           // Message text
           const messageText = `Dear ${student.fullName}, your registration for the Internship Program from ${student.college || 'your college'} is pending. Please complete your registration and pay a fee of ₹${collegeAmount} using this secure link: ${securePaymentLink}`;

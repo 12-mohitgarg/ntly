@@ -138,6 +138,8 @@ export default function Certifications() {
   };
 
   const progress = profile?.progress || 0;
+  const lockedDocumentDate = '15 Sep 2026';
+  const lockedDocumentDateRaw = '2026-09-15';
 
   // Certificates list
   const initialDocs = [
@@ -159,10 +161,10 @@ export default function Certifications() {
       desc: 'UGC-compliant internship completion certificate',
       icon: Award,
       type: 'certificate',
-      ready: progress >= 100,
-      badge: progress >= 100 ? 'Verified' : 'Pending',
-      date: '14 Jun 2026',
-      dateRaw: '2026-06-14',
+      ready: false,
+      badge: 'Available 15 Sep',
+      date: lockedDocumentDate,
+      dateRaw: lockedDocumentDateRaw,
       color: 'blue'
     },
     {
@@ -171,10 +173,10 @@ export default function Certifications() {
       desc: 'Detailed performance breakdown of your internship',
       icon: FileCheck,
       type: 'marksheet',
-      ready: !!testSubmission,
-      badge: testSubmission ? 'Verified' : 'Pending',
-      date: '14 Jun 2026',
-      dateRaw: '2026-06-14',
+      ready: false,
+      badge: 'Available 15 Sep',
+      date: lockedDocumentDate,
+      dateRaw: lockedDocumentDateRaw,
       color: 'purple'
     },
     {
@@ -183,10 +185,10 @@ export default function Certifications() {
       desc: 'Comprehensive report of your learnings and tasks',
       icon: FileText,
       type: 'report',
-      ready: progress >= 90 && !!reportUrl,
-      badge: progress >= 90 ? (reportUrl ? 'Verified' : 'Pending Upload') : 'Pending',
-      date: '20 Jun 2026',
-      dateRaw: '2026-06-20',
+      ready: false,
+      badge: 'Available 15 Sep',
+      date: lockedDocumentDate,
+      dateRaw: lockedDocumentDateRaw,
       color: 'orange'
     },
     {
@@ -195,10 +197,10 @@ export default function Certifications() {
       desc: 'Official record of your internship attendance',
       icon: Clock,
       type: 'attendance',
-      ready: progress >= 100,
-      badge: progress >= 100 ? 'Verified' : 'Pending',
-      date: '14 Jun 2026',
-      dateRaw: '2026-06-14',
+      ready: false,
+      badge: 'Available 15 Sep',
+      date: lockedDocumentDate,
+      dateRaw: lockedDocumentDateRaw,
       color: 'green'
     },
     {
@@ -208,9 +210,9 @@ export default function Certifications() {
       icon: ClipboardList,
       type: 'logbook',
       ready: false,
-      badge: 'Pending',
-      date: '14 Jun 2026',
-      dateRaw: '2026-06-14',
+      badge: 'Available 15 Sep',
+      date: lockedDocumentDate,
+      dateRaw: lockedDocumentDateRaw,
       color: 'orange'
     }
   ];
@@ -429,7 +431,7 @@ export default function Certifications() {
                 <div className="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">
                   <div className="flex flex-col">
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-                      {docItem.id === 'report' ? 'Available from' : 'Issued on'}
+                      {docItem.ready ? 'Issued on' : 'Available from'}
                     </span>
                     <span className="text-xs text-slate-700 font-bold mt-0.5">
                       {docItem.date}
@@ -460,7 +462,7 @@ export default function Certifications() {
                       className="inline-flex h-9 items-center justify-center gap-1.5 bg-slate-100 border border-slate-100 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-wider px-4 cursor-not-allowed select-none"
                     >
                       <Lock size={11} />
-                      {docItem.id === 'report' && progress >= 90 ? 'Not Uploaded' : 'Coming Soon'}
+                      Available 15 Sep
                     </button>
                   )}
                 </div>
