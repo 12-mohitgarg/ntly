@@ -65,6 +65,7 @@ const WhatsAppIcon = ({ size = 20, className = "" }: { size?: number; className?
 const REGISTRATION_SESSIONS = ['2023-27', '2024-28', '2025-29', '2026-30'];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PHONE_PATTERN = /^[6-9]\d{9}$/;
+const MAHILA_TEKARI_COLLEGE_NAME = 'Mahila College Tekari, Gaya';
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const normalizePhoneNumber = (value: string) => {
@@ -87,6 +88,27 @@ const normalizeImportedSubject = (value: string) => {
     .trim();
   const bracketMatch = cleaned.match(/^[A-Z]\.[A-Z][A-Za-z.]*\s*\((.+)\)$/i);
   return bracketMatch ? bracketMatch[1].trim() : cleaned;
+};
+
+const normalizeCollegeName = (value: string) => {
+  const cleaned = value.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+  const comparable = cleaned.toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' ');
+  if (comparable === 'mahila college tekari' || comparable === 'mahila college tekari gaya') {
+    return MAHILA_TEKARI_COLLEGE_NAME;
+  }
+  return cleaned;
+};
+
+const dedupeColleges = (collegeList: College[]) => {
+  const collegesByName = new Map<string, College>();
+  collegeList.forEach((college) => {
+    const name = normalizeCollegeName(college.name);
+    const key = name.toLowerCase();
+    if (!collegesByName.has(key)) {
+      collegesByName.set(key, { ...college, name });
+    }
+  });
+  return Array.from(collegesByName.values()).sort((a, b) => a.name.localeCompare(b.name));
 };
 
 const matchOptionValue = (value: string, options: string[]) => {
@@ -170,7 +192,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
         contactNumber: importedData.contactNumber || '',
         gender: importedData.gender || '',
         district: importedData.district || '',
-        college: importedData.college || '',
+        college: normalizeCollegeName(importedData.college || ''),
         university: importedData.university || '',
         degree: importedData.degree || '',
         department: importedData.department || '',
@@ -425,7 +447,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
       registrationConfigCache = {
         districts: districtsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as District)),
-        colleges: collegesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as College)),
+        colleges: dedupeColleges(collegesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as College))),
         universities: universitiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as University)),
         courses: coursesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course)),
         degrees: degreesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Degree))

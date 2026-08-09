@@ -63,7 +63,8 @@ function normalizeSemester(value) {
 
 function normalizeCollege(value) {
   const cleaned = clean(value);
-  if (cleaned.toLowerCase() === 'mahila college, tekari, gaya') return 'Mahila College, Tekari';
+  const comparable = cleaned.toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' ');
+  if (comparable === 'mahila college tekari' || comparable === 'mahila college tekari gaya') return 'Mahila College Tekari, Gaya';
   return cleaned;
 }
 
@@ -107,7 +108,7 @@ function parseFile(fileName) {
         email: get('email').toLowerCase(),
         gender: get('gender') || 'Female',
         district: 'Gaya',
-        college: normalizeCollege(get('college')) || 'Mahila College, Tekari',
+        college: normalizeCollege(get('college')) || 'Mahila College Tekari, Gaya',
         university: get('university') || 'Magadh University (MU), Bodh Gaya',
         degree: rawDegree === 'UG' || rawDegree === 'PG' ? rawDegree : (rawDegree.includes('B.') ? 'UG' : rawDegree),
         department: get('department') || 'B.A.',

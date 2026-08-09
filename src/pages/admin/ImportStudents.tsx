@@ -136,7 +136,8 @@ export default function ImportStudents() {
 
         const normalizeCollegeValue = (value: string) => {
           const cleaned = value.replace(/\u00a0/g, ' ').trim();
-          if (cleaned.toLowerCase() === 'mahila college, tekari, gaya') return 'Mahila College, Tekari';
+          const comparable = cleaned.toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' ');
+          if (comparable === 'mahila college tekari' || comparable === 'mahila college tekari gaya') return 'Mahila College Tekari, Gaya';
           return cleaned;
         };
 
@@ -211,7 +212,7 @@ export default function ImportStudents() {
             email: getVal(emailIdx),
             gender: getVal(genderIdx) || (isMahilaTekariSheet ? 'Female' : ''),
             district: isMahilaTekariSheet ? 'Gaya' : '',
-            college: normalizeCollegeValue(getVal(collegeIdx)) || (isMahilaTekariSheet ? 'Mahila College, Tekari' : ''),
+            college: normalizeCollegeValue(getVal(collegeIdx)) || (isMahilaTekariSheet ? 'Mahila College Tekari, Gaya' : ''),
             university: getVal(uniIdx) || (isMahilaTekariSheet ? 'Magadh University (MU), Bodh Gaya' : ''),
             degree: rawDegree === 'UG' || rawDegree === 'PG' ? rawDegree : (rawDegree.includes('B.') ? 'UG' : ''),
             department,
