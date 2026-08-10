@@ -30,13 +30,23 @@ interface ParsedStudent {
   contactNumber: string;
   email: string;
   gender: string;
+  district: string;
   college: string;
   university: string;
+  degree: string;
+  department: string;
+  subject: string;
+  session: string;
   course: string;
   semester: string;
   universityRoll: string;
   universityRollNo: string;
   industrialRegNo: string;
+  internshipDomain: string;
+  internshipMode: string;
+  password?: string;
+  motherName?: string;
+  dateOfBirth?: string;
   academicDetails?: string;
   importedAt?: string;
   status?: string;
@@ -168,7 +178,7 @@ export default function ImportStudents() {
         const data = event.target?.result;
         if (!data) throw new Error("Could not read file data");
 
-        const workbook = XLSX.read(data, { type: 'binary' });
+        const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const json: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
@@ -177,36 +187,94 @@ export default function ImportStudents() {
           throw new Error("Excel sheet must contain a header row and at least one data row.");
         }
 
-        const rawHeaders = json[0].map((h: any) => String(h || '').trim());
+        const rawHeaders = json[0].map((h: any) => String(h || '').replace(/\u00a0/g, ' ').trim());
+        setHeaders(rawHeaders);
 
         const mappedStudents: ParsedStudent[] = [];
         const fileWarnings: string[] = [];
 
-        const findColIndex = (names: string[]) => {
-          return rawHeaders.findIndex((h) =>
-            names.some((name) => h.toLowerCase() === name.toLowerCase())
-          );
+        // Helper to find column index by multiple potential names
+        const normalizeHeader = (value: string) =>
+          value
+            .replace(/\u00a0/g, ' ')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '');
+
+        const normalizeDepartment = (value: string) => {
+          const cleaned = value.replace(/\u00a0/g, ' ').trim();
+          const match = cleaned.match(/^(B\.A\.|B\.Sc\.|B\.Com\.|M\.A\.|M\.Sc\.|M\.Com\.)/i);
+          return match ? match[1].replace(/(^|\.)([a-z])/g, s => s.toUpperCase()) : cleaned;
         };
 
-        const nameIdx = findColIndex(['Student Name', 'Name', 'fullName', 'StudentName']);
+        const normalizeSubjectValue = (value: string) => {
+          const cleaned = value
+            .replace(/\u00a0/g, ' ')
+            .replace(/^Major\s*:\s*/i, '')
+            .trim();
+          const bracketMatch = cleaned.match(/^[A-Z]\.[A-Z][A-Za-z.]*\s*\((.+)\)$/i);
+          return bracketMatch ? bracketMatch[1].trim() : cleaned;
+        };
+
+        const normalizeSemesterValue = (value: string) => {
+          const cleaned = value.replace(/\u00a0/g, ' ').trim();
+          const romanMap: Record<string, string> = {
+            I: 'Semester 1',
+            II: 'Semester 2',
+            III: 'Semester 3',
+            IV: 'Semester 4',
+            V: 'Semester 5',
+            VI: 'Semester 6',
+            VII: 'Semester 7',
+            VIII: 'Semester 8',
+          };
+          const upper = cleaned.toUpperCase();
+          if (romanMap[upper]) return romanMap[upper];
+          if (/^\d+$/.test(cleaned)) return `Semester ${cleaned}`;
+          return cleaned;
+        };
+
+        const normalizeCollegeValue = (value: string) => {
+          const cleaned = value.replace(/\u00a0/g, ' ').trim();
+          const comparable = cleaned.toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' ');
+          if (comparable === 'mahila college tekari' || comparable === 'mahila college tekari gaya') return 'Mahila College Tekari, Gaya';
+          return cleaned;
+        };
+
+        const findColIndex = (names: string[]) => {
+          const normalizedNames = names.map(normalizeHeader);
+          return rawHeaders.findIndex((h) => normalizedNames.includes(normalizeHeader(h)));
+        };
+
+        const nameIdx = findColIndex(['Student Name', "Student's Name", 'Name', 'Full Name', 'fullName', 'StudentName']);
         const parentIdx = findColIndex(["Father's Name", 'Father Name', 'Parent Name', 'parentName', 'FatherName']);
-        const phoneIdx = findColIndex(['Mobile Number', 'Mobile', 'Phone', 'contactNumber', 'Phone Number', 'MobileNo']);
-        const emailIdx = findColIndex(['Email', 'email', 'Email Address', 'EmailId']);
+        const motherIdx = findColIndex(["Mother's Name", 'Mother Name', 'MotherName']);
+        const dobIdx = findColIndex(['Date of Birth', 'DOB', 'Birth Date']);
+        const phoneIdx = findColIndex(['Mobile Number', 'Mobile', 'Phone', 'contactNumber', 'Phone Number', 'MobileNo', 'Mobile No']);
+        const emailIdx = findColIndex(['Email', 'email', 'Email Address', 'EmailId', 'E-mail']);
         const genderIdx = findColIndex(['Gender', 'gender', 'Sex']);
         const collegeIdx = findColIndex(['College Name', 'College', 'college']);
         const uniIdx = findColIndex(['University', 'university', 'University Name']);
-        const courseIdx = findColIndex(['Course', 'Domain', 'Internship Domain', 'course', 'domain']);
+        const degreeIdx = findColIndex(['Degree', 'Degree (UG/PG)']);
+        const departmentIdx = findColIndex(['Department', 'Department Name']);
+        const subjectIdx = findColIndex(['Subject', 'Subjects', 'Major Subject']);
+        const sessionIdx = findColIndex(['Session', 'Academic Session']);
+        const courseIdx = findColIndex(['Course', 'course']);
+        const domainIdx = findColIndex(['Internship Domain', 'Domain', 'domain']);
+        const modeIdx = findColIndex(['Mode', 'Mode (Online/Offline)', 'Internship Mode']);
+        const passwordIdx = findColIndex(['Password', 'Default Password']);
         const semIdx = findColIndex(['Semester', 'semester', 'Year/Semester']);
-        const rollIdx = findColIndex(['University Registration Number', 'Registration Number', 'Reg No', 'universityRoll', 'RegNo']);
+        const rollIdx = findColIndex(['University Registration Number', 'Registration Number', 'Reg No', 'Reg. No.', 'universityRoll', 'RegNo']);
         const rollNoIdx = findColIndex(['University Roll No', 'University Roll Number', 'Roll Number', 'Roll No', 'universityRollNo', 'RollNo']);
         const indIdx = findColIndex(['Industrial Registration Number', 'Industrial Reg No', 'industrialRegNo', 'IndustrialRegNo']);
 
-        if (rollIdx === -1) fileWarnings.push("Missing University Registration Number column.");
+        // Check required fields
+        if (rollIdx === -1) fileWarnings.push("Missing University Registration Number column. Students won't be able to verify.");
         if (nameIdx === -1) fileWarnings.push("Missing Student Name column.");
         if (phoneIdx === -1) fileWarnings.push("Missing Mobile Number column.");
         if (emailIdx === -1) fileWarnings.push("Missing Email column.");
-
-        setWarnings(fileWarnings);
+        if (domainIdx === -1) fileWarnings.push("Missing Internship Domain column. Students can still import, but the domain will need to be selected during registration.");
+        if (sessionIdx === -1) fileWarnings.push("Missing Session column. Students can still import, but session may need manual confirmation.");
+        if (semIdx === -1) fileWarnings.push("Missing Semester column. Students can still import, but semester may need manual confirmation.");
 
         for (let r = 1; r < json.length; r++) {
           const row = json[r];
@@ -216,22 +284,46 @@ export default function ImportStudents() {
 
           const getVal = (idx: number) => {
             if (idx === -1 || idx >= row.length) return '';
-            return String(row[idx] || '').trim();
+            const value = row[idx];
+            if (value instanceof Date) {
+              return value.toLocaleDateString('en-IN');
+            }
+            return String(value || '').replace(/\u00a0/g, ' ').trim();
           };
+
+          const fileName = selectedFile.name.toLowerCase();
+          const isMahilaTekariSheet = fileName.includes('mahila') && fileName.includes('tekari');
+          const isExStudentSheet = fileName.includes('ex-student');
+          const sessionFromFile = fileName.includes('2024-28') ? '2024-28' : fileName.includes('2023-27') ? '2023-27' : '';
+          const rawDegree = getVal(degreeIdx);
+          const department = getVal(departmentIdx) || normalizeDepartment(rawDegree);
+          const subject = normalizeSubjectValue(getVal(subjectIdx));
+          const internshipDomain = getVal(domainIdx) || getVal(courseIdx);
 
           mappedStudents.push({
             fullName: getVal(nameIdx),
             parentName: getVal(parentIdx),
             contactNumber: getVal(phoneIdx),
             email: getVal(emailIdx),
-            gender: getVal(genderIdx),
-            college: getVal(collegeIdx),
-            university: getVal(uniIdx),
-            course: getVal(courseIdx),
-            semester: getVal(semIdx),
+            gender: getVal(genderIdx) || (isMahilaTekariSheet ? 'Female' : ''),
+            district: isMahilaTekariSheet ? 'Gaya' : '',
+            college: normalizeCollegeValue(getVal(collegeIdx)) || (isMahilaTekariSheet ? 'Mahila College Tekari, Gaya' : ''),
+            university: getVal(uniIdx) || (isMahilaTekariSheet ? 'Magadh University (MU), Bodh Gaya' : ''),
+            degree: rawDegree === 'UG' || rawDegree === 'PG' ? rawDegree : (rawDegree.includes('B.') ? 'UG' : ''),
+            department,
+            subject,
+            session: getVal(sessionIdx) || sessionFromFile,
+            course: internshipDomain,
+            semester: normalizeSemesterValue(getVal(semIdx)) || (isExStudentSheet ? '' : 'Semester 5'),
             universityRoll: getVal(rollIdx),
             universityRollNo: getVal(rollNoIdx),
             industrialRegNo: getVal(indIdx),
+            internshipDomain,
+            internshipMode: getVal(modeIdx) || 'Online',
+            password: getVal(passwordIdx),
+            motherName: getVal(motherIdx),
+            dateOfBirth: getVal(dobIdx),
+            academicDetails: getVal(acadIdx) || [rawDegree, subject].filter(Boolean).join(' | '),
           });
         }
 
@@ -239,6 +331,18 @@ export default function ImportStudents() {
           throw new Error("No valid student rows found in the uploaded sheet.");
         }
 
+        const countDuplicates = (values: string[]) =>
+          values.reduce((count, value, _index, list) => count + (value && list.indexOf(value) !== list.lastIndexOf(value) ? 1 : 0), 0);
+        const duplicatePhoneRows = countDuplicates(mappedStudents.map(student => student.contactNumber.replace(/\D/g, '').slice(-10)));
+        const duplicateEmailRows = countDuplicates(mappedStudents.map(student => student.email.trim().toLowerCase()));
+        if (duplicatePhoneRows > 0) {
+          fileWarnings.push(`${duplicatePhoneRows} rows share a mobile number. They will still import because registration number is used as the unique student ID.`);
+        }
+        if (duplicateEmailRows > 0) {
+          fileWarnings.push(`${duplicateEmailRows} rows share an email address. They will still import because registration number is used as the unique student ID.`);
+        }
+
+        setWarnings(fileWarnings);
         setParsedData(mappedStudents);
       } catch (err: any) {
         setErrorMsg(err?.message || "Failed to parse Excel sheet. Check formatting.");
@@ -263,8 +367,6 @@ export default function ImportStudents() {
     const importedStudents: ParsedStudent[] = [];
     const skippedStudents: ImportSkippedStudent[] = [];
     const seenRolls = new Set<string>();
-    const seenEmails = new Set<string>();
-    const seenPhones = new Set<string>();
     const CHUNK_SIZE = 100;
 
     for (let i = 0; i < students.length; i += CHUNK_SIZE) {
@@ -292,41 +394,19 @@ export default function ImportStudents() {
           skippedStudents.push({ ...student, reason: "Duplicate roll number in uploaded file", status: 'Duplicate' });
           continue;
         }
-        if (email && seenEmails.has(email)) {
-          skippedStudents.push({ ...student, reason: "Duplicate email in uploaded file", status: 'Duplicate' });
-          continue;
-        }
-        if (phone && seenPhones.has(phone)) {
-          skippedStudents.push({ ...student, reason: "Duplicate mobile number in uploaded file", status: 'Duplicate' });
-          continue;
-        }
         if (roll) seenRolls.add(roll);
-        if (email) seenEmails.add(email);
-        if (phone) seenPhones.add(phone);
 
         const existingChecks = await Promise.all([
           getDocs(query(usersRef, where("universityRoll", "==", roll), limit(1))),
-          email ? getDocs(query(usersRef, where("email", "==", email), limit(1))) : Promise.resolve(null),
-          phone ? getDocs(query(usersRef, where("contactNumber", "==", phone), limit(1))) : Promise.resolve(null),
           getDocs(query(importedRef, where("universityRoll", "==", roll), limit(1))),
-          email ? getDocs(query(importedRef, where("email", "==", email), limit(1))) : Promise.resolve(null),
-          phone ? getDocs(query(importedRef, where("contactNumber", "==", phone), limit(1))) : Promise.resolve(null),
         ]);
 
         if (!existingChecks[0].empty) {
           skippedStudents.push({ ...student, reason: "Already registered with this roll number", status: 'Duplicate' });
           continue;
         }
-        if (existingChecks[1] && !existingChecks[1].empty) {
-          skippedStudents.push({ ...student, reason: "Already registered with this email", status: 'Duplicate' });
-          continue;
-        }
-        if (existingChecks[2] && !existingChecks[2].empty) {
-          skippedStudents.push({ ...student, reason: "Already registered with this mobile number", status: 'Duplicate' });
-          continue;
-        }
-        if (!existingChecks[3].empty || (existingChecks[4] && !existingChecks[4].empty) || (existingChecks[5] && !existingChecks[5].empty)) {
-          skippedStudents.push({ ...student, reason: "Already exists in imported database", status: 'Duplicate' });
+        if (!existingChecks[1].empty) {
+          skippedStudents.push({ ...student, reason: "Student already exists in imported list" });
           continue;
         }
 
@@ -336,13 +416,23 @@ export default function ImportStudents() {
           contactNumber: phone || student.contactNumber || "",
           email: email || "",
           gender: student.gender || "",
+          district: student.district || "",
           college: student.college || "",
           university: student.university || "",
+          degree: student.degree || "",
+          department: student.department || "",
+          subject: student.subject || "",
+          session: student.session || "",
           course: student.course || "",
           semester: student.semester || "",
           universityRoll: roll,
           universityRollNo: student.universityRollNo || "",
           industrialRegNo: student.industrialRegNo || "",
+          internshipDomain: student.internshipDomain || student.course || "",
+          internshipMode: student.internshipMode || "Online",
+          motherName: student.motherName || "",
+          dateOfBirth: student.dateOfBirth || "",
+          academicDetails: student.academicDetails || "",
           importedAt: new Date().toISOString(),
           paymentStatus: "Pending",
           whatsappSent: false,
@@ -370,6 +460,14 @@ export default function ImportStudents() {
 
   const handleImportSubmit = async () => {
     if (parsedData.length === 0 || !user) return;
+
+    // Additional check
+    const hasUnverifiable = parsedData.some(s => !s.universityRoll);
+    if (hasUnverifiable) {
+      if (!confirm("Some rows are missing University Registration Number. These students will not be able to complete their registration. Do you want to proceed?")) {
+        return;
+      }
+    }
 
     setImporting(true);
     setErrorMsg('');
@@ -468,7 +566,7 @@ export default function ImportStudents() {
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto pb-12 select-none animate-fade-in">
-      
+
       {/* 1. TOP TITLE HEADER */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -502,47 +600,27 @@ export default function ImportStudents() {
         </Button>
       </div>
 
-      {/* 2. UPLOAD & SUPPORTED COLUMNS CARD GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Upload Box (7 Cols) */}
-        <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col justify-between relative overflow-hidden">
-          <div className="text-center space-y-4 py-4">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center mx-auto shadow-inner">
-              <FileSpreadsheet size={32} />
-            </div>
-
-            <div>
-              <h3 className="text-base font-black text-slate-900">Choose Excel / CSV File to Upload</h3>
-              <p className="text-xs font-semibold text-slate-400 mt-1">
-                Drag and drop your file here, or click to browse
-              </p>
-            </div>
-
-            <div className="flex justify-center pt-2">
-              <label className="inline-flex h-11 items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-6 rounded-2xl transition shadow-md shadow-blue-600/20 cursor-pointer active:scale-95">
-                <Upload size={16} />
-                <span>Choose File</span>
-                <input
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            {file && (
-              <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 font-bold text-xs px-3.5 py-1.5 rounded-full">
-                <FileSpreadsheet size={14} />
-                <span className="truncate max-w-[200px]">{file.name}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-slate-100 pt-4 text-center">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Supported formats: .xlsx, .xls, .csv | Maximum file size: 10MB
+      {/* Main card */}
+      <div className="student-card p-6 bg-white/80 border border-slate-100/50 shadow-xl rounded-3xl space-y-6">
+        {/* Help Tip */}
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-sm text-blue-700 flex gap-3">
+          <HelpCircle className="size-5 shrink-0 mt-0.5 text-blue-600" />
+          <div className="space-y-1">
+            <span className="font-black">Supported Columns:</span>
+            <p className="text-xs font-semibold leading-relaxed">
+              For best results, name columns exactly like this in the sheet:
+              <br />
+              <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">Student Name</code>
+              <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">Father's Name</code>
+              <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">Mobile Number</code>
+              <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">Email</code>
+              <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">Gender</code>
+              <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">College Name</code>
+              <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">University</code>
+              <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">Course</code>
+              <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">Semester</code>
+              <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">University Registration Number</code>
+              <code className="bg-white/80 px-1.5 py-0.5 rounded font-black text-indigo-600 mx-1">University Roll No</code>
             </p>
           </div>
         </div>
@@ -558,18 +636,91 @@ export default function ImportStudents() {
               For best results, name columns exactly like this in the sheet:
             </p>
 
-            {/* Column Badges Grid */}
-            <div className="flex flex-wrap gap-2">
-              {supportedColumns.map((col) => (
-                <span
-                  key={col}
-                  className="bg-white border border-blue-200/80 text-blue-700 font-extrabold text-[10px] px-2.5 py-1 rounded-lg shadow-2xs"
-                >
-                  {col}
-                </span>
-              ))}
-            </div>
+            {importSummary.importedStudents.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-black uppercase tracking-widest text-emerald-700">Imported Students</h4>
+                <div className="overflow-x-auto border border-emerald-100 rounded-2xl">
+                  <table className="w-full text-left border-collapse table-auto text-xs min-w-[900px]">
+                    <thead className="bg-emerald-50">
+                      <tr className="border-b border-emerald-100">
+                        <th className="p-3 font-black text-emerald-800 uppercase tracking-wider">Student</th>
+                        <th className="p-3 font-black text-emerald-800 uppercase tracking-wider">Contact</th>
+                        <th className="p-3 font-black text-emerald-800 uppercase tracking-wider">College</th>
+                        <th className="p-3 font-black text-emerald-800 uppercase tracking-wider">Course</th>
+                        <th className="p-3 font-black text-emerald-800 uppercase tracking-wider">Registration / Roll</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-emerald-50 bg-white">
+                      {importSummary.importedStudents.map((student, idx) => (
+                        <tr key={`${student.universityRoll}-${idx}`} className="hover:bg-emerald-50/40">
+                          <td className="p-3">
+                            <div className="font-bold text-slate-900">{student.fullName || '-'}</div>
+                            <div className="text-[10px] font-semibold text-slate-400">S/o: {student.parentName || '-'}</div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-semibold text-slate-700">{student.email || '-'}</div>
+                            <div className="text-[10px] font-semibold text-slate-400">{student.contactNumber || '-'}</div>
+                          </td>
+                          <td className="p-3 font-semibold text-slate-700">{student.college || '-'}</td>
+                          <td className="p-3">
+                            <div className="font-bold text-indigo-600">{student.course || '-'}</div>
+                            <div className="text-[10px] font-semibold text-slate-400">{student.semester || '-'}</div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-bold text-slate-800">Reg: {student.universityRoll || '-'}</div>
+                            <div className="text-[10px] font-bold text-slate-500">Roll: {student.universityRollNo || '-'}</div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {importSummary.skippedStudents.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-black uppercase tracking-widest text-amber-700">Skipped Rows</h4>
+                <div className="overflow-x-auto border border-amber-100 rounded-2xl">
+                  <table className="w-full text-left border-collapse table-auto text-xs min-w-[900px]">
+                    <thead className="bg-amber-50">
+                      <tr className="border-b border-amber-100">
+                        <th className="p-3 font-black text-amber-800 uppercase tracking-wider">Student</th>
+                        <th className="p-3 font-black text-amber-800 uppercase tracking-wider">Contact</th>
+                        <th className="p-3 font-black text-amber-800 uppercase tracking-wider">Registration / Roll</th>
+                        <th className="p-3 font-black text-amber-800 uppercase tracking-wider">Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-50 bg-white">
+                      {importSummary.skippedStudents.map((student, idx) => (
+                        <tr key={`${student.universityRoll}-${idx}`} className="hover:bg-amber-50/40">
+                          <td className="p-3 font-bold text-slate-900">{student.fullName || '-'}</td>
+                          <td className="p-3">
+                            <div className="font-semibold text-slate-700">{student.email || '-'}</div>
+                            <div className="text-[10px] font-semibold text-slate-400">{student.contactNumber || '-'}</div>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-bold text-slate-800">Reg: {student.universityRoll || '-'}</div>
+                            <div className="text-[10px] font-bold text-slate-500">Roll: {student.universityRollNo || '-'}</div>
+                          </td>
+                          <td className="p-3 font-bold text-amber-700">{student.reason}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
+        )}
+
+          {warnings.length > 0 && (
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 text-amber-800 text-xs font-bold space-y-1">
+              <div className="flex items-center gap-2 text-sm text-amber-900 mb-1">
+                <AlertTriangle className="size-4 text-amber-600 shrink-0" />
+                <span>Import Column Mapping Warnings:</span>
+              </div>
+            </div>
 
           {parsedData.length > 0 && (
             <div className="pt-4 border-t border-blue-200/60 flex items-center justify-between">
@@ -616,7 +767,7 @@ export default function ImportStudents() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          
+
           {/* Card 1: Total Records */}
           <div className="bg-slate-50 border border-slate-200/70 rounded-2xl p-4 flex items-center justify-between">
             <div>
@@ -666,7 +817,7 @@ export default function ImportStudents() {
 
       {/* 4. IMPORTED STUDENTS LISTING TABLE */}
       <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-        
+
         {/* Header Search & Filter Bar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
           <div>
@@ -752,18 +903,31 @@ export default function ImportStudents() {
                       <td className="py-3.5 px-4 font-bold text-blue-600">{student.course || '-'}</td>
                       <td className="py-3.5 px-4 font-bold text-slate-600">{student.semester || '-'}</td>
                       <td className="py-3.5 px-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                          isImported
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : isDuplicate
-                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
-                        }`}>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${isImported
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : isDuplicate
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-rose-50 text-rose-700 border border-rose-200'
+                          }`}>
                           {student.status || 'Imported'}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 text-slate-400 text-[11px] whitespace-nowrap">
-                        {formatDate(student.importedAt)}
+                      <td className="p-3">
+                        <div className="font-semibold text-slate-700">{student.email}</div>
+                        <div className="text-[10px] font-semibold text-slate-400">{student.contactNumber}</div>
+                      </td>
+                      <td className="p-3 font-semibold text-slate-600">{student.gender || '-'}</td>
+                      <td className="p-3">
+                        <div className="font-bold text-slate-800 truncate max-w-[200px]">{student.college}</div>
+                        <div className="text-[10px] font-semibold text-slate-400 truncate max-w-[200px]">{student.university}</div>
+                      </td>
+                      <td className="p-3">
+                        <div className="font-bold text-indigo-600">{student.course}</div>
+                        <div className="text-[10px] font-semibold text-slate-400">{student.semester}</div>
+                      </td>
+                      <td className="p-3">
+                        <div className="font-bold text-slate-800">Reg: {student.universityRoll || <span className="text-rose-500">Missing</span>}</div>
+                        <div className="text-[10px] font-bold text-slate-500">Roll: {student.universityRollNo || '-'}</div>
                       </td>
                     </tr>
                   );
@@ -795,16 +959,15 @@ export default function ImportStudents() {
               >
                 <ChevronLeft size={14} />
               </button>
-              
+
               {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 5).map(pageNum => (
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`w-8 h-8 rounded-lg font-bold text-xs transition cursor-pointer ${
-                    currentPage === pageNum
-                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
-                      : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
+                  className={`w-8 h-8 rounded-lg font-bold text-xs transition cursor-pointer ${currentPage === pageNum
+                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                    : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
                 >
                   {pageNum}
                 </button>

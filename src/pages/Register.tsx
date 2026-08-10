@@ -18,7 +18,7 @@ import {
 } from '../lib/constants';
 import {
   ChevronRight, ChevronLeft, GraduationCap, ArrowRight, ShieldCheck, User,
-  School, AlertCircle, Handshake, Mail, Phone, Lock, FileText, CheckCircle2,
+  School, AlertCircle, Handshake, Mail, Phone, MapPin, Lock, FileText, CheckCircle2,
   Users, BookOpen, Clock, ThumbsUp, Sparkles, Building2, Facebook,
   Instagram, Twitter, Linkedin, Youtube, Check, Award, Headset
 } from 'lucide-react';
@@ -65,12 +65,63 @@ const WhatsAppIcon = ({ size = 20, className = "" }: { size?: number; className?
 const REGISTRATION_SESSIONS = ['2023-27', '2024-28', '2025-29', '2026-30'];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PHONE_PATTERN = /^[6-9]\d{9}$/;
+const MAHILA_TEKARI_COLLEGE_NAME = 'Mahila College Tekari, Gaya';
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const normalizePhoneNumber = (value: string) => {
   const digits = value.replace(/\D/g, '');
   if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
   return digits.slice(0, 10);
+};
+const normalizeAcademicValue = (value: string) =>
+  value
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/[.,]/g, '')
+    .trim()
+    .toLowerCase();
+
+const normalizeImportedSubject = (value: string) => {
+  const cleaned = value
+    .replace(/\u00a0/g, ' ')
+    .replace(/^Major\s*:\s*/i, '')
+    .trim();
+  const bracketMatch = cleaned.match(/^[A-Z]\.[A-Z][A-Za-z.]*\s*\((.+)\)$/i);
+  return bracketMatch ? bracketMatch[1].trim() : cleaned;
+};
+
+const normalizeCollegeName = (value: string) => {
+  const cleaned = value.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+  const comparable = cleaned.toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' ');
+  if (comparable === 'mahila college tekari' || comparable === 'mahila college tekari gaya') {
+    return MAHILA_TEKARI_COLLEGE_NAME;
+  }
+  return cleaned;
+};
+
+const dedupeColleges = (collegeList: College[]) => {
+  const collegesByName = new Map<string, College>();
+  collegeList.forEach((college) => {
+    const name = normalizeCollegeName(college.name);
+    const key = name.toLowerCase();
+    if (!collegesByName.has(key)) {
+      collegesByName.set(key, { ...college, name });
+    }
+  });
+  return Array.from(collegesByName.values()).sort((a, b) => a.name.localeCompare(b.name));
+};
+
+const matchOptionValue = (value: string, options: string[]) => {
+  const cleaned = value.replace(/\u00a0/g, ' ').trim();
+  if (!cleaned) return '';
+
+  const normalized = normalizeAcademicValue(cleaned);
+  return options.find(option => normalizeAcademicValue(option) === normalized) || cleaned;
+};
+
+const hasOptionValue = (value: string, options: string[]) => {
+  const normalized = normalizeAcademicValue(value);
+  return Boolean(normalized && options.some(option => normalizeAcademicValue(option) === normalized));
 };
 
 let registrationConfigCache: {
@@ -91,16 +142,19 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
   const [searchParams] = useSearchParams();
   const [inputUniversityRoll, setInputUniversityRoll] = useState(searchParams.get('roll') || '');
-  const [inputIndustrialRegNo, setInputIndustrialRegNo] = useState(searchParams.get('ind') || '');
   const [verificationLoading, setVerificationLoading] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
 
-  const handleVerify = async (rollParam?: string, indParam?: string) => {
+  const handleVerify = async (rollParam?: string) => {
     const roll = (rollParam || inputUniversityRoll).trim();
-    const ind = (indParam || inputIndustrialRegNo).trim();
 
+<<<<<<< HEAD
     if (!roll || !ind) {
       setError("Please enter both Roll Number and Industrial Registration Number.");
+=======
+    if (!roll) {
+      setError("Enter Registration Number to fetch your details.");
+>>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
       return;
     }
 
@@ -138,11 +192,16 @@ export default function Register({ mode = 'public' }: RegisterProps) {
       const registeredQuery = query(usersRef, where('universityRoll', '==', roll));
 
       const importedRef = collection(db, 'importedStudents');
+<<<<<<< HEAD
       const importedQuery = query(
         importedRef,
         where('universityRoll', '==', roll),
         where('industrialRegNo', '==', ind)
       );
+=======
+      const rollSnapshot = await getDocs(query(importedRef, where('universityRoll', '==', roll)));
+      const uniqueDocs = rollSnapshot.docs;
+>>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
 
       const [registeredSnap, snapshot] = await Promise.all([
         getDocs(registeredQuery),
@@ -170,13 +229,27 @@ export default function Register({ mode = 'public' }: RegisterProps) {
         email: importedData.email || '',
         contactNumber: importedData.contactNumber || '',
         gender: importedData.gender || '',
-        college: importedData.college || '',
+        district: importedData.district || '',
+        college: normalizeCollegeName(importedData.college || ''),
         university: importedData.university || '',
+<<<<<<< HEAD
         internshipDomain: importedData.course || '',
         semester: importedData.semester || 'Semester 5',
         universityRoll: roll,
         universityRollNo: importedData.universityRollNo || '',
         industrialRegNo: ind,
+=======
+        degree: importedData.degree || '',
+        department: importedData.department || '',
+        subject: normalizeImportedSubject(importedData.subject || ''),
+        session: importedData.session || prev.session,
+        internshipDomain: importedData.internshipDomain || importedData.course || '',
+        internshipMode: importedData.internshipMode || prev.internshipMode,
+        semester: importedData.semester || prev.semester,
+        universityRoll: importedRegistrationNumber,
+        universityRollNo: importedData.universityRollNo || '',
+        industrialRegNo: importedData.industrialRegNo || '',
+>>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
       }));
 
       setIsVerified(true);
@@ -191,9 +264,14 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
   useEffect(() => {
     const roll = searchParams.get('roll');
+<<<<<<< HEAD
     const ind = searchParams.get('ind');
     if (roll && ind) {
       handleVerify(roll, ind);
+=======
+    if (roll) {
+      handleVerify(roll);
+>>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
     }
   }, []);
 
@@ -354,7 +432,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
       registrationConfigCache = {
         districts: districtsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as District)),
-        colleges: collegesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as College)),
+        colleges: dedupeColleges(collegesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as College))),
         universities: universitiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as University)),
         courses: coursesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course)),
         degrees: degreesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Degree))
@@ -383,6 +461,38 @@ export default function Register({ mode = 'public' }: RegisterProps) {
     const degree = degrees.find(d => d.name === degreeName);
     return degree?.subjects || [];
   };
+
+  const getUniversityOptions = () => universities.map(university => university.name);
+  const getCollegeOptions = () => formData.district ? getCollegesForDistrict(formData.district).map(college => college.name) : [];
+  const getDepartmentOptions = () => degrees.map(degree => degree.name);
+  const getSubjectOptions = () => formData.department ? getSubjectsForDegree(formData.department) : [];
+  const getDomainOptions = () => courses.map(course => course.name);
+
+  useEffect(() => {
+    if (dataLoading) return;
+
+    setFormData(prev => {
+      const departmentOptions = degrees.map(degree => degree.name);
+      const matchedDepartment = matchOptionValue(prev.department, departmentOptions);
+      const subjects = matchedDepartment ? getSubjectsForDegree(matchedDepartment) : [];
+      const matchedSubject = matchOptionValue(normalizeImportedSubject(prev.subject), subjects);
+      const matchedDistrict = matchOptionValue(prev.district, districts.map(district => district.name));
+      const collegeOptions = matchedDistrict
+        ? getCollegesForDistrict(matchedDistrict).map(college => college.name)
+        : [];
+
+      return {
+        ...prev,
+        university: matchOptionValue(prev.university, universities.map(university => university.name)),
+        district: matchedDistrict,
+        college: matchOptionValue(prev.college, collegeOptions),
+        degree: matchOptionValue(prev.degree, DEGREES),
+        department: matchedDepartment,
+        subject: matchedSubject,
+        internshipDomain: matchOptionValue(prev.internshipDomain, courses.map(course => course.name)),
+      };
+    });
+  }, [dataLoading, universities, districts, colleges, degrees, courses]);
 
   const nextStep = async () => {
     if (step === 1) {
@@ -459,7 +569,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
     }
 
     if (step === 3) {
-      if (!formData.district || !formData.college || !formData.university || !formData.degree || !formData.department || !formData.subject || !formData.session || !formData.semester || !formData.universityRoll || !formData.internshipDomain) {
+      if (!formData.district || !formData.college || !formData.university || !formData.degree || !formData.department || !formData.subject || !formData.session || !formData.semester || !formData.universityRoll || !formData.universityRollNo || !formData.internshipDomain) {
         setError("Please fill all academic details.");
         return;
       }
@@ -720,31 +830,18 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-left">
                   <div className="space-y-1.5 md:col-span-2">
                     <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-xs font-semibold text-blue-800 leading-relaxed">
-                      <strong>Optional:</strong> If your college has pre-registered/imported your details, enter your Roll Number and Industrial Registration Number below to verify and pre-fill the form. Otherwise, you can skip and register manually.
+                      <strong>Optional:</strong> If your college has pre-registered/imported your details, enter your Registration Number below to verify and pre-fill the form. Otherwise, you can skip and register manually.
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="inputUniversityRoll" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Registration Number / Roll Number *</Label>
+                  <div className="space-y-1.5 md:col-span-2">
+                    <Label htmlFor="inputUniversityRoll" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Registration Number *</Label>
                     <div className="relative">
                       <GraduationCap size={16} className="absolute left-4 top-3.5 text-slate-400" />
                       <Input
                         id="inputUniversityRoll"
                         value={inputUniversityRoll}
                         onChange={(e) => setInputUniversityRoll(e.target.value)}
-                        placeholder="e.g. 23UGCO01"
-                        className="pl-11 h-12 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 font-semibold text-xs sm:text-sm"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="inputIndustrialRegNo" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Industrial Registration Number *</Label>
-                    <div className="relative">
-                      <ShieldCheck size={16} className="absolute left-4 top-3.5 text-slate-400" />
-                      <Input
-                        id="inputIndustrialRegNo"
-                        value={inputIndustrialRegNo}
-                        onChange={(e) => setInputIndustrialRegNo(e.target.value)}
-                        placeholder="e.g. IM-23-4567"
+                        placeholder="Enter university registration number"
                         className="pl-11 h-12 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 font-semibold text-xs sm:text-sm"
                       />
                     </div>
@@ -833,6 +930,56 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     </div>
                     {emailError && <p className="text-[10px] text-red-500 font-bold pl-1">{emailError}</p>}
                   </div>
+<<<<<<< HEAD
+=======
+
+                  <div className="md:col-span-2 flex justify-end border-t border-slate-100 pt-5">
+                    <Button
+                      type="button"
+                      onClick={nextStep}
+                      disabled={loading}
+                      className="h-11 w-full sm:w-auto rounded-xl bg-blue-600 px-6 text-xs font-black uppercase tracking-wider text-white hover:bg-blue-700"
+                    >
+                      {loading ? 'Validating...' : 'Next'}
+                      <ChevronRight size={14} />
+                    </Button>
+                  </div>
+
+                  <div className="md:col-span-2 rounded-2xl border border-blue-100 bg-blue-50/60 p-4 text-left">
+                    <div className="mb-3">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-blue-800">Already shared by college?</h4>
+                      <p className="mt-1 text-[11px] font-semibold leading-relaxed text-blue-700">
+                        Enter your university registration number to fetch imported college details.
+                      </p>
+                    </div>
+                    <div className="grid gap-3">
+                      <div className="rounded-2xl border border-blue-100 bg-white p-3 shadow-sm transition">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <Label htmlFor="inputUniversityRoll" className="text-[10px] font-black text-blue-700 uppercase tracking-wider leading-tight">Registration Number</Label>
+                          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-blue-700">Registration No.</span>
+                        </div>
+                        <Input
+                          id="inputUniversityRoll"
+                          value={inputUniversityRoll}
+                          onChange={(e) => {
+                            setInputUniversityRoll(e.target.value);
+                            setFormData((prev) => ({ ...prev, universityRoll: e.target.value, industrialRegNo: '' }));
+                          }}
+                          placeholder="Enter registration number"
+                          className="h-11 rounded-xl bg-white border-blue-100 font-semibold text-xs"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      disabled={verificationLoading || !inputUniversityRoll.trim()}
+                      onClick={() => handleVerify()}
+                      className="mt-3 h-10 w-full sm:w-auto rounded-xl bg-blue-600 px-4 text-[10px] font-black uppercase tracking-wider text-white hover:bg-blue-700"
+                    >
+                      {verificationLoading ? 'Fetching...' : 'Fetch My Details'}
+                    </Button>
+                  </div>
+>>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
                 </div>
               )}
 
@@ -844,6 +991,9 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="university" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">University *</Label>
                     <select name="university" value={formData.university} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Select University</option>
+                      {formData.university && !hasOptionValue(formData.university, getUniversityOptions()) && (
+                        <option value={formData.university}>{formData.university}</option>
+                      )}
                       {universities.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
                     </select>
                   </div>
@@ -852,6 +1002,9 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="district" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">District *</Label>
                     <select name="district" value={formData.district} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Select District</option>
+                      {formData.district && !hasOptionValue(formData.district, districts.map(d => d.name)) && (
+                        <option value={formData.district}>{formData.district}</option>
+                      )}
                       {districts.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
                     </select>
                   </div>
@@ -860,7 +1013,10 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="college" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">College Affiliate *</Label>
                     <select name="college" value={formData.college} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Select College</option>
-                      {formData.district ? getCollegesForDistrict(formData.district).map(c => <option key={c.id} value={c.name}>{c.name}</option>) : <option value={formData.college}>{formData.college}</option>}
+                      {formData.college && !hasOptionValue(formData.college, getCollegeOptions()) && (
+                        <option value={formData.college}>{formData.college}</option>
+                      )}
+                      {formData.district ? getCollegesForDistrict(formData.district).map(c => <option key={c.id} value={c.name}>{c.name}</option>) : null}
                     </select>
                   </div>
 
@@ -868,6 +1024,9 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="degree" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Degree *</Label>
                     <select name="degree" value={formData.degree} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Degree</option>
+                      {formData.degree && !hasOptionValue(formData.degree, DEGREES) && (
+                        <option value={formData.degree}>{formData.degree}</option>
+                      )}
                       {DEGREES.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
@@ -876,6 +1035,9 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="department" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Department *</Label>
                     <select name="department" value={formData.department} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Select Department</option>
+                      {formData.department && !hasOptionValue(formData.department, getDepartmentOptions()) && (
+                        <option value={formData.department}>{formData.department}</option>
+                      )}
                       {degrees.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
                     </select>
                   </div>
@@ -884,7 +1046,10 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="subject" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Subject *</Label>
                     <select name="subject" value={formData.subject} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Subject</option>
-                      {formData.department ? getSubjectsForDegree(formData.department).map(s => <option key={s} value={s}>{s}</option>) : <option value={formData.subject}>{formData.subject}</option>}
+                      {formData.subject && !hasOptionValue(formData.subject, getSubjectOptions()) && (
+                        <option value={formData.subject}>{formData.subject}</option>
+                      )}
+                      {formData.department ? getSubjectsForDegree(formData.department).map(s => <option key={s} value={s}>{s}</option>) : null}
                     </select>
                   </div>
 
@@ -910,7 +1075,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                   </div>
 
                   <div className="space-y-1.5 text-left">
-                    <Label htmlFor="universityRollNo" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">University Roll No</Label>
+                    <Label htmlFor="universityRollNo" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">University Roll No *</Label>
                     <Input id="universityRollNo" name="universityRollNo" value={formData.universityRollNo} onChange={handleChange} placeholder="Enter university roll no" className="h-12 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm" />
                   </div>
 
@@ -918,6 +1083,9 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     <Label htmlFor="internshipDomain" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">Internship Domain Track *</Label>
                     <select name="internshipDomain" value={formData.internshipDomain} onChange={handleChange} className="w-full h-12 rounded-xl border border-transparent bg-slate-50 px-4 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm appearance-none shadow-sm cursor-pointer">
                       <option value="">Select Domain</option>
+                      {formData.internshipDomain && !hasOptionValue(formData.internshipDomain, getDomainOptions()) && (
+                        <option value={formData.internshipDomain}>{formData.internshipDomain}</option>
+                      )}
                       {courses.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                     </select>
                   </div>
@@ -1160,12 +1328,22 @@ export default function Register({ mode = 'public' }: RegisterProps) {
             </div>
 
             <div>
-              <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-300 mb-6">Support</h3>
-              <ul className="space-y-3.5 text-slate-400 text-xs font-semibold">
-                <li className="hover:text-blue-400 cursor-pointer transition-colors">FAQs</li>
+              <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-300 mb-6">Support & Contact</h3>
+              <ul className="space-y-3 text-slate-400 text-xs font-semibold">
                 <li><Link to="/about" className="hover:text-blue-400 transition-colors">About Us</Link></li>
-                <li><Link to="/contact" className="hover:text-blue-400 transition-colors">Contact us</Link></li>
-                <li className="hover:text-blue-400 cursor-pointer transition-colors">Credentials</li>
+                <li><Link to="/contact" className="hover:text-blue-400 transition-colors">Contact Us</Link></li>
+                <li className="flex items-center gap-2 pt-1 text-slate-300">
+                  <Phone className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <a href="tel:+919693921517" className="hover:text-blue-400 transition-colors">+91 9693921517</a>
+                </li>
+                <li className="flex items-center gap-2 text-slate-300">
+                  <Mail className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <a href="mailto:info@internmitra.com" className="hover:text-blue-400 transition-colors">info@internmitra.com</a>
+                </li>
+                <li className="flex items-center gap-2 text-slate-300">
+                  <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span>Patna, Bihar, India</span>
+                </li>
               </ul>
             </div>
 

@@ -41,6 +41,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/admin/users/:uid/email"
+  to = "/.netlify/functions/admin-user-email?uid=:uid"
+  status = 200
+
+[[redirects]]
   from = "/api/admin/college-users"
   to = "/.netlify/functions/admin-college-user"
   status = 200
@@ -48,6 +53,11 @@
 [[redirects]]
   from = "/api/admin/sub-users/:uid"
   to = "/.netlify/functions/admin-sub-user?uid=:uid"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/student-login-identifier"
+  to = "/.netlify/functions/auth-student-login-identifier"
   status = 200
 
 [[redirects]]

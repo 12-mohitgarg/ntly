@@ -23,7 +23,7 @@ const COLLEGES_DATA: Record<string, string[]> = {
     "Wazirganj College, Wazirganj, Gaya",
     "S.N.S. College, Tekari",
     "S.M.S.G. College, Sherghati",
-    "Mahila College, Tekari",
+    "Mahila College Tekari, Gaya",
     "Laloo Mandal College, Gaya",
     "Maa Bageshwari College, Gaya",
     "Sanjay Singh Yadav College, Gaya",

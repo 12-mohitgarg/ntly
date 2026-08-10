@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { auth, db } from '../lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { arrayUnion, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { arrayUnion, collection, doc, getDoc, getDocs, limit, query, updateDoc, where } from 'firebase/firestore';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowRight, Lock, Mail, AlertCircle, Handshake, Eye, EyeOff,
   AlertTriangle, ShieldCheck, Rocket, Headset, Link2, Users,
-  User, Check
+  User, Check, IdCard
 } from 'lucide-react';
 import { useAuth } from '../components/AuthContext';
 
@@ -20,9 +20,15 @@ const WhatsAppIcon = ({ size = 20, className = "" }: { size?: number; className?
   </svg>
 );
 
+const uniqueIdentifierValues = (value: string) => Array.from(new Set([
+  value,
+  value.toUpperCase(),
+  value.toLowerCase(),
+].filter(Boolean)));
+
 export default function Login() {
   const { user, profile, isAdmin, isEmitra, isCollege, adminProfile, loading: authLoading } = useAuth();
-  const [email, setEmail] = useState('');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +66,66 @@ export default function Login() {
     setLoading(true);
     setError(null);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const loginId = loginIdentifier.trim();
+      let resolvedEmail = loginId.toLowerCase();
+
+      const resolveStudentEmailFromFirestore = async () => {
+        const usersRef = collection(db, 'users');
+        const phone = loginId.replace(/\D/g, '').slice(-10);
+        const lookups = [];
+
+        if (phone.length === 10) {
+          lookups.push(getDocs(query(usersRef, where('contactNumber', '==', phone), limit(1))));
+        }
+
+        uniqueIdentifierValues(loginId).forEach((value) => {
+          lookups.push(getDocs(query(usersRef, where('universityRoll', '==', value), limit(1))));
+          lookups.push(getDocs(query(usersRef, where('universityRollNo', '==', value), limit(1))));
+        });
+
+        const snapshots = await Promise.all(lookups);
+        const matchedDoc = snapshots.find((snapshot) => !snapshot.empty)?.docs[0];
+        const email = String(matchedDoc?.data()?.email || '').trim().toLowerCase();
+
+        if (!email) {
+          throw new Error('No student account found for this login ID.');
+        }
+
+        return email;
+      };
+
+      if (!loginId) {
+        setError('Please enter email, mobile number, roll number, or registration number.');
+        return;
+      }
+
+      if (!loginId.includes('@')) {
+        try {
+          resolvedEmail = await resolveStudentEmailFromFirestore();
+        } catch (fallbackError: any) {
+          console.warn('Student login Firestore lookup failed, trying API fallback:', fallbackError);
+          try {
+            const lookupResponse = await fetch('/api/auth/student-login-identifier', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ identifier: loginId }),
+            });
+
+            const lookupResult = await lookupResponse.json().catch(() => ({}));
+
+            if (!lookupResponse.ok || !lookupResult?.email) {
+              throw new Error(lookupResult?.error || 'No student account found for this login ID.');
+            }
+
+            resolvedEmail = String(lookupResult.email).trim().toLowerCase();
+          } catch (lookupError: any) {
+            setError(fallbackError?.message || lookupError?.message || 'No student account found for this login ID.');
+            return;
+          }
+        }
+      }
+
+      const userCredential = await signInWithEmailAndPassword(auth, resolvedEmail, password);
       const user = userCredential.user;
 
       const safeGetDoc = (collectionName: string) =>
@@ -348,21 +413,28 @@ export default function Login() {
                 </div>
               )}
 
-              {/* Email ID input */}
+              {/* Login ID input */}
               <div className="space-y-1.5 text-left">
-                <Label htmlFor="email" className="uppercase tracking-[0.15em] text-[10px] sm:text-xs font-bold text-slate-400 px-1">Email Address</Label>
+                <Label htmlFor="loginIdentifier" className="uppercase tracking-[0.15em] text-[10px] sm:text-xs font-bold text-slate-400 px-1">Login ID</Label>
                 <div className="relative">
                   <Input
-                    id="email"
-                    type="email"
-                    value={email}
+                    id="loginIdentifier"
+                    type="text"
+                    value={loginIdentifier}
                     required
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => setLoginIdentifier(e.target.value)}
                     className="h-12 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 pl-11 transition-all font-semibold text-xs sm:text-sm text-slate-800"
-                    placeholder="e.g. name@domain.com"
+                    placeholder="Email, mobile, roll no, or registration no"
                   />
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-350" size={16} />
+                  {loginIdentifier.includes('@') ? (
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-350" size={16} />
+                  ) : (
+                    <IdCard className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-350" size={16} />
+                  )}
                 </div>
+                <p className="text-[10px] text-slate-400 font-bold px-1">
+                  Students can use email, mobile number, university roll no, or registration number.
+                </p>
               </div>
 
               {/* Password input */}
