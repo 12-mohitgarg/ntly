@@ -69,6 +69,9 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 import { QuizSubmission } from './dashboard/generateTestReport';
+import InternshipReportManager from './admin/InternshipReportManager';
+import AssignmentManager from './admin/AssignmentManager';
+import TestReportManager from './admin/TestReportManager';
 
 interface UserProfile {
   uid: string;
@@ -2173,205 +2176,13 @@ export default function AdminDashboard() {
       })()}
 
       {/* 8. TEST REPORT VIEW */}
-      {activeTab === 'test-report' && (
-        <div className="space-y-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-                Test Reports Management
-              </h1>
-              <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
-                View quiz/test submissions, scores, marks breakdown, and export test reports.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-              <h3 className="text-lg font-black text-slate-900">Registered Student Test Scores ({users.length})</h3>
-              <div className="flex items-center gap-3">
-                <input
-                  type="text"
-                  placeholder="Search student or email..."
-                  value={userSearchText}
-                  onChange={(e) => setUserSearchText(e.target.value)}
-                  className="h-10 px-4 rounded-full bg-slate-50 border border-slate-200 text-xs font-semibold outline-none focus:bg-white focus:border-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100 text-[10px] font-black uppercase text-slate-400">
-                    <th className="py-3 px-4">STUDENT NAME</th>
-                    <th className="py-3 px-4">EMAIL</th>
-                    <th className="py-3 px-4">DOMAIN</th>
-                    <th className="py-3 px-4">STATUS</th>
-                    <th className="py-3 px-4 text-right">ACTION</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-800">
-                  {users.slice(0, 15).map((u) => (
-                    <tr key={u.uid} className="hover:bg-slate-50/80">
-                      <td className="py-4 px-4 font-extrabold text-slate-900">{u.fullName || 'Student'}</td>
-                      <td className="py-4 px-4 text-slate-500">{u.email}</td>
-                      <td className="py-4 px-4">
-                        <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border border-blue-100">
-                          {u.internshipDomain}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border border-emerald-100">
-                          PASSED (85%)
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => alert(`Exporting Test Report for ${u.fullName}...`)}
-                          className="h-8 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold flex items-center gap-1.5 ml-auto cursor-pointer shadow-xs"
-                        >
-                          <Download size={13} />
-                          <span>Export PDF</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
+      {activeTab === 'test-report' && <TestReportManager users={users} />}
 
       {/* 9. ASSIGNMENT VIEW */}
-      {activeTab === 'assignment' && (
-        <div className="space-y-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-                Student Assignment Submissions
-              </h1>
-              <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
-                Review submitted student practical assignments and project links.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-              <h3 className="text-lg font-black text-slate-900">Assignment Submissions ({users.length})</h3>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100 text-[10px] font-black uppercase text-slate-400">
-                    <th className="py-3 px-4">STUDENT NAME</th>
-                    <th className="py-3 px-4">EMAIL</th>
-                    <th className="py-3 px-4">DOMAIN</th>
-                    <th className="py-3 px-4">SUBMISSION STATUS</th>
-                    <th className="py-3 px-4 text-right">ACTION</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-800">
-                  {users.slice(0, 15).map((u) => (
-                    <tr key={u.uid} className="hover:bg-slate-50/80">
-                      <td className="py-4 px-4 font-extrabold text-slate-900">{u.fullName || 'Student'}</td>
-                      <td className="py-4 px-4 text-slate-500">{u.email}</td>
-                      <td className="py-4 px-4">
-                        <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border border-blue-100">
-                          {u.internshipDomain}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="bg-teal-50 text-teal-600 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border border-teal-100">
-                          SUBMITTED
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => alert(`Reviewing assignment for ${u.fullName}...`)}
-                          className="h-8 px-3 rounded-xl border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-extrabold flex items-center gap-1.5 ml-auto cursor-pointer"
-                        >
-                          <Eye size={13} />
-                          <span>Review</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
+      {activeTab === 'assignment' && <AssignmentManager users={users} />}
 
       {/* 10. INTERNSHIP REPORT VIEW */}
-      {activeTab === 'internship-report' && (
-        <div className="space-y-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-                Internship Reports & Certificates
-              </h1>
-              <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
-                Generate and export official 120-hour digital internship completion reports.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-              <h3 className="text-lg font-black text-slate-900">Internship Completion Certificates</h3>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100 text-[10px] font-black uppercase text-slate-400">
-                    <th className="py-3 px-4">STUDENT NAME</th>
-                    <th className="py-3 px-4">COLLEGE</th>
-                    <th className="py-3 px-4">DOMAIN</th>
-                    <th className="py-3 px-4">COMPLETION STATUS</th>
-                    <th className="py-3 px-4 text-right">ACTION</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-800">
-                  {users.slice(0, 15).map((u) => (
-                    <tr key={u.uid} className="hover:bg-slate-50/80">
-                      <td className="py-4 px-4 font-extrabold text-slate-900">{u.fullName || 'Student'}</td>
-                      <td className="py-4 px-4 text-slate-500">{u.college || 'Government College'}</td>
-                      <td className="py-4 px-4">
-                        <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border border-blue-100">
-                          {u.internshipDomain}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border border-emerald-100">
-                          120 HRS COMPLETED
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => alert(`Exporting Internship Report PDF for ${u.fullName}...`)}
-                          className="h-8 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold flex items-center gap-1.5 ml-auto cursor-pointer shadow-xs"
-                        >
-                          <Download size={13} />
-                          <span>Export PDF</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
+      {activeTab === 'internship-report' && <InternshipReportManager users={users} />}
 
       {/* 11. COLLEGE EXPORT VIEW */}
       {activeTab === 'college-export' && (

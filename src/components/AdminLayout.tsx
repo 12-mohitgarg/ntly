@@ -109,7 +109,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       items: [
         { title: 'Test Report', path: '/admin-dashboard?tab=test-report', icon: FileCheck },
         { title: 'Assignment', path: '/admin-dashboard?tab=assignment', icon: ClipboardList },
-        { title: 'Internship Report', path: '/admin-dashboard?tab=internship-report', icon: FileText },
+        { title: 'Course Internship Reports', path: '/admin-dashboard?tab=internship-report', icon: FileText },
         { title: 'College Export', path: '/admin-dashboard?tab=college-export', icon: Download }
       ]
     },
@@ -272,7 +272,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div className="flex items-center gap-3 shrink-0">
 
             {/* Dynamic Real-time Date Badge */}
-            <div className="flex items-center gap-2 bg-slate-100/80 border border-slate-200/80 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 shadow-2xs">
+            <div className="hidden sm:flex items-center gap-2 bg-slate-100/80 border border-slate-200/80 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 shadow-2xs">
               <Calendar size={14} className="text-blue-600" />
               <span>
                 {new Date().toLocaleDateString('en-GB', {
