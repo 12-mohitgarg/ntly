@@ -401,7 +401,7 @@ app.post("/api/admin/import-students", requireAdmin, async (req, res) => {
 
     const db = admin.firestore();
     const importedRef = db.collection("importedStudents");
-    
+
     let importedCount = 0;
     const importedStudents: any[] = [];
     const skippedStudents: any[] = [];
@@ -426,7 +426,7 @@ app.post("/api/admin/import-students", requireAdmin, async (req, res) => {
           skippedStudents.push({ ...student, reason: existingReason });
           continue;
         }
-        
+
         const docData = {
           ...student,
           importedAt: new Date().toISOString(),
@@ -436,7 +436,7 @@ app.post("/api/admin/import-students", requireAdmin, async (req, res) => {
 
         const newRef = importedRef.doc();
         batch.set(newRef, docData);
-        
+
         importedCount += 1;
         importedStudents.push(docData);
       }
@@ -449,7 +449,7 @@ app.post("/api/admin/import-students", requireAdmin, async (req, res) => {
       try {
         console.log(`[WhatsApp Notifications] Starting dispatch for ${importedStudents.length} imported students...`);
         const appUrl = process.env.APP_URL || "https://internmitra.com";
-        
+
         for (const student of importedStudents) {
           if (!student.contactNumber || !student.universityRoll) continue;
 
@@ -464,10 +464,10 @@ app.post("/api/admin/import-students", requireAdmin, async (req, res) => {
 
           // Fetch the college amount
           const collegeAmount = await getCollegeAmount(student.college);
-          
+
           // Formulate Secure Payment Link
           const securePaymentLink = `${appUrl}/register?roll=${encodeURIComponent(student.universityRoll)}`;
-          
+
           // Message text
           const messageText = `Dear ${student.fullName}, your registration for the Internship Program from ${student.college || 'your college'} is pending. Please complete your registration and pay a fee of ₹${collegeAmount} using this secure link: ${securePaymentLink}`;
 
@@ -548,9 +548,6 @@ app.patch("/api/admin/users/:uid/password", requireDashboardOperator, async (req
   }
 });
 
-<<<<<<< HEAD
-app.post("/api/admin/college-users", requireDashboardOperator, async (req, res) => {
-=======
 app.patch("/api/admin/users/:uid/email", requireDashboardOperator, async (req, res) => {
   try {
     const { uid } = req.params;
@@ -584,7 +581,6 @@ app.patch("/api/admin/users/:uid/email", requireDashboardOperator, async (req, r
 });
 
 app.post("/api/admin/college-users", requireAdmin, async (req, res) => {
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
   try {
     const collegeId = String(req.body.collegeId || "").trim();
     let collegeName = String(req.body.collegeName || "").trim();
@@ -886,8 +882,8 @@ app.post("/api/payment/order", async (req, res) => {
   } catch (error: any) {
     console.error("Razorpay Order Error:", error);
     res.status(error?.statusCode || 500).json({
-      error: "Error creating Razorpay order", 
-      details: error.description || error.message || "Unknown error" 
+      error: "Error creating Razorpay order",
+      details: error.description || error.message || "Unknown error"
     });
   }
 });

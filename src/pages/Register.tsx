@@ -145,16 +145,11 @@ export default function Register({ mode = 'public' }: RegisterProps) {
   const [verificationLoading, setVerificationLoading] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
 
-  const handleVerify = async (rollParam?: string) => {
+  const handleVerify = async (rollParam?: string, indParam?: string) => {
     const roll = (rollParam || inputUniversityRoll).trim();
 
-<<<<<<< HEAD
-    if (!roll || !ind) {
-      setError("Please enter both Roll Number and Industrial Registration Number.");
-=======
     if (!roll) {
       setError("Enter Registration Number to fetch your details.");
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
       return;
     }
 
@@ -163,45 +158,10 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
     try {
       const usersRef = collection(db, 'users');
-      // const registeredQuery = query(usersRef, where('universityRoll', '==', roll));
-      // const registeredSnap = await getDocs(registeredQuery);
-
-      // if (!registeredSnap.empty) {
-      //   setError("This student is already registered! Please login to your account.");
-      //   setVerificationLoading(false);
-      //   return;
-      // }
-
-      // const importedRef = collection(db, 'importedStudents');
-      // const q = query(
-      //   importedRef,
-      //   where('universityRoll', '==', roll),
-      //   where('industrialRegNo', '==', ind)
-      // );
-
-      // const snapshot = await getDocs(q);
-
-      // if (snapshot.empty) {
-      //   setError("Invalid Roll Number or Industrial Registration Number. Please check your credentials or contact college/admin.");
-      //   setVerificationLoading(false);
-      //   return;
-      // }
-
-      // const importedData = snapshot.docs[0].data();
-
       const registeredQuery = query(usersRef, where('universityRoll', '==', roll));
 
       const importedRef = collection(db, 'importedStudents');
-<<<<<<< HEAD
-      const importedQuery = query(
-        importedRef,
-        where('universityRoll', '==', roll),
-        where('industrialRegNo', '==', ind)
-      );
-=======
-      const rollSnapshot = await getDocs(query(importedRef, where('universityRoll', '==', roll)));
-      const uniqueDocs = rollSnapshot.docs;
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
+      const importedQuery = query(importedRef, where('universityRoll', '==', roll));
 
       const [registeredSnap, snapshot] = await Promise.all([
         getDocs(registeredQuery),
@@ -215,7 +175,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
       }
 
       if (snapshot.empty) {
-        setError("Invalid Roll Number or Industrial Registration Number. Please check your credentials or contact college/admin.");
+        setError("Registration Number not found in imported list. Please check your number or contact college/admin.");
         setVerificationLoading(false);
         return;
       }
@@ -224,32 +184,24 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
       setFormData(prev => ({
         ...prev,
-        fullName: importedData.fullName || '',
-        parentName: importedData.parentName || '',
-        email: importedData.email || '',
-        contactNumber: importedData.contactNumber || '',
-        gender: importedData.gender || '',
-        district: importedData.district || '',
-        college: normalizeCollegeName(importedData.college || ''),
-        university: importedData.university || '',
-<<<<<<< HEAD
-        internshipDomain: importedData.course || '',
-        semester: importedData.semester || 'Semester 5',
-        universityRoll: roll,
-        universityRollNo: importedData.universityRollNo || '',
-        industrialRegNo: ind,
-=======
-        degree: importedData.degree || '',
-        department: importedData.department || '',
-        subject: normalizeImportedSubject(importedData.subject || ''),
+        fullName: importedData.fullName || prev.fullName,
+        parentName: importedData.parentName || prev.parentName,
+        email: importedData.email || prev.email,
+        contactNumber: importedData.contactNumber || prev.contactNumber,
+        gender: importedData.gender || prev.gender,
+        district: importedData.district || prev.district,
+        college: importedData.college ? normalizeCollegeName(importedData.college) : prev.college,
+        university: importedData.university || prev.university,
+        degree: importedData.degree || prev.degree,
+        department: importedData.department || prev.department,
+        subject: importedData.subject || prev.subject,
         session: importedData.session || prev.session,
-        internshipDomain: importedData.internshipDomain || importedData.course || '',
+        internshipDomain: importedData.internshipDomain || importedData.course || prev.internshipDomain,
         internshipMode: importedData.internshipMode || prev.internshipMode,
-        semester: importedData.semester || prev.semester,
-        universityRoll: importedRegistrationNumber,
-        universityRollNo: importedData.universityRollNo || '',
-        industrialRegNo: importedData.industrialRegNo || '',
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
+        semester: importedData.semester || prev.semester || 'Semester 5',
+        universityRoll: roll,
+        universityRollNo: importedData.universityRollNo || prev.universityRollNo,
+        industrialRegNo: importedData.industrialRegNo || prev.industrialRegNo,
       }));
 
       setIsVerified(true);
@@ -264,14 +216,8 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
   useEffect(() => {
     const roll = searchParams.get('roll');
-<<<<<<< HEAD
-    const ind = searchParams.get('ind');
-    if (roll && ind) {
-      handleVerify(roll, ind);
-=======
     if (roll) {
       handleVerify(roll);
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
     }
   }, []);
 
@@ -930,8 +876,6 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                     </div>
                     {emailError && <p className="text-[10px] text-red-500 font-bold pl-1">{emailError}</p>}
                   </div>
-<<<<<<< HEAD
-=======
 
                   <div className="md:col-span-2 flex justify-end border-t border-slate-100 pt-5">
                     <Button
@@ -979,7 +923,6 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                       {verificationLoading ? 'Fetching...' : 'Fetch My Details'}
                     </Button>
                   </div>
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
                 </div>
               )}
 

@@ -1,14 +1,8 @@
-<<<<<<< HEAD
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { db } from "../lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { Link } from "react-router-dom";
-=======
-import React, { useState } from "react";
-import { motion } from "motion/react";
-import { Link, useNavigate } from "react-router-dom";
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
 import {
   SearchCheck,
   Download,
@@ -18,7 +12,6 @@ import {
   Clock,
   Shield,
   BookOpen,
-<<<<<<< HEAD
   BarChart3,
   Phone,
   Mail,
@@ -53,35 +46,19 @@ import {
   UserCheck,
   Share2,
   Layers,
-  Sparkle
-=======
-  Award,
-  CheckCircle2,
-  Sparkles,
-  ShieldCheck,
-  Building2,
-  Laptop,
+  Sparkle,
   Code2,
   BrainCircuit,
   Database,
   Lock,
-  ChevronDown,
-  Phone,
-  Mail,
-  MapPin,
-  Star,
   ExternalLink,
-  Zap,
-  GraduationCap,
   Landmark,
-  Palette,
-  FileText
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
+  Palette
 } from "lucide-react";
 import { generateCertificate } from "./dashboard/generateCertificate";
 
 export default function Home() {
-<<<<<<< HEAD
+  const navigate = useNavigate();
   const [activeTrackCategory, setActiveTrackCategory] = useState("All");
   const [activeFilter, setActiveFilter] = useState("All");
   const [certificateNo, setCertificateNo] = useState("");
@@ -216,8 +193,8 @@ export default function Home() {
       icon: <Building2 className="w-6 h-6 text-rose-600" />,
       tag: "Partner Network",
       gradient: "from-rose-500/10 via-pink-500/5 to-transparent border-rose-200/80"
-=======
-  const navigate = useNavigate();
+    }
+  ];
   const [certSearchId, setCertSearchId] = useState("");
   const [searchingCert, setSearchingCert] = useState(false);
   const [certSearchResult, setCertSearchResult] = useState<any>(null);
@@ -308,7 +285,6 @@ export default function Home() {
       badge: "Essential",
       color: "from-cyan-600 to-blue-600",
       accent: "bg-cyan-50 text-cyan-600 border-cyan-100"
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
     }
   ];
 
@@ -354,80 +330,50 @@ export default function Home() {
   const testimonials = [
     {
       name: "Rahul Kumar",
-<<<<<<< HEAD
       role: "B.Tech Student • Patliputra University",
       type: "Student",
-      review: "InternMitra made my 120-hour mandatory internship extremely smooth. The video modules and digital logbook system are top class!"
+      review: "InternMitra made my 120-hour mandatory internship extremely smooth. The video modules and digital logbook system are top class!",
+      rating: 5
     },
     {
       name: "Priya Sharma",
       role: "BCA Student • Magadh University",
       type: "Student",
-      review: "The digital certificate QR verification worked instantly when submitting to my college placement cell. Highly recommended!"
+      review: "The digital certificate QR verification worked instantly when submitting to my college placement cell. Highly recommended!",
+      rating: 5
     },
     {
       name: "Aman Raj",
       role: "B.Sc Student • AKU Patna",
       type: "Student",
-      review: "Clean user dashboard, excellent study material, and quick certificate generation after quiz completion."
+      review: "Clean user dashboard, excellent study material, and quick certificate generation after quiz completion.",
+      rating: 5
     },
     {
       name: "Dr. Rajesh Kumar",
       role: "HOD Dept of Computer Science • Patna University",
       type: "Teacher",
-      review: "InternMitra simplifies mandatory UGC internship management for our entire batch with verified digital logbooks."
+      review: "InternMitra simplifies mandatory UGC internship management for our entire batch with verified digital logbooks.",
+      rating: 5
     },
     {
       name: "Anjali Sinha",
       role: "Academic Coordinator • VKSU Ara",
       type: "Teacher",
-      review: "Structured course material and transparent attendance tracking make it an ideal choice for degree colleges."
+      review: "Structured course material and transparent attendance tracking make it an ideal choice for degree colleges.",
+      rating: 5
     },
     {
       name: "Suresh Gupta",
       role: "Owner • Digital eMitra Center, Gaya",
       type: "Cyber Cafe",
-      review: "Being a Cyber Cafe partner with InternMitra has allowed us to help hundreds of local students register easily."
-=======
-      role: "B.Tech Computer Science Student",
-      type: "student",
-      review: "InternMitra helped me gain real practical internship experience with hands-on projects. The 120-hour certificate was recognized by my university!",
+      review: "Being a Cyber Cafe partner with InternMitra has allowed us to help hundreds of local students register easily.",
       rating: 5
-    },
-    {
-      name: "Priya Sharma",
-      role: "B.Sc Information Technology",
-      type: "student",
-      review: "The LMS videos and daily assignments are extremely well structured. I completed my Web Development internship smoothly.",
-      rating: 5
-    },
-    {
-      name: "Dr. Rajesh Kumar",
-      role: "College HOD & Faculty Coordinator",
-      type: "faculty",
-      review: "InternMitra provides excellent UGC compliant internship records and export options. It saves our college immense time in student tracking.",
-      rating: 5
-    },
-    {
-      name: "Aman Verma",
-      role: "BCA Final Year Student",
-      type: "student",
-      review: "Instant payment receipt and auto certificate verification feature are amazing. Highly recommended for all degree college students!",
-      rating: 5
-    },
-    {
-      name: "Anjali Sinha",
-      role: "Cyber Cafe Partner - Patna",
-      type: "faculty",
-      review: "The Cyber Cafe Partner Portal makes student registration so seamless. Transparent commissions and fast customer support!",
-      rating: 5
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
     }
   ];
 
   const faqs = [
     {
-<<<<<<< HEAD
       q: "Is InternMitra's 120-Hour Internship recognized under UGC & AICTE guidelines?",
       a: "Yes! InternMitra's internship modules are specifically structured according to UGC & AICTE curriculum guidelines for 120-hour practical learning logs, required for undergraduate and vocational degree programs across universities in Bihar."
     },
@@ -475,30 +421,9 @@ export default function Home() {
       setUniversities(data);
     } catch (error) {
       console.error(error);
-=======
-      q: "Is InternMitra Internship & Certificate UGC & AICTE Compliant?",
-      a: "Yes! All InternMitra 120-hour internship programs, logbooks, and completion certificates follow standard UGC and AICTE guidelines for university curriculum evaluation."
-    },
-    {
-      q: "How can I access my LMS course lectures and assignments?",
-      a: "After registering and logging in, go to your Student Dashboard -> LMS / Lectures tab. You will find day-wise video modules, downloadable PPT notes, and assignment links."
-    },
-    {
-      q: "How do I verify the authenticity of my Completion Certificate?",
-      a: "Every certificate issued by InternMitra contains a unique Certificate ID and QR Code. Anyone can verify its validity instantly using the Search tool on the Home page or Dashboard."
-    },
-    {
-      q: "What payment methods are supported for course enrollment?",
-      a: "We support all major payment options via Razorpay including UPI (Google Pay, PhonePe, Paytm), Debit/Credit Cards, and Net Banking with instant fee receipt generation."
-    },
-    {
-      q: "Can Cyber Cafes and Partners register students directly?",
-      a: "Yes! Cyber Cafes can register for our Partner Program through the Cyber Cafe Partner Portal and earn attractive referral commissions on every student registration."
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
     }
-  ];
+  };
 
-<<<<<<< HEAD
   const verifyCertificate = async () => {
     if (!certificateNo) {
       alert("Please enter a valid certificate number");
@@ -534,8 +459,8 @@ export default function Home() {
     : internshipTracks.filter((track) => track.category === activeTrackCategory);
 
   const filteredTestimonials = activeFilter === "All"
-    ? allTestimonials
-    : allTestimonials.filter((item) => item.type === activeFilter);
+    ? testimonials
+    : testimonials.filter((item) => item.type === activeFilter);
 
   return (
     <div className="bg-[#f8fafc] text-slate-900 overflow-hidden font-sans selection:bg-blue-100 selection:text-blue-900">
@@ -635,105 +560,33 @@ export default function Home() {
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-4 pt-4">
                 <Link to="/register">
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                  <button
+                    type="button"
                     className="bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 text-white px-8 h-14 rounded-2xl font-black uppercase text-xs tracking-wider shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all duration-300 flex items-center gap-2.5 cursor-pointer"
                   >
                     <span>Enroll for {activeHeroTrack}</span>
-=======
-  const filteredTestimonials = testimonials.filter(
-    (t) => reviewFilter === "all" || t.type === reviewFilter
-  );
-
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
-      
-      {/* 1. HERO SECTION */}
-      <section className="relative pt-12 pb-20 md:pt-20 md:pb-28 overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white">
-        {/* Animated Background Gradients */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-r from-blue-600/30 via-indigo-600/20 to-purple-600/30 blur-[120px] rounded-full pointer-events-none -z-0" />
-        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-blue-500/10 blur-[90px] rounded-full pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            
-            {/* Hero Content Left */}
-            <div className="lg:col-span-7 space-y-8 text-center lg:text-left">
-              
-              {/* Badge */}
-              <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/10 border border-white/15 backdrop-blur-md shadow-inner text-blue-300 text-xs font-black uppercase tracking-wider"
-              >
-                <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
-                <span>UGC & AICTE Compliant Internship Portal</span>
-                <span className="hidden sm:inline-block w-1.5 h-1.5 rounded-full bg-blue-400" />
-                <span className="hidden sm:inline-block text-white/80">Batch 2026 Open</span>
-              </motion.div>
-
-              {/* Main Headline */}
-              <motion.h1
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] text-white"
-              >
-                Empowering Students with <br />
-                <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
-                  Digital 120-Hr Internships
-                </span> & Certifications
-              </motion.h1>
-
-              {/* Subtitle */}
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="text-base sm:text-lg text-slate-300 font-semibold max-w-2xl leading-relaxed mx-auto lg:mx-0"
-              >
-                Join thousands of degree college students acquiring practical skill training, LMS lectures, daily assignments, auto test reports, and official verified completion certificates.
-              </motion.p>
-
-              {/* Action Buttons */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-                className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2"
-              >
-                <Link to="/register" className="w-full sm:w-auto">
-                  <button
-                    type="button"
-                    className="w-full sm:w-auto h-14 px-8 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-blue-600/30 hover:shadow-blue-600/50 hover:-translate-y-0.5 transition-all cursor-pointer flex items-center justify-center gap-3"
-                  >
-                    <span>Explore & Enroll Now</span>
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
                     <ArrowRight className="w-4 h-4" />
-                  </motion.button>
+                  </button>
                 </Link>
 
-<<<<<<< HEAD
                 <a href="#verify">
                   <button className="bg-white/10 backdrop-blur-md border border-white/20 hover:border-amber-400/60 text-white px-7 h-14 rounded-2xl font-black uppercase text-xs tracking-wider transition-all duration-300 shadow-xs flex items-center gap-2 cursor-pointer hover:bg-white/15">
                     <SearchCheck className="w-4 h-4 text-amber-400" />
                     <span>Verify QR Certificate</span>
-=======
-                <Link to="/emitra-register" className="w-full sm:w-auto">
+                  </button>
+                </a>
+
+                <Link to="/emitra-register">
                   <button
                     type="button"
-                    className="w-full sm:w-auto h-14 px-7 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-extrabold text-sm uppercase tracking-wider backdrop-blur-md transition-all cursor-pointer flex items-center justify-center gap-2.5"
+                    className="bg-white/10 hover:bg-white/15 border border-white/20 text-white px-7 h-14 rounded-2xl font-extrabold text-xs uppercase tracking-wider backdrop-blur-md transition-all cursor-pointer flex items-center gap-2.5"
                   >
                     <Building2 className="w-4 h-4 text-amber-400" />
                     <span>Cyber Cafe Partner</span>
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
                   </button>
                 </Link>
-              </motion.div>
+              </div>
 
-<<<<<<< HEAD
               {/* Selectable University Fast Selector */}
               <div className="pt-6 border-t border-white/10 space-y-2">
                 <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-slate-400">
@@ -766,19 +619,8 @@ export default function Home() {
                 </div>
               </div>
 
-            </motion.div>
-
-            {/* Right Column: Multi-Layered Overlapping Glass 3D Cards */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92 }}
-=======
               {/* Quick Trust Pill Indicators */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
-                className="pt-6 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-4 text-left"
-              >
+              <div className="pt-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-left">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span className="text-xs font-bold text-slate-300">100% Online LMS</span>
@@ -795,19 +637,18 @@ export default function Home() {
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span className="text-xs font-bold text-slate-300">Razorpay Payment</span>
                 </div>
-              </motion.div>
+              </div>
 
-            </div>
+            </motion.div>
 
+            {/* Hero Showcase Card Right */}
             {/* Hero Showcase Card Right */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.7, delay: 0.2 }}
               className="lg:col-span-5 relative"
             >
-<<<<<<< HEAD
               <div className="relative mx-auto max-w-md lg:max-w-none min-h-[420px] flex items-center justify-center">
 
                 {/* Layer 1: Background Glass Frame with Illustration */}
@@ -1350,82 +1191,22 @@ export default function Home() {
                     <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-extrabold text-sm shadow-xs">
                       {item.name.charAt(0)}
                     </div>
-=======
-              <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-b from-white/15 to-white/5 border border-white/20 backdrop-blur-2xl shadow-2xl space-y-6">
-                
-                {/* Header Card Info */}
-                <div className="flex items-center justify-between pb-4 border-b border-white/10">
-                  <div className="flex items-center gap-3">
-                    <img src="/logo-new.jpeg" alt="Logo" className="h-10 w-auto rounded-xl border border-white/20" />
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
                     <div>
-                      <h3 className="text-base font-black text-white">InternMitra Workspace</h3>
-                      <p className="text-[11px] font-bold text-blue-300">Verified Academic Portal</p>
+                      <h3 className="text-sm font-black text-slate-900">{item.name}</h3>
+                      <p className="text-[11px] font-bold text-slate-400">{item.role}</p>
                     </div>
                   </div>
-<<<<<<< HEAD
-
                   <span className="px-2.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider bg-blue-50 text-blue-600 border border-blue-100">
                     {item.type}
-=======
-                  <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
-                    LIVE BATCH 2026
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
                   </span>
                 </div>
-
-                {/* Stat Micro Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-4 rounded-2xl bg-white/10 border border-white/10">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Total Students</span>
-                    <span className="text-2xl font-black text-white mt-1 block">50,000+</span>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-white/10 border border-white/10">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Partner Colleges</span>
-                    <span className="text-2xl font-black text-blue-400 mt-1 block">500+</span>
-                  </div>
-                </div>
-
-                {/* Domain Pill Tags */}
-                <div className="space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Available Domains</span>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="bg-blue-500/20 text-blue-200 border border-blue-500/30 px-3 py-1 rounded-xl text-xs font-bold">
-                      💻 Web Development
-                    </span>
-                    <span className="bg-purple-500/20 text-purple-200 border border-purple-500/30 px-3 py-1 rounded-xl text-xs font-bold">
-                      🔒 Cyber Security
-                    </span>
-                    <span className="bg-emerald-500/20 text-emerald-200 border border-emerald-500/30 px-3 py-1 rounded-xl text-xs font-bold">
-                      📄 Digital Literacy
-                    </span>
-                    <span className="bg-rose-500/20 text-rose-200 border border-rose-500/30 px-3 py-1 rounded-xl text-xs font-bold">
-                      🏦 Financial Literacy
-                    </span>
-                  </div>
-                </div>
-
-                {/* Sample Verification Badge Box */}
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-600/30 to-purple-600/30 border border-white/20 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <Award className="w-8 h-8 text-amber-400 shrink-0" />
-                    <div>
-                      <p className="text-xs font-black text-white">Digital Certificate Verification</p>
-                      <p className="text-[10px] text-slate-300">Instant QR Code & ID Search</p>
-                    </div>
-                  </div>
-                  <BadgeCheck className="w-5 h-5 text-emerald-400 shrink-0" />
-                </div>
-
-              </div>
-            </motion.div>
-
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-<<<<<<< HEAD
-      {/* 11. FAQ ACCORDION */}
+      {/* FAQ ACCORDION */}
       <section className="py-24 bg-white border-b border-slate-200/60">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-left">
           
@@ -1474,7 +1255,11 @@ export default function Home() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-=======
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
       {/* 2. INSTANT CERTIFICATE VERIFICATION SEARCH BAR */}
       <section className="relative -mt-10 z-20 max-w-5xl mx-auto px-4 sm:px-6">
         <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-xl space-y-4">
@@ -1627,12 +1412,9 @@ export default function Home() {
                 <span className="text-3xl mb-4 block">{feat.icon}</span>
                 <h3 className="text-base font-black text-slate-900">{feat.title}</h3>
                 <p className="text-xs font-semibold text-slate-500 mt-2 leading-relaxed">{feat.desc}</p>
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
               </div>
             ))}
           </div>
-
-<<<<<<< HEAD
         </div>
       </section>
 
@@ -1742,271 +1524,14 @@ export default function Home() {
               </ul>
             </div>
 
-            <div>
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-300 mb-5">Verification</h3>
-              <ul className="space-y-3 text-slate-400 text-xs font-medium">
-                <li><a href="#verify" className="hover:text-blue-400 transition-colors">Verify Certificate</a></li>
-                <li className="hover:text-blue-400 cursor-pointer transition-colors">UGC 120-Hour Guidelines</li>
-                <li className="hover:text-blue-400 cursor-pointer transition-colors">Privacy Policy</li>
-                <li className="hover:text-blue-400 cursor-pointer transition-colors">Terms & Conditions</li>
-              </ul>
-=======
-        </div>
-      </section>
-
-      {/* 5. METRICS & IMPACT COUNTER SECTION */}
-      <section className="py-16 bg-slate-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-y sm:divide-y-0 sm:divide-x divide-white/10">
-            
-            <div className="p-4 space-y-1">
-              <span className="text-3xl sm:text-4xl font-black text-blue-400">50,000+</span>
-              <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">Enrolled Students</p>
-            </div>
-
-            <div className="p-4 space-y-1 pt-6 sm:pt-4">
-              <span className="text-3xl sm:text-4xl font-black text-purple-400">500+</span>
-              <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">Partner Colleges</p>
-            </div>
-
-            <div className="p-4 space-y-1 pt-6 sm:pt-4">
-              <span className="text-3xl sm:text-4xl font-black text-emerald-400">1,200+</span>
-              <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">Cyber Cafe Partners</p>
-            </div>
-
-            <div className="p-4 space-y-1 pt-6 sm:pt-4">
-              <span className="text-3xl sm:text-4xl font-black text-amber-400">100%</span>
-              <p className="text-xs font-bold text-slate-300 uppercase tracking-wider">Verified Certificates</p>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* 6. CYBER CAFE PARTNER CALLOUT BANNER */}
-      <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative rounded-3xl p-8 sm:p-12 bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 text-white shadow-xl overflow-hidden">
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            
-            <div className="lg:col-span-8 space-y-4 text-center sm:text-left">
-              <span className="bg-white/20 border border-white/30 text-white px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
-                Cyber Cafe & CSC Center Network
-              </span>
-              <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-white leading-tight">
-                Become an Official InternMitra Cyber Cafe Partner
-              </h2>
-              <p className="text-xs sm:text-sm font-semibold text-orange-100 max-w-xl leading-relaxed">
-                Register students directly from your cafe portal, manage fee receipts, track student enrollments, and earn transparent referral commissions.
-              </p>
-            </div>
-
-            <div className="lg:col-span-4 flex justify-center lg:justify-end">
-              <Link to="/emitra-register">
-                <button
-                  type="button"
-                  className="h-14 px-8 rounded-2xl bg-white hover:bg-slate-50 text-slate-900 font-black text-xs uppercase tracking-wider shadow-lg hover:shadow-xl active:scale-98 transition cursor-pointer flex items-center gap-2"
-                >
-                  <Sparkles className="w-4 h-4 text-amber-600" />
-                  <span>Join Partner Program</span>
-                </button>
-              </Link>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* 7. STUDENT & FACULTY TESTIMONIALS SECTION */}
-      <section className="py-20 bg-slate-100/70 border-t border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          
-          <div className="text-center space-y-4 max-w-3xl mx-auto">
-            <span className="bg-purple-50 text-purple-600 border border-purple-100 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
-              Testimonials & Feedback
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-              Trusted By Students & Faculty Nationwide
-            </h2>
-            
-            {/* Filter Toggle */}
-            <div className="flex items-center justify-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setReviewFilter("all")}
-                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer ${
-                  reviewFilter === "all"
-                    ? "bg-slate-900 text-white"
-                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                All Reviews
-              </button>
-              <button
-                type="button"
-                onClick={() => setReviewFilter("student")}
-                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer ${
-                  reviewFilter === "student"
-                    ? "bg-slate-900 text-white"
-                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                Student Reviews
-              </button>
-              <button
-                type="button"
-                onClick={() => setReviewFilter("faculty")}
-                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer ${
-                  reviewFilter === "faculty"
-                    ? "bg-slate-900 text-white"
-                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                Faculty Reviews
-              </button>
-            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTestimonials.map((t, i) => (
-              <div key={i} className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-4 flex flex-col justify-between">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-1 text-amber-400">
-                    {[...Array(t.rating)].map((_, idx) => (
-                      <Star key={idx} className="w-4 h-4 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-xs font-semibold text-slate-700 leading-relaxed italic">
-                    "{t.review}"
-                  </p>
-                </div>
-
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                  <div>
-                    <h4 className="text-xs font-black text-slate-900">{t.name}</h4>
-                    <p className="text-[10px] font-bold text-slate-400">{t.role}</p>
-                  </div>
-                  <span className="bg-blue-50 text-blue-600 text-[10px] font-black uppercase px-2.5 py-1 rounded-md">
-                    {t.type}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </div>
-      </section>
-
-      {/* 8. FAQ ACCORDION SECTION */}
-      <section className="py-20 max-w-4xl mx-auto px-4 sm:px-6">
-        <div className="text-center space-y-4 mb-12">
-          <span className="bg-blue-50 text-blue-600 border border-blue-100 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
-            Got Questions?
-          </span>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-            Frequently Asked Questions
-          </h2>
-        </div>
-
-        <div className="space-y-4">
-          {faqs.map((faq, idx) => (
-            <div
-              key={idx}
-              className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs transition"
-            >
-              <button
-                type="button"
-                onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}
-                className="w-full p-5 text-left font-black text-sm text-slate-900 flex items-center justify-between gap-4 cursor-pointer"
-              >
-                <span>{faq.q}</span>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${activeFaq === idx ? "rotate-180 text-blue-600" : ""}`} />
-              </button>
-              {activeFaq === idx && (
-                <div className="px-5 pb-5 text-xs font-semibold text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
-                  {faq.a}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 9. FOOTER SECTION */}
-      <footer className="bg-slate-900 text-slate-300 pt-16 pb-12 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            
-            {/* Column 1: Brand Info */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <img src="/logo-new.jpeg" alt="Logo" className="h-10 w-auto rounded-xl border border-slate-700" />
-                <span className="font-black text-lg text-white">InternMitra</span>
-              </div>
-              <p className="text-xs font-semibold text-slate-400 leading-relaxed">
-                UGC & AICTE Compliant Digital Internship & Certification Portal empowering degree college students nationwide.
-              </p>
-              <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
-                <ShieldCheck className="w-4 h-4" />
-                <span>Official Academic Partner</span>
-              </div>
-            </div>
-
-            {/* Column 2: Quick Links */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-black uppercase tracking-wider text-white">Navigation</h4>
-              <ul className="space-y-2 text-xs font-semibold text-slate-400">
-                <li><Link to="/" className="hover:text-white transition">Home</Link></li>
-                <li><Link to="/about" className="hover:text-white transition">About Us</Link></li>
-                <li><Link to="/features" className="hover:text-white transition">Platform Features</Link></li>
-                <li><Link to="/contact" className="hover:text-white transition">Contact Support</Link></li>
-              </ul>
-            </div>
-
-            {/* Column 3: Portals */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-black uppercase tracking-wider text-white">Portals & Login</h4>
-              <ul className="space-y-2 text-xs font-semibold text-slate-400">
-                <li><Link to="/login" className="hover:text-white transition">Student Login</Link></li>
-                <li><Link to="/register" className="hover:text-white transition">Student Registration</Link></li>
-                <li><Link to="/emitra-register" className="hover:text-white transition">Cyber Cafe Partner Registration</Link></li>
-                <li><Link to="/login" className="hover:text-white transition">Admin & Teacher Portal</Link></li>
-              </ul>
-            </div>
-
-            {/* Column 4: Contact Info */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-black uppercase tracking-wider text-white">Contact & Support</h4>
-              <div className="space-y-2 text-xs font-semibold text-slate-400">
-                <div className="flex items-center gap-2">
-                  <Phone className="w-3.5 h-3.5 text-blue-400" />
-                  <a href="tel:+919693921517" className="hover:text-white transition">+91 9693921517</a>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="w-3.5 h-3.5 text-blue-400" />
-                  <a href="mailto:info@internmitra.com" className="hover:text-white transition">info@internmitra.com</a>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Patna, Bihar, India</span>
-                </div>
-              </div>
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
-            </div>
-
-          </div>
-
-<<<<<<< HEAD
           <div className="border-t border-slate-800/80 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium text-slate-400">
-            <p>© 2026 InternMitra. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} InternMitra. All Rights Reserved. Compliant with UGC & AICTE Internship Standards.</p>
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-blue-500" />
               20,000+ Enrolled Scholars across Bihar
             </div>
-=======
-          <div className="pt-8 border-t border-slate-800 text-center text-xs font-bold text-slate-500">
-            © {new Date().getFullYear()} InternMitra. All Rights Reserved. Compliant with UGC & AICTE Internship Standards.
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
           </div>
 
         </div>

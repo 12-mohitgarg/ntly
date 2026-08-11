@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import {
   Users,
   LogOut,
@@ -166,7 +167,103 @@ interface CyberCafeSummary {
   pendingStudents: number;
   paidAmount: number;
   colleges: Set<string>;
-  domains: Set<string>;
+}
+
+interface StudentReport {
+  id: string;
+  userId: string;
+  studentName?: string;
+  email?: string;
+  course?: string;
+  assignmentId?: string;
+  assignmentTitle?: string;
+  description?: string;
+  fileName: string;
+  fileUrl: string;
+  uploadedAt?: string;
+}
+
+interface CollegeCompleteReport {
+  college: string;
+  university: string;
+  totalStudents: number;
+  totalPayments: number;
+  pendingPayments: number;
+  totalRevenue: number;
+}
+
+interface PaginationControlsProps {
+  currentPage: number;
+  totalItems: number;
+  itemsPerPage: number;
+  onPageChange: (page: number) => void;
+  onItemsPerPageChange?: (itemsPerPage: number) => void;
+  label?: string;
+}
+
+function PaginationControls({
+  currentPage,
+  totalItems,
+  itemsPerPage,
+  onPageChange,
+  onItemsPerPageChange,
+  label = 'items'
+}: PaginationControlsProps) {
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100 text-xs font-bold text-slate-500">
+      <div className="flex items-center gap-2">
+        {onItemsPerPageChange && (
+          <>
+            <span>Show</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
+              className="h-8 px-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-extrabold text-slate-800 cursor-pointer"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            <span>entries</span>
+          </>
+        )}
+        <span className="text-slate-400 font-semibold ml-1 italic">
+          Showing {startItem} to {endItem} of {totalItems} {label}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <Button
+          variant="outline"
+          className="h-8 px-3 rounded-lg border-slate-200 text-slate-700 disabled:opacity-40"
+          disabled={currentPage <= 1}
+          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+        >
+          <ChevronLeft size={14} />
+          <span>Previous</span>
+        </Button>
+
+        <span className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-black">
+          {currentPage} / {totalPages}
+        </span>
+
+        <Button
+          variant="outline"
+          className="h-8 px-3 rounded-lg border-slate-200 text-slate-700 disabled:opacity-40"
+          disabled={currentPage >= totalPages}
+          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+        >
+          <span>Next</span>
+          <ChevronRight size={14} />
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export default function AdminDashboard() {
@@ -174,9 +271,35 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Read active tab from URL query params
+  const isSubUser = adminProfile?.role === 'sub_user';
+  const isTeacher = adminProfile?.role === 'teacher';
+  const canOperateDashboardPayments = !isSubUser && !isTeacher;
+  const canManageAdminDashboard = !isSubUser && !isTeacher;
+
+  // Helper to map URL tab names to active tab keys
+  const getTabValue = (t: string | null) => {
+    if (!t || t === 'dashboard' || t === 'registered-users') return 'dashboard';
+    if (t === 'assignment' || t === 'assignments' || t === 'student-reports') return 'assignment';
+    if (t === 'test-report' || t === 'test-reports') return 'test-report';
+    if (t === 'internship-report' || t === 'reports') return 'internship-report';
+    if (t === 'cyber-cafe' || t === 'emitras' || t === 'cyber-cafe-summary') return 'cyber-cafe-summary';
+    return t;
+  };
+
   const searchParams = new URLSearchParams(location.search);
-  const activeTab = searchParams.get('tab') || 'dashboard';
+  const activeTab = getTabValue(searchParams.get('tab'));
+  const [activeAdminTab, setActiveAdminTabState] = useState(activeTab);
+
+  useEffect(() => {
+    const currentTabFromUrl = getTabValue(new URLSearchParams(location.search).get('tab'));
+    setActiveAdminTabState(currentTabFromUrl);
+  }, [location.search]);
+
+  const setActiveAdminTab = (tab: string) => {
+    const targetTab = getTabValue(tab);
+    setActiveAdminTabState(targetTab);
+    navigate(`/admin-dashboard?tab=${tab}`, { replace: true });
+  };
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -186,6 +309,35 @@ export default function AdminDashboard() {
   const [colleges, setColleges] = useState<College[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [studentReports, setStudentReports] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
+
+  const getGroupName = (value?: string) => value?.trim() || 'Not specified';
+
+  const isUserSuccessful = (userItem: UserProfile) => {
+    if (!userItem) return false;
+    if (userItem.isPaid || userItem.hasPaid || userItem.paymentStatus === 'success' || (userItem as any).paymentVerified) return true;
+    return payments.some((p) => p.userId === userItem.uid && (p.status === 'success' || p.status === 'captured'));
+  };
+
+  const formatCompactRupees = (amount: number) => {
+    if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(amount >= 100000000 ? 1 : 2)} Cr`;
+    if (amount >= 100000) return `₹${(amount / 100000).toFixed(amount >= 1000000 ? 1 : 2)} L`;
+    return `₹${amount.toLocaleString('en-IN')}`;
+  };
+
+  const getUserSuccessfulPaymentAmount = (student: UserProfile) => {
+    if (!student) return 0;
+    const paymentAmount = payments
+      .filter((payment) => payment.userId === student.uid && payment.status === 'success')
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+    if (paymentAmount > 0) return paymentAmount;
+
+    if (!isUserSuccessful(student)) return 0;
+
+    const matchedCollege = colleges.find((college) => college.name === student.college);
+    return matchedCollege?.price || 1000;
+  };
 
   const [loading, setLoading] = useState(true);
 
@@ -195,26 +347,23 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
   const [userSearchText, setUserSearchText] = useState('');
-
-  // Modals & Action Menus
-  const [openUserMenuId, setOpenUserMenuId] = useState<string | null>(null);
-  const [selectedUserModal, setSelectedUserModal] = useState<UserProfile | null>(null);
-  const [passwordUser, setPasswordUser] = useState<UserProfile | null>(null);
-  const [passwordForm, setPasswordForm] = useState({ password: '', confirmPassword: '' });
-  const [savingPassword, setSavingPassword] = useState(false);
-<<<<<<< HEAD
-
-  // Cyber Cafe Summary tab states
+  const [userSearchFilter, setUserSearchFilter] = useState('');
+  const [userPaymentFilter, setUserPaymentFilter] = useState('');
+  const [reportSearch, setReportSearch] = useState('');
+  const [reportCollegeFilter, setReportCollegeFilter] = useState('');
+  const [reportUniversityFilter, setReportUniversityFilter] = useState('');
+  const [reportPaymentFilter, setReportPaymentFilter] = useState('');
+  const [cyberCafeSearch, setCyberCafeSearch] = useState('');
+  const [cyberCafePaymentFilter, setCyberCafePaymentFilter] = useState('');
+  const [cyberCafeCollegeFilter, setCyberCafeCollegeFilter] = useState('');
+  const [cyberCafeDomainFilter, setCyberCafeDomainFilter] = useState('');
   const [cafeSearchText, setCafeSearchText] = useState('');
   const [cafeStatusFilter, setCafeStatusFilter] = useState('');
-  const [selectedCafeModal, setSelectedCafeModal] = useState<EmitraProfile | null>(null);
   const [openCafeMenuId, setOpenCafeMenuId] = useState<string | null>(null);
+  const [selectedCafeModal, setSelectedCafeModal] = useState<EmitraProfile | null>(null);
+  const [viewingSubmission, setViewingSubmission] = useState<QuizSubmission | null>(null);
 
-  // Notification tab states
-  const [selectedNotificationDetails, setSelectedNotificationDetails] = useState<NotificationItem | null>(null);
-  const [openNotificationMenuId, setOpenNotificationMenuId] = useState<string | null>(null);
-
-  // College & Domain tab states
+  // College & Domain breakdown view states
   const [collegeSearchQuery, setCollegeSearchQuery] = useState('');
   const [collegeSortOrder, setCollegeSortOrder] = useState('high-to-low');
   const [collegePage, setCollegePage] = useState(1);
@@ -225,9 +374,16 @@ export default function AdminDashboard() {
   const [domainPage, setDomainPage] = useState(1);
   const [domainPerPage, setDomainPerPage] = useState(12);
 
-  // Forms
-  const [teacherForm, setTeacherForm] = useState({ fullName: '', email: '', password: '', course: '' });
-=======
+  // Notification states
+  const [selectedNotificationDetails, setSelectedNotificationDetails] = useState<NotificationItem | null>(null);
+  const [openNotificationMenuId, setOpenNotificationMenuId] = useState<string | null>(null);
+
+  // Modals & Action Menus
+  const [openUserMenuId, setOpenUserMenuId] = useState<string | null>(null);
+  const [selectedUserModal, setSelectedUserModal] = useState<UserProfile | null>(null);
+  const [passwordUser, setPasswordUser] = useState<UserProfile | null>(null);
+  const [passwordForm, setPasswordForm] = useState({ password: '', confirmPassword: '' });
+  const [savingPassword, setSavingPassword] = useState(false);
   const [emailUser, setEmailUser] = useState<UserProfile | null>(null);
   const [emailForm, setEmailForm] = useState({ email: '' });
   const [savingEmail, setSavingEmail] = useState(false);
@@ -269,13 +425,8 @@ export default function AdminDashboard() {
   });
   const [reportFileInputKey, setReportFileInputKey] = useState(0);
   const [assignmentFileInputKey, setAssignmentFileInputKey] = useState(0);
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
   const [savingTeacher, setSavingTeacher] = useState(false);
-
-  const [subUserForm, setSubUserForm] = useState({ fullName: '', email: '', password: '', districtIds: [] as string[] });
   const [savingSubUser, setSavingSubUser] = useState(false);
-
-  const [notificationForm, setNotificationForm] = useState({ title: '', message: '' });
   const [savingNotification, setSavingNotification] = useState(false);
 
   const [backupLoading, setBackupLoading] = useState(false);
@@ -363,15 +514,7 @@ export default function AdminDashboard() {
 
   const actionMenuRef = useRef<HTMLDivElement | null>(null);
 
-  const isSubUser = adminProfile?.role === 'sub_user';
-  const isTeacher = adminProfile?.role === 'teacher';
-
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-    if (!adminProfile) return;
     fetchData();
   }, [user, adminProfile?.role]);
 
@@ -406,7 +549,9 @@ export default function AdminDashboard() {
         emitrasSnapshot,
         collegesSnapshot,
         districtsSnapshot,
-        notificationsSnapshot
+        notificationsSnapshot,
+        reportsSnapshot,
+        assignmentsSnapshot
       ] = await Promise.all([
         getDocs(usersQuery),
         getDocs(paymentsRef),
@@ -415,10 +560,23 @@ export default function AdminDashboard() {
         getDocs(collection(db, 'emitras')),
         getDocs(collection(db, 'colleges')),
         getDocs(query(collection(db, 'districts'), orderBy('name'))),
-        getDocs(query(collection(db, 'notifications'), orderBy('createdAt', 'desc')))
+        getDocs(query(collection(db, 'notifications'), orderBy('createdAt', 'desc'))),
+        getDocs(collection(db, 'student_reports')).catch(() => ({ docs: [] })),
+        getDocs(collection(db, 'assignments')).catch(() => ({ docs: [] }))
       ]);
 
-      const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+      const JULY_20_2026_TIME = new Date('2026-07-20T00:00:00').getTime();
+      const isAfterJuly20 = (student: UserProfile) => {
+        const dateStr = student.registrationDate || (student as any).createdAt;
+        if (!dateStr) return true;
+        const cleaned = String(dateStr).replace(/-(\d)T/g, '-0$1T');
+        const parsedTime = new Date(cleaned).getTime();
+        if (isNaN(parsedTime)) return true;
+        return parsedTime >= JULY_20_2026_TIME;
+      };
+
+      const rawUsersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+      const usersData = rawUsersData.filter(isAfterJuly20);
       setUsers(usersData);
 
       const paymentsData = paymentsSnapshot.docs.map(doc => doc.data() as Payment);
@@ -442,32 +600,18 @@ export default function AdminDashboard() {
       const notificationsData = notificationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NotificationItem));
       setNotifications(notificationsData);
 
+      if ('docs' in reportsSnapshot) {
+        setStudentReports(reportsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }
+      if ('docs' in assignmentsSnapshot) {
+        setAssignments(assignmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }
+
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  // Helper check for payment success
-  const isUserSuccessful = (student: UserProfile) => {
-    return Boolean(
-      student.isPaid ||
-      student.hasPaid ||
-      student.paymentStatus === 'success' ||
-      payments.some(p => p.userId === student.uid && p.status === 'success')
-    );
-  };
-
-  const successfulUsers = users.filter(isUserSuccessful);
-  const successfulUsersCount = successfulUsers.length;
-  const pendingUsersCount = Math.max(0, users.length - successfulUsersCount);
-  const totalAmount = payments.filter(p => p.status === 'success').reduce((sum, p) => sum + (p.amount || 0), 0);
-
-  const formatCompactRupees = (amount: number) => {
-    if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(2)} Cr`;
-    if (amount >= 100000) return `₹${(amount / 100000).toFixed(2)} L`;
-    return `₹${amount.toLocaleString('en-IN')}`;
   };
 
   // User Actions: Verify, Reject, Password Change
@@ -531,8 +675,7 @@ export default function AdminDashboard() {
     }
   };
 
-<<<<<<< HEAD
-=======
+
   const openPasswordModal = (student: UserProfile) => {
     setPasswordUser(student);
     setPasswordForm({ password: '', confirmPassword: '' });
@@ -543,7 +686,6 @@ export default function AdminDashboard() {
     setEmailForm({ email: student.email || '' });
   };
 
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
   const handleUpdateUserPassword = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!passwordUser) return;
@@ -572,13 +714,6 @@ export default function AdminDashboard() {
     }
   };
 
-<<<<<<< HEAD
-  const handleAddTeacher = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!teacherForm.fullName || !teacherForm.email || !teacherForm.password || !teacherForm.course) {
-      alert('Please fill all teacher fields');
-      return;
-=======
   const handleUpdateUserEmail = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -633,16 +768,11 @@ export default function AdminDashboard() {
     }
   };
 
-  const getGroupName = (value?: string) => value?.trim() || 'Not specified';
-
   const successfulUserIds = new Set(
     payments
       .filter((payment) => payment.status === 'success' && payment.userId)
       .map((payment) => payment.userId)
   );
-
-  const isUserSuccessful = (user: UserProfile) =>
-    Boolean(user.isPaid || user.hasPaid || user.paymentStatus === 'success' || successfulUserIds.has(user.uid));
 
   const uniqueColleges = [
     ...new Set(users.map(user => getGroupName(user.college)))
@@ -675,7 +805,7 @@ export default function AdminDashboard() {
     return collegeMatch && domainMatch;
   });
 
-  const filteredUsers = users.filter(user => {
+  const searchFilteredUsers = users.filter(user => {
     const searchValue = userSearchFilter.trim().toLowerCase();
     const searchMatch =
       !searchValue ||
@@ -710,7 +840,7 @@ export default function AdminDashboard() {
   const successfulUsers = users.filter(isUserSuccessful);
   const subUserRegisteredUsers = isSubUser ? users : users.filter((student) => student.createdBySubUserId === adminProfile?.uid);
 
-  const collegeCount = filteredUsers.reduce<Record<string, number>>(
+  const collegeCount = searchFilteredUsers.reduce<Record<string, number>>(
     (acc, user) => {
       const college = getGroupName(user.college);
 
@@ -723,7 +853,7 @@ export default function AdminDashboard() {
     {}
   );
 
-  const domainCount = filteredUsers.reduce<Record<string, number>>(
+  const domainCount = searchFilteredUsers.reduce<Record<string, number>>(
     (acc, user) => {
       const domain = getGroupName(user.internshipDomain);
 
@@ -738,27 +868,13 @@ export default function AdminDashboard() {
   // Calculate payment statistics
   const successfulUsersCount = successfulUsers.length;
   const pendingUsersCount = users.length - successfulUsersCount;
-  const formatCompactRupees = (amount: number) => {
-    if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(amount >= 100000000 ? 1 : 2)} Cr`;
-    if (amount >= 100000) return `₹${(amount / 100000).toFixed(amount >= 1000000 ? 1 : 2)} L`;
-    return `₹${amount.toLocaleString('en-IN')}`;
-  };
+
   const successfulPaymentsByUser = payments
     .filter((payment) => payment.status === 'success' && payment.userId)
     .reduce<Record<string, number>>((acc, payment) => {
       acc[payment.userId] = (acc[payment.userId] || 0) + (payment.amount || 0);
       return acc;
     }, {});
-
-  const getUserSuccessfulPaymentAmount = (student: UserProfile) => {
-    const paymentAmount = successfulPaymentsByUser[student.uid] || 0;
-    if (paymentAmount > 0) return paymentAmount;
-
-    if (!isUserSuccessful(student)) return 0;
-
-    const matchedCollege = colleges.find((college) => college.name === student.college);
-    return matchedCollege?.price || 0;
-  };
   const totalAmount = successfulUsers.reduce((sum, student) => sum + getUserSuccessfulPaymentAmount(student), 0);
 
   const reportFilteredUsers = users.filter((student) => {
@@ -799,28 +915,28 @@ export default function AdminDashboard() {
   );
 
   const collegeCompleteReportMap = reportFilteredUsers.reduce<Record<string, CollegeCompleteReport>>((acc, student) => {
-      const college = getGroupName(student.college);
-      const university = getGroupName(student.university);
-      const key = `${college}__${university}`;
+    const college = getGroupName(student.college);
+    const university = getGroupName(student.university);
+    const key = `${college}__${university}`;
 
-      if (!acc[key]) {
-        acc[key] = {
-          college,
-          university,
-          totalStudents: 0,
-          totalPayments: 0,
-          pendingPayments: 0,
-          totalRevenue: 0,
-        };
-      }
+    if (!acc[key]) {
+      acc[key] = {
+        college,
+        university,
+        totalStudents: 0,
+        totalPayments: 0,
+        pendingPayments: 0,
+        totalRevenue: 0,
+      };
+    }
 
-      const paymentSuccess = isUserSuccessful(student);
-      acc[key].totalStudents += 1;
-      acc[key].totalPayments += paymentSuccess ? 1 : 0;
-      acc[key].pendingPayments += paymentSuccess ? 0 : 1;
-      acc[key].totalRevenue += getUserSuccessfulPaymentAmount(student);
-      return acc;
-    }, {});
+    const paymentSuccess = isUserSuccessful(student);
+    acc[key].totalStudents += 1;
+    acc[key].totalPayments += paymentSuccess ? 1 : 0;
+    acc[key].pendingPayments += paymentSuccess ? 0 : 1;
+    acc[key].totalRevenue += getUserSuccessfulPaymentAmount(student);
+    return acc;
+  }, {});
 
   const collegeCompleteReport: CollegeCompleteReport[] = Object.keys(collegeCompleteReportMap)
     .map((key) => collegeCompleteReportMap[key])
@@ -1001,7 +1117,25 @@ export default function AdminDashboard() {
         colleges: new Set<string>(),
         domains: new Set<string>(),
       };
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
+    }
+    const isPaid = isUserSuccessful(student);
+    acc[id].totalStudents += 1;
+    if (isPaid) {
+      acc[id].successfulStudents += 1;
+      acc[id].paidAmount += getUserSuccessfulPaymentAmount(student);
+    } else {
+      acc[id].pendingStudents += 1;
+    }
+    if (student.college) acc[id].colleges.add(student.college);
+    if (student.internshipDomain) acc[id].domains.add(student.internshipDomain);
+    return acc;
+  }, {});
+
+  const handleAddTeacher = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teacherForm.fullName || !teacherForm.email || !teacherForm.password) {
+      alert('Please fill all teacher fields');
+      return;
     }
     setSavingTeacher(true);
     try {
@@ -1203,6 +1337,7 @@ export default function AdminDashboard() {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Registered Users');
     XLSX.writeFile(workbook, `Registered_Users_${Date.now()}.xlsx`);
   };
+
 
   // Colored Avatar Helper
   const getAvatarColor = (name: string) => {
@@ -3502,25 +3637,6 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-<<<<<<< HEAD
-      {/* CYBER CAFE DETAILS MODAL */}
-      <Dialog open={Boolean(selectedCafeModal)} onOpenChange={(open) => !open && setSelectedCafeModal(null)}>
-        <DialogContent className="sm:max-w-3xl bg-white rounded-3xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="border-b border-slate-100 pb-4 text-left">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-black flex items-center justify-center text-lg shadow-md shadow-blue-600/30 shrink-0">
-                <Building size={24} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <DialogTitle className="text-xl font-black text-slate-900 leading-tight">
-                  {selectedCafeModal?.centerName}
-                </DialogTitle>
-                <p className="text-xs font-semibold text-slate-500 mt-0.5">
-                  Owner: {selectedCafeModal?.ownerName}
-                </p>
-              </div>
-            </div>
-=======
       <Dialog
         open={Boolean(emailUser)}
         onOpenChange={(open) => {
@@ -3592,7 +3708,6 @@ export default function AdminDashboard() {
             <DialogDescription className="font-bold text-slate-500">
               Course: <span className="text-slate-900">{viewingSubmission?.course}</span> | Email: <span className="text-slate-900">{viewingSubmission?.email}</span>
             </DialogDescription>
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
           </DialogHeader>
 
           {selectedCafeModal && (() => {
@@ -3705,2082 +3820,6 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-<<<<<<< HEAD
     </div>
-=======
-      {/* Redundant header removed - AdminLayout header controls navigation */}
-
-      {/* Content */}
-      <div className="max-w-7xl mx-auto p-8">
-        <Tabs
-          value={activeAdminTab}
-          onValueChange={(value) => {
-            if (isSubUser && value !== 'dashboard') {
-              setActiveAdminTab('dashboard');
-              return;
-            }
-            setActiveAdminTab(value);
-          }}
-          className="gap-6 flex-col"
-        >
-          <TabsList className="w-full h-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 bg-white border border-slate-100 shadow-lg p-1.5">            <TabsTrigger value="dashboard" className="px-6 py-2 font-black">
-            <LayoutDashboard size={16} />
-            Dashboard
-          </TabsTrigger>
-            {canOperateDashboardPayments && !isSubUser && (
-              <TabsTrigger value="cyber-cafe-summary" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                <Building2 size={14} />
-                Cyber Cafe Summary
-              </TabsTrigger>
-            )}
-            {canManageAdminDashboard && (
-              <>
-                <TabsTrigger value="teachers" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                  <UserPlus size={14} />
-                  Teachers
-                </TabsTrigger>
-                <TabsTrigger value="sub-users" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                  <Users size={14} />
-                  Sub Users
-                </TabsTrigger>
-                <TabsTrigger value="emitras" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                  <Building2 size={14} />
-                  Cyber cafe
-                </TabsTrigger>
-                <TabsTrigger value="notifications" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                  <Bell size={14} />
-                  Notifications
-                </TabsTrigger>
-                <TabsTrigger value="reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                  <FileText size={14} />
-                  Internship Reports
-                </TabsTrigger>
-                <TabsTrigger value="student-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                  <Upload size={14} />
-                  Assignments
-                </TabsTrigger>
-                <TabsTrigger value="test-reports" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                  <ClipboardList size={14} />
-                  Test Reports
-                </TabsTrigger>
-                <TabsTrigger value="college-export" className="px-5 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                  <Download size={14} />
-                  College Export
-                </TabsTrigger>
-              </>
-            )}
-          </TabsList >
-
-          <TabsContent value="dashboard" className="space-y-8 mt-4">
-            {isSubUser && (
-              <div className="student-card p-5 bg-white/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <h3 className="text-base font-black text-slate-900">Register Student</h3>
-                  <p className="text-xs font-semibold text-slate-500 mt-1">
-                    Add a student from your dashboard. These registrations are auto verified and do not need payment.
-                  </p>
-                  <p className="mt-2 text-xs font-black text-blue-700">
-                    Your registered students: {subUserRegisteredUsers.length}
-                  </p>
-                </div>
-                <Link to="/admin/register-student">
-                  <Button className="h-11 w-full sm:w-auto rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm transition">
-                    <UserPlus size={15} />
-                    Register Student
-                  </Button>
-                </Link>
-              </div>
-            )}
-
-            {/* Stats Grid */}
-            {canOperateDashboardPayments && (
-              <div className="student-card p-4 bg-white/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-black text-slate-900">Razorpay Payment Sync</h3>
-                  <p className="text-xs font-semibold text-slate-500 mt-1">
-                    Use this if Razorpay shows paid but the student is still pending.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  onClick={reconcileRazorpayPayments}
-                  disabled={reconcileLoading}
-                  className="h-11 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider"
-                >
-                  <RefreshCw size={16} className={reconcileLoading ? 'animate-spin' : ''} />
-                  {reconcileLoading ? 'Syncing...' : 'Sync Razorpay'}
-                </Button>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="student-card p-6 bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 border-indigo-500/15 relative overflow-hidden group">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-indigo-600/10 rounded-xl flex items-center justify-center text-indigo-600 shadow-inner">
-                    <Users size={20} />
-                  </div>
-                  <span className="text-slate-500 font-black uppercase tracking-wider text-[10px]">Total Users</span>
-                </div>
-                <p className="text-3xl sm:text-4xl font-black text-slate-900">{users.length}</p>
-                <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-indigo-600/5 rounded-full" />
-              </div>
-
-              <div className="student-card p-6 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/15 relative overflow-hidden group">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-emerald-600/10 rounded-xl flex items-center justify-center text-emerald-600 shadow-inner">
-                    <CreditCard size={20} />
-                  </div>
-                  <span className="text-slate-500 font-black uppercase tracking-wider text-[10px]">Total Amount</span>
-                </div>
-                <p
-                  className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight whitespace-nowrap"
-                  title={`₹${totalAmount.toLocaleString('en-IN')}`}
-                >
-                  {formatCompactRupees(totalAmount)}
-                </p>
-                <p className="text-[10px] text-slate-400 font-bold mt-1">
-                  {successfulUsersCount} {isSubUser ? 'successful registrations' : 'successful payments'}
-                </p>
-                <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-emerald-600/5 rounded-full" />
-              </div>
-
-              <div className="student-card p-6 bg-gradient-to-br from-teal-500/10 to-teal-600/5 border-teal-500/15 relative overflow-hidden group">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-teal-600/10 rounded-xl flex items-center justify-center text-teal-600 shadow-inner">
-                    <CheckCircle2 size={20} />
-                  </div>
-                  <span className="text-slate-500 font-black uppercase tracking-wider text-[10px]">Success</span>
-                </div>
-                <p className="text-3xl sm:text-4xl font-black text-slate-900">{successfulUsersCount}</p>
-                <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-teal-600/5 rounded-full" />
-              </div>
-
-              <div className="student-card p-6 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/15 relative overflow-hidden group">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-amber-600/10 rounded-xl flex items-center justify-center text-amber-600 shadow-inner">
-                    <Clock size={20} />
-                  </div>
-                  <span className="text-slate-500 font-black uppercase tracking-wider text-[10px]">Pending</span>
-                </div>
-                <p className="text-3xl sm:text-4xl font-black text-slate-900">{pendingUsersCount}</p>
-                <div className="absolute -bottom-6 -right-6 w-16 h-16 bg-amber-600/5 rounded-full" />
-              </div>
-            </div>
-
-          </TabsContent>
-
-          <TabsContent value="complete-report" className="space-y-8 mt-4">
-            <div className="student-card bg-white/80 overflow-hidden">
-              <div className="p-6 border-b border-slate-100/70 flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
-                <div className="flex items-start gap-3">
-                  <div className="student-icon bg-blue-50 text-blue-600 ring-blue-100">
-                    <FileText size={24} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black text-slate-900 gradient-text">सभी Colleges का Complete Report</h2>
-                    <p className="text-sm font-semibold text-slate-500 mt-1">
-                      Total Students, payments, pending payments, revenue और college-wise summary एक जगह.
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  onClick={exportCompleteReportExcel}
-                  disabled={reportFilteredUsers.length === 0}
-                  className="student-button-primary bg-emerald-600 hover:bg-emerald-700 text-white h-12 px-5 shadow-emerald-600/10 cursor-pointer"
-                >
-                  <Download size={18} />
-                  Export to Excel
-                </Button>
-              </div>
-
-              <div className="p-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 border-b border-slate-100/70">
-                <div className="rounded-2xl bg-indigo-50 border border-indigo-100 px-4 py-4">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-indigo-600">Total Students</p>
-                  <p className="mt-1 text-2xl font-black text-slate-900">{completeReportTotals.totalStudents}</p>
-                </div>
-                <div className="rounded-2xl bg-emerald-50 border border-emerald-100 px-4 py-4">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Total Payments</p>
-                  <p className="mt-1 text-2xl font-black text-emerald-700">{completeReportTotals.totalPayments}</p>
-                </div>
-                <div className="rounded-2xl bg-amber-50 border border-amber-100 px-4 py-4">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-amber-600">Pending Payments</p>
-                  <p className="mt-1 text-2xl font-black text-amber-700">{completeReportTotals.pendingPayments}</p>
-                </div>
-                <div className="rounded-2xl bg-sky-50 border border-sky-100 px-4 py-4">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-sky-600">Total Revenue</p>
-                  <p className="mt-1 text-2xl font-black text-sky-700 whitespace-nowrap" title={`₹${completeReportTotals.totalRevenue.toLocaleString('en-IN')}`}>
-                    {formatCompactRupees(completeReportTotals.totalRevenue)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-6 border-b border-slate-100/70 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div>
-                  <Label className="student-label block mb-2">Search एवं Filter</Label>
-                  <Input
-                    value={reportSearch}
-                    onChange={(event) => setReportSearch(event.target.value)}
-                    placeholder="Name, email, phone, roll..."
-                    className="student-input"
-                  />
-                </div>
-                <div>
-                  <Label className="student-label block mb-2">College-wise Filter</Label>
-                  <select
-                    value={reportCollegeFilter}
-                    onChange={(event) => setReportCollegeFilter(event.target.value)}
-                    className="student-input"
-                  >
-                    <option value="">All Colleges</option>
-                    {uniqueColleges.map((college) => (
-                      <option key={college} value={college}>{college}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <Label className="student-label block mb-2">University-wise Filter</Label>
-                  <select
-                    value={reportUniversityFilter}
-                    onChange={(event) => setReportUniversityFilter(event.target.value)}
-                    className="student-input"
-                  >
-                    <option value="">All Universities</option>
-                    {uniqueUniversities.map((university) => (
-                      <option key={university} value={university}>{university}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <Label className="student-label block mb-2">Payment Filter</Label>
-                  <select
-                    value={reportPaymentFilter}
-                    onChange={(event) => setReportPaymentFilter(event.target.value)}
-                    className="student-input"
-                  >
-                    <option value="">All Payments</option>
-                    <option value="success">Paid / Success</option>
-                    <option value="pending">Pending Payments</option>
-                  </select>
-                </div>
-              </div>
-
-              {collegeCompleteReport.length === 0 ? (
-                <div className="p-12 text-center">
-                  <FileText size={48} className="text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500 font-bold">No report data found for selected filters.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[980px] table-auto">
-                    <thead className="bg-slate-50/60">
-                      <tr>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">College</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">University</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Total Students</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Total Payments</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Pending Payments</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Total Revenue</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {collegeCompleteReport.map((row) => (
-                        <tr key={`${row.college}-${row.university}`} className="border-b border-slate-100/60 hover:bg-blue-50/10 transition-colors">
-                          <td className="p-4">
-                            <div className="font-black text-slate-900">{row.college}</div>
-                          </td>
-                          <td className="p-4 text-slate-600 text-sm font-bold">{row.university}</td>
-                          <td className="p-4">
-                            <span className="inline-flex px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100 text-xs font-black uppercase tracking-wider">
-                              {row.totalStudents}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 text-xs font-black uppercase tracking-wider">
-                              <CheckCircle2 size={12} />
-                              {row.totalPayments}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-100 text-xs font-black uppercase tracking-wider">
-                              <Clock size={12} />
-                              {row.pendingPayments}
-                            </span>
-                          </td>
-                          <td className="p-4 text-slate-900 font-black" title={`₹${row.totalRevenue.toLocaleString('en-IN')}`}>
-                            {formatCompactRupees(row.totalRevenue)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="cyber-cafe-summary" className="space-y-8 mt-4">
-            <div className="student-card bg-white/80 overflow-hidden">
-              <div className="p-6 border-b border-slate-100/70 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
-                <div className="flex items-start gap-3">
-                  <div className="student-icon bg-indigo-50 text-indigo-600 ring-indigo-100">
-                    <Building2 size={24} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black text-slate-900 gradient-text">Cyber Cafe Student Summary</h2>
-                    <p className="text-sm font-semibold text-slate-500 mt-1">
-                      Track how many students each cyber cafe has registered and how many are paid or pending.
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full lg:w-auto">
-                  <div className="rounded-2xl bg-slate-50 border border-slate-100 px-4 py-3">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Students</p>
-                    <p className="mt-1 text-lg font-black text-slate-900">{cyberCafeTotals.totalStudents}</p>
-                  </div>
-                  <div className="rounded-2xl bg-emerald-50 border border-emerald-100 px-4 py-3">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Success</p>
-                    <p className="mt-1 text-lg font-black text-emerald-700">{cyberCafeTotals.successfulStudents}</p>
-                  </div>
-                  <div className="rounded-2xl bg-amber-50 border border-amber-100 px-4 py-3">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-amber-600">Pending</p>
-                    <p className="mt-1 text-lg font-black text-amber-700">{cyberCafeTotals.pendingStudents}</p>
-                  </div>
-                  <div className="rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-blue-600">Amount</p>
-                    <p className="mt-1 text-lg font-black text-blue-700 whitespace-nowrap" title={`₹${cyberCafeTotals.paidAmount.toLocaleString('en-IN')}`}>
-                      {formatCompactRupees(cyberCafeTotals.paidAmount)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 border-b border-slate-100/70 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div>
-                  <Label className="student-label block mb-2">Search Cyber Cafe</Label>
-                  <Input
-                    value={cyberCafeSearch}
-                    onChange={(event) => setCyberCafeSearch(event.target.value)}
-                    placeholder="Cafe, student, email..."
-                    className="student-input"
-                  />
-                </div>
-                <div>
-                  <Label className="student-label block mb-2">Payment Status</Label>
-                  <select
-                    value={cyberCafePaymentFilter}
-                    onChange={(event) => setCyberCafePaymentFilter(event.target.value)}
-                    className="student-input"
-                  >
-                    <option value="">All Students</option>
-                    <option value="success">Success Only</option>
-                    <option value="pending">Pending Only</option>
-                  </select>
-                </div>
-                <div>
-                  <Label className="student-label block mb-2">College</Label>
-                  <select
-                    value={cyberCafeCollegeFilter}
-                    onChange={(event) => setCyberCafeCollegeFilter(event.target.value)}
-                    className="student-input"
-                  >
-                    <option value="">All Colleges</option>
-                    {uniqueColleges.map((college) => (
-                      <option key={college} value={college}>{college}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <Label className="student-label block mb-2">Domain</Label>
-                  <select
-                    value={cyberCafeDomainFilter}
-                    onChange={(event) => setCyberCafeDomainFilter(event.target.value)}
-                    className="student-input"
-                  >
-                    <option value="">All Domains</option>
-                    {uniqueDomains.map((domain) => (
-                      <option key={domain} value={domain}>{domain}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {cyberCafeSummary.length === 0 ? (
-                <div className="p-10 text-center">
-                  <Building2 size={44} className="text-slate-300 mx-auto mb-3" />
-                  <p className="text-sm font-bold text-slate-500">No cyber cafe students found for selected filters.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[920px] table-auto">
-                    <thead className="bg-slate-50/60">
-                      <tr>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Cyber Cafe</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Students</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Success</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Pending</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Paid Amount</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Colleges</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Domains</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cyberCafeSummary.map((cafe) => (
-                        <tr key={cafe.id} className="border-b border-slate-100/60 hover:bg-indigo-50/10 transition-colors">
-                          <td className="p-4">
-                            <div className="font-black text-slate-900">{cafe.name}</div>
-                            <div className="text-xs text-slate-400 font-semibold">{cafe.id}</div>
-                          </td>
-                          <td className="p-4">
-                            <span className="inline-flex px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-black uppercase tracking-wider">
-                              {cafe.totalStudents}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 text-xs font-black uppercase tracking-wider">
-                              <CheckCircle2 size={12} />
-                              {cafe.successfulStudents}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-100 text-xs font-black uppercase tracking-wider">
-                              <Clock size={12} />
-                              {cafe.pendingStudents}
-                            </span>
-                          </td>
-                          <td className="p-4 text-slate-900 font-black" title={`₹${cafe.paidAmount.toLocaleString('en-IN')}`}>
-                            {formatCompactRupees(cafe.paidAmount)}
-                          </td>
-                          <td className="p-4 text-slate-600 text-xs font-bold max-w-[220px]">
-                            {Array.from(cafe.colleges).slice(0, 3).join(', ')}
-                            {cafe.colleges.size > 3 ? ` +${cafe.colleges.size - 3}` : ''}
-                          </td>
-                          <td className="p-4 text-slate-600 text-xs font-bold max-w-[220px]">
-                            {Array.from(cafe.domains).slice(0, 3).join(', ')}
-                            {cafe.domains.size > 3 ? ` +${cafe.domains.size - 3}` : ''}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-          </TabsContent>
-
-          <TabsContent value="dashboard" className="space-y-8 mt-4">
-            {/* FILTERS */}
-            <div className="grid md:grid-cols-2 xl:grid-cols-5 gap-6 mb-8">
-
-              <div className="student-card p-6 bg-white/80 xl:col-span-2">
-                <h3 className="student-label mb-3">
-                  Search Students
-                </h3>
-                <Input
-                  value={userSearchFilter}
-                  onChange={(event) => setUserSearchFilter(event.target.value)}
-                  placeholder="Name, email, mobile, roll..."
-                  className="student-input"
-                />
-              </div>
-
-              {/* COLLEGE FILTER */}
-              <div className="student-card p-6 bg-white/80">
-
-                <h3 className="student-label mb-3">
-                  Filter By College
-                </h3>
-
-                <select
-                  value={collegeFilter}
-                  onChange={(e) =>
-                    setCollegeFilter(e.target.value)
-                  }
-                  className="student-input"
-                >
-
-                  <option value="">
-                    All Colleges
-                  </option>
-
-                  {uniqueColleges.map((college) => (
-
-                    <option
-                      key={college}
-                      value={college}
-                    >
-                      {college}
-                    </option>
-
-                  ))}
-
-                </select>
-
-              </div>
-
-              {/* DOMAIN FILTER */}
-              <div className="student-card p-6 bg-white/80">
-
-                <h3 className="student-label mb-3">
-                  Filter By Domain
-                </h3>
-
-                <select
-                  value={domainFilter}
-                  onChange={(e) =>
-                    setDomainFilter(e.target.value)
-                  }
-                  className="student-input"
-                >
-
-                  <option value="">
-                    All Domains
-                  </option>
-
-                  {uniqueDomains.map((domain) => (
-
-                    <option
-                      key={domain}
-                      value={domain}
-                    >
-                      {domain}
-                    </option>
-
-                  ))}
-
-                </select>
-
-              </div>
-
-              <div className="student-card p-6 bg-white/80">
-                <h3 className="student-label mb-3">
-                  Filter By Payment
-                </h3>
-                <select
-                  value={userPaymentFilter}
-                  onChange={(event) => setUserPaymentFilter(event.target.value)}
-                  className="student-input"
-                >
-                  <option value="">All Payments</option>
-                  <option value="success">Paid</option>
-                  <option value="pending">Pending</option>
-                </select>
-              </div>
-
-              <div className="student-card p-6 bg-white/80">
-                <h3 className="student-label mb-3">
-                  Reset Filters
-                </h3>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setUserSearchFilter('');
-                    setCollegeFilter('');
-                    setDomainFilter('');
-                    setUserPaymentFilter('');
-                  }}
-                  className="h-12 w-full rounded-xl bg-slate-100 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-200"
-                >
-                  Clear All
-                </Button>
-              </div>
-
-            </div>
-
-            {/* FILTER SUMMARY */}
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-
-              {/* COLLEGE SUMMARY */}
-              <div className="student-card p-6 bg-white/80">
-
-                <h3 className="text-xl font-black mb-4 gradient-text">
-                  College Wise Users
-                </h3>
-
-                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-
-                  {Object.entries(collegeCount).map(
-                    ([college, count]) => (
-
-                      <div
-                        key={college}
-                        className="flex justify-between items-center border-b border-slate-100/50 pb-3 last:border-b-0"
-                      >
-
-                        <span className="text-slate-700 font-bold text-sm">
-                          {college}
-                        </span>
-
-                        <span className="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-black ring-1 ring-indigo-100/80">
-                          {count as number}
-                        </span>
-
-                      </div>
-
-                    )
-                  )}
-
-                </div>
-
-              </div>
-
-              {/* DOMAIN SUMMARY */}
-              <div className="student-card p-6 bg-white/80">
-
-                <h3 className="text-xl font-black mb-4 gradient-text">
-                  Domain Wise Users
-                </h3>
-
-                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-
-                  {Object.entries(domainCount).map(
-                    ([domain, count]) => (
-
-                      <div
-                        key={domain}
-                        className="flex justify-between items-center border-b border-slate-100/50 pb-3 last:border-b-0"
-                      >
-
-                        <span className="text-slate-700 font-bold text-sm">
-                          {domain}
-                        </span>
-
-                        <span className="bg-teal-50 text-teal-600 px-3 py-1.5 rounded-xl text-xs font-black ring-1 ring-teal-100/80">
-                          {count as number}
-                        </span>
-
-                      </div>
-
-                    )
-                  )}
-
-                </div>
-
-              </div>
-
-            </div>
-            {/* Users Table */}
-            <div className="student-card bg-white/80 overflow-hidden">
-              <div className="p-6 border-b border-slate-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-black text-slate-900 gradient-text">Registered Users</h2>
-                  {isSubUser && (
-                    <p className="mt-1 text-xs font-bold text-slate-500">
-                      Showing only students registered by you.
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {isSubUser && (
-                    <span className="bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ring-1 ring-blue-100">
-                      My Students
-                    </span>
-                  )}
-                  <span className="bg-slate-100 text-slate-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
-                    {filteredUsers.length} of {users.length} Users
-                  </span>
-                </div>
-              </div>
-
-              {users.length === 0 ? (
-                <div className="p-12 text-center">
-                  <Users size={48} className="text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500 font-bold">No users found</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto w-full">
-                  <table className="w-full min-w-[1100px] table-auto">
-                    <thead className="bg-slate-50/50">
-                      <tr>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Name</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Email</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Phone</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">College</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Department</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Domain</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Payment Status</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Registered</th>
-                        <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Source</th>
-                        {canOperateDashboardPayments && (
-                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">
-                            Action
-                          </th>
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredUsers.slice((usersPage - 1) * usersPerPage, usersPage * usersPerPage).map((user) => (
-                        <tr key={user.uid} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
-                          <td className="p-4">
-                            <div className="font-black text-slate-900">{user.fullName}</div>
-                            <div className="text-xs text-slate-400 font-semibold">{user.uid}</div>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-2 text-slate-600 text-sm font-semibold">
-                              <Mail size={14} className="text-slate-400" />
-                              {user.email}
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-2 text-slate-600 text-sm font-semibold">
-                              <Phone size={14} className="text-slate-400" />
-                              {user.contactNumber}
-                            </div>
-                          </td>
-                          <td className="p-4 text-slate-600 text-sm font-medium">{user.college}</td>
-                          <td className="p-4 text-slate-600 text-sm font-medium">{user.department}</td>
-                          <td className="p-4 text-slate-600 font-bold text-sm">{user.internshipDomain}</td>
-                          <td className="p-4">
-                            {(() => {
-                              const paymentStatus = getUserPaymentStatus(user.uid);
-                              return (
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${paymentStatus.status === 'Success'
-                                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80'
-                                  : 'bg-amber-50 text-amber-700 ring-1 ring-amber-100/80'
-                                  }`}>
-                                  {paymentStatus.status === 'Success' ? <CheckCircle2 size={12} /> : <Clock size={12} />}
-                                  {paymentStatus.status}
-                                </span>
-                              );
-                            })()}
-                          </td>
-                          <td className="p-4 text-slate-600 text-sm font-medium">
-
-                            {new Date(user.registrationDate).toLocaleDateString('en-IN', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric'
-                            })}
-                          </td>
-                          <td className="p-4">
-                            {user.createdByEmitraId ? (
-                              <div>
-                                <span className="inline-flex px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-black uppercase tracking-wider ring-1 ring-indigo-100">
-                                  Cyber cafe
-                                </span>
-                                <div className="mt-1 text-xs text-slate-500 font-bold">{user.createdByEmitraName || user.createdByEmitraId}</div>
-                              </div>
-                            ) : user.createdBySubUserId ? (
-                              <div>
-                                <span className="inline-flex px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-black uppercase tracking-wider ring-1 ring-blue-100">
-                                  Sub User
-                                </span>
-                                <div className="mt-1 text-xs text-slate-500 font-bold">{user.createdBySubUserName || user.createdBySubUserId}</div>
-                              </div>
-                            ) : (
-                              <span className="inline-flex px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-black uppercase tracking-wider">
-                                Direct
-                              </span>
-                            )}
-                          </td>
-                          {canOperateDashboardPayments && (
-                            <td className="p-4">
-                              <div className="flex flex-wrap gap-2">
-
-                                <button
-                                  onClick={() =>
-                                    updatePaymentStatus(user.uid)
-                                  }
-                                  className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-emerald-600/10 hover:bg-emerald-700 active:scale-[0.98] transition-all cursor-pointer"
-                                >
-                                  Verify
-                                </button>
-
-                                <button
-                                  onClick={() => rejectPaymentStatus(user.uid)}
-                                  className="px-3 py-1.5 bg-rose-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm shadow-rose-600/10 hover:bg-rose-700 active:scale-[0.98] transition-all cursor-pointer"
-                                >
-                                  Reject
-                                </button>
-
-                                <button
-                                  onClick={() => openPasswordModal(user)}
-                                  className="inline-flex items-center gap-1 px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
-                                  title="Update password"
-                                >
-                                  <KeyRound size={14} />
-                                  Change Password
-                                </button>
-
-                                <button
-                                  onClick={() => openEmailModal(user)}
-                                  className="inline-flex items-center gap-1 px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-lg text-xs font-bold hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed"
-                                  title="Update email"
-                                >
-                                  <Mail size={14} />
-                                  Change Email
-                                </button>
-
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <PaginationControls
-                    currentPage={usersPage}
-                    totalItems={filteredUsers.length}
-                    itemsPerPage={usersPerPage}
-                    onPageChange={setUsersPage}
-                    onItemsPerPageChange={(size) => {
-                      setUsersPerPage(size);
-                      setUsersPage(1);
-                    }}
-                    label="students"
-                  />
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="student-reports">
-            <div className="space-y-6">
-              <div className="student-card p-6 bg-white/80">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="student-icon">
-                      <ClipboardList size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black text-slate-900 gradient-text">Create Assignment</h2>
-                      <p className="text-slate-500 text-sm font-semibold">Add assignment questions course-wise. Students can upload answers only after an assignment is available.</p>
-                    </div>
-                  </div>
-                  <span className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-indigo-100/80">
-                    {assignments.length} Assignments
-                  </span>
-                </div>
-
-                <form onSubmit={handleCreateAssignment} className="border border-slate-100/50 rounded-2xl p-5 mb-6 bg-slate-50/30">
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto] gap-4 items-end">
-                    <div>
-                      <Label className="student-label">Assignment Title</Label>
-                      <Input
-                        value={assignmentForm.title}
-                        onChange={(event) => setAssignmentForm({ ...assignmentForm, title: event.target.value })}
-                        placeholder="Module 1 practical task"
-                        className="student-input mt-2 h-12 px-4"
-                      />
-                    </div>
-                    <div>
-                      <Label className="student-label">Course</Label>
-                      <select
-                        value={assignmentForm.course}
-                        onChange={(event) => setAssignmentForm({ ...assignmentForm, course: event.target.value })}
-                        className="student-input mt-2 h-12 px-4"
-                        required
-                      >
-                        <option value="">Select Course</option>
-                        {INTERNSHIP_DOMAINS.map((domain) => (
-                          <option key={domain} value={domain}>
-                            {domain}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <Label className="student-label">Question File</Label>
-                      <Input
-                        key={assignmentFileInputKey}
-                        type="file"
-                        accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg"
-                        onChange={(event) => setAssignmentForm({ ...assignmentForm, file: event.target.files?.[0] || null })}
-                        className="student-input mt-2 h-12 px-4 py-2"
-                      />
-                    </div>
-                    <Button type="submit" disabled={savingAssignment} className="student-button-primary h-12 px-5 min-h-[48px] shadow-indigo-600/10 cursor-pointer">
-                      <ClipboardList size={18} />
-                      {savingAssignment ? 'Adding...' : 'Add'}
-                    </Button>
-                  </div>
-                  <div className="mt-4">
-                    <Label className="student-label">Instructions</Label>
-                    <textarea
-                      value={assignmentForm.description}
-                      onChange={(event) => setAssignmentForm({ ...assignmentForm, description: event.target.value })}
-                      placeholder="Write the assignment instructions students should follow"
-                      className="student-input mt-2 min-h-24 py-3"
-                    />
-                  </div>
-                </form>
-
-                {assignments.length === 0 ? (
-                  <div className="border border-dashed border-slate-200 rounded-2xl p-10 text-center">
-                    <ClipboardList size={44} className="text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-500 font-bold">No assignments added yet</p>
-                  </div>
-                ) : (
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {assignments.map((assignment) => (
-                      <div key={assignment.id} className="student-card p-5 bg-white/60 hover:shadow-md hover:-translate-y-0.5 transition-all">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <h3 className="truncate font-black text-slate-900">{assignment.title}</h3>
-                            <p className="mt-1 text-xs font-black uppercase tracking-wider text-indigo-600">{assignment.course || 'Course not set'}</p>
-                            {assignment.description && (
-                              <p className="mt-2 line-clamp-2 text-sm font-semibold leading-6 text-slate-600">{assignment.description}</p>
-                            )}
-                            {assignment.fileUrl && (
-                              <a href={assignment.fileUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-black uppercase tracking-wider text-indigo-600 hover:text-indigo-700 transition-colors">
-                                Download question file
-                              </a>
-                            )}
-                          </div>
-                          <Button
-                            type="button"
-                            onClick={() => handleDeleteAssignment(assignment)}
-                            className="bg-rose-600 hover:bg-rose-700 text-white font-black p-2.5 rounded-xl cursor-pointer transition-all active:scale-95"
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="student-card p-6 bg-white/80">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="student-icon text-emerald-600 bg-emerald-50 ring-emerald-100">
-                      <Upload size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black text-slate-900 gradient-text">Student Assignments</h2>
-                      <p className="text-slate-500 text-sm font-semibold">Every student PDF upload appears here with the optional description message.</p>
-                    </div>
-                  </div>
-                  <span className="bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-emerald-100/80">
-                    {visibleStudentReports.length} Uploads
-                  </span>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <Label className="student-label">Filter By College</Label>
-                    <select
-                      value={collegeFilter}
-                      onChange={(event) => setCollegeFilter(event.target.value)}
-                      className="student-input mt-2 h-12 px-4"
-                    >
-                      <option value="">All Colleges</option>
-                      {uniqueColleges.map((college) => (
-                        <option key={college} value={college}>
-                          {college}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label className="student-label">Filter By Course</Label>
-                    <select
-                      value={domainFilter}
-                      onChange={(event) => setDomainFilter(event.target.value)}
-                      className="student-input mt-2 h-12 px-4"
-                    >
-                      <option value="">All Courses</option>
-                      {uniqueDomains.map((domain) => (
-                        <option key={domain} value={domain}>
-                          {domain}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {visibleStudentReports.length === 0 ? (
-                  <div className="border border-dashed border-slate-200 rounded-2xl p-12 text-center">
-                    <Upload size={48} className="text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-500 font-bold">No student assignments uploaded yet</p>
-                  </div>
-                ) : (
-                  <div className="student-card overflow-hidden bg-white/50 border-slate-100/50">
-                    <div className="overflow-x-auto w-full">
-                      <table className="w-full min-w-[1000px] table-auto">
-                        <thead className="bg-slate-50/50">
-                          <tr>
-                            <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Student</th>
-                            <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Assignment</th>
-                            <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Course</th>
-                            <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">File</th>
-                            <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Description</th>
-                            <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Uploaded</th>
-                            <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {visibleStudentReports.slice((assignmentsPage - 1) * assignmentsPerPage, assignmentsPage * assignmentsPerPage).map((report) => {
-                            const student = getStudentProfile(report.userId);
-
-                            return (
-                              <tr key={report.id} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
-                                <td className="p-4">
-                                  <div className="font-black text-slate-900">{student?.fullName || report.studentName || 'Student'}</div>
-                                  <div className="text-xs text-slate-400 font-semibold">{student?.email || report.email || report.userId}</div>
-                                  <div className="mt-1 text-xs font-bold text-slate-500">{student?.college || '-'}</div>
-                                </td>
-                                <td className="p-4 text-slate-700 font-black">{getAssignmentTitle(report)}</td>
-                                <td className="p-4 text-slate-600 font-bold">{report.course || student?.internshipDomain || '-'}</td>
-                                <td className="p-4 text-slate-600 text-sm font-medium">{report.fileName}</td>
-                                <td className="p-4 text-sm font-semibold leading-6 text-slate-600">
-                                  {report.description || <span className="text-slate-400">No description</span>}
-                                </td>
-                                <td className="p-4 text-slate-600 text-sm font-medium">
-                                  {report.uploadedAt
-                                    ? new Date(report.uploadedAt).toLocaleDateString('en-IN', {
-                                      day: '2-digit',
-                                      month: 'short',
-                                      year: 'numeric'
-                                    })
-                                    : '-'}
-                                </td>
-                                <td className="p-4">
-                                  <a href={report.fileUrl} target="_blank" rel="noreferrer" download>
-                                    <Button type="button" className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-black text-xs uppercase tracking-wider hover:bg-emerald-700 transition-all active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5">
-                                      <Download size={16} />
-                                      Download
-                                    </Button>
-                                  </a>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                      <PaginationControls
-                        currentPage={assignmentsPage}
-                        totalItems={visibleStudentReports.length}
-                        itemsPerPage={assignmentsPerPage}
-                        onPageChange={setAssignmentsPage}
-                        onItemsPerPageChange={(size) => {
-                          setAssignmentsPerPage(size);
-                          setAssignmentsPage(1);
-                        }}
-                        label="uploads"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="test-reports">
-            <div className="space-y-6">
-              {/* Summary Stats */}
-              {(() => {
-                const isTeacher = adminProfile?.role === 'teacher';
-                const assignedCourse = adminProfile?.course || '';
-
-                const visibleTestSubmissions = testSubmissions.filter((sub) => {
-                  if (isTeacher && sub.course !== assignedCourse) return false;
-                  if (testCourseFilter && sub.course !== testCourseFilter) return false;
-                  return true;
-                });
-
-                const totalTestsCount = visibleTestSubmissions.length;
-                const passedTestsCount = visibleTestSubmissions.filter(sub => sub.scorePercentage >= 33).length;
-                const failedTestsCount = totalTestsCount - passedTestsCount;
-
-                return (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-                        <div className="flex items-center gap-3 mb-2">
-                          <ClipboardList className="text-blue-600" size={24} />
-                          <span className="text-slate-500 font-black uppercase text-xs">Total Assessments Taken</span>
-                        </div>
-                        <p className="text-4xl font-black text-slate-900">{totalTestsCount}</p>
-                      </div>
-                      <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-                        <div className="flex items-center gap-3 mb-2">
-                          <CheckCircle2 className="text-green-600" size={24} />
-                          <span className="text-slate-500 font-black uppercase text-xs">Passed Students</span>
-                        </div>
-                        <p className="text-4xl font-black text-slate-900">{passedTestsCount}</p>
-                        <p className="text-sm text-slate-400 font-bold">
-                          {totalTestsCount > 0 ? Math.round((passedTestsCount / totalTestsCount) * 100) : 0}% Pass Rate
-                        </p>
-                      </div>
-                      <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
-                        <div className="flex items-center gap-3 mb-2">
-                          <Clock className="text-red-600" size={24} />
-                          <span className="text-slate-500 font-black uppercase text-xs">Failed Students</span>
-                        </div>
-                        <p className="text-4xl font-black text-slate-900">{failedTestsCount}</p>
-                        <p className="text-sm text-slate-400 font-bold">Score below 33%</p>
-                      </div>
-                    </div>
-
-                    {/* Course-wise Filter */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center">
-                            <ClipboardList size={24} />
-                          </div>
-                          <div>
-                            <h2 className="text-xl font-black text-slate-900">Student Assessment Reports</h2>
-                            <p className="text-slate-500 text-sm font-bold">View question-by-question breakdown, grades, and completion status of final tests.</p>
-                          </div>
-                        </div>
-                        {!isTeacher && (
-                          <div className="w-full md:w-64">
-                            <Label className="text-slate-500 text-xs font-black uppercase">Filter By Course</Label>
-                            <select
-                              value={testCourseFilter}
-                              onChange={(event) => setTestCourseFilter(event.target.value)}
-                              className="mt-2 w-full h-12 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                            >
-                              <option value="">All Courses</option>
-                              {INTERNSHIP_DOMAINS.map((domain) => (
-                                <option key={domain} value={domain}>
-                                  {domain}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Submissions Table */}
-                    <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-                      {visibleTestSubmissions.length === 0 ? (
-                        <div className="p-12 text-center">
-                          <ClipboardList size={48} className="text-slate-300 mx-auto mb-4" />
-                          <p className="text-slate-500 font-bold">No test submissions found</p>
-                        </div>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full">
-                            <thead className="bg-slate-50">
-                              <tr>
-                                <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Student</th>
-                                <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Course</th>
-                                <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Score</th>
-                                <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Answers</th>
-                                <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
-                                <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Submitted At</th>
-                                <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Action</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {visibleTestSubmissions.slice((testSubmissionsPage - 1) * testSubmissionsPerPage, testSubmissionsPage * testSubmissionsPerPage).map((sub) => {
-                                const student = getStudentProfile(sub.userId);
-                                const isPassed = sub.scorePercentage >= 33;
-
-                                return (
-                                  <tr key={sub.userId + '-' + sub.course} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                                    <td className="p-4">
-                                      <div className="font-black text-slate-900">{sub.studentName}</div>
-                                      <div className="text-xs text-slate-400">{sub.email}</div>
-                                      {student?.college && (
-                                        <div className="mt-1 text-xs font-bold text-slate-500">{student.college}</div>
-                                      )}
-                                    </td>
-                                    <td className="p-4 text-slate-600 font-bold">{sub.course}</td>
-                                    <td className="p-4">
-                                      <span className="text-lg font-black text-slate-900">{sub.scorePercentage}%</span>
-                                    </td>
-                                    <td className="p-4 text-slate-600 font-bold">
-                                      {sub.correctCount} / {sub.totalQuestions}
-                                    </td>
-                                    <td className="p-4">
-                                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black ${isPassed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                        }`}>
-                                        {isPassed ? <CheckCircle2 size={12} /> : <Clock size={12} />}
-                                        {isPassed ? 'PASSED' : 'FAILED'}
-                                      </span>
-                                    </td>
-                                    <td className="p-4 text-slate-600 text-sm">
-                                      {sub.submittedAt
-                                        ? new Date(sub.submittedAt).toLocaleString('en-IN', {
-                                          day: '2-digit',
-                                          month: 'short',
-                                          year: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit'
-                                        })
-                                        : '-'}
-                                    </td>
-                                    <td className="p-4">
-                                      <Button
-                                        type="button"
-                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-black"
-                                        onClick={() => setViewingSubmission(sub)}
-                                      >
-                                        View Details
-                                      </Button>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                          <PaginationControls
-                            currentPage={testSubmissionsPage}
-                            totalItems={visibleTestSubmissions.length}
-                            itemsPerPage={testSubmissionsPerPage}
-                            onPageChange={setTestSubmissionsPage}
-                            onItemsPerPageChange={(size) => {
-                              setTestSubmissionsPerPage(size);
-                              setTestSubmissionsPage(1);
-                            }}
-                            label="submissions"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="college-export">
-            <div className="student-card p-6 bg-white/80">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="student-icon bg-emerald-50 text-emerald-600 ring-emerald-100">
-                    <Download size={24} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black text-slate-900 gradient-text">College Student Export</h2>
-                    <p className="text-slate-500 text-sm font-semibold">Select one college and export successful payment students as PDF.</p>
-                  </div>
-                </div>
-                <span className="bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-emerald-100/80">
-                  {exportCollege
-                    ? users.filter(user =>
-                      getGroupName(user.college) === exportCollege &&
-                      isUserSuccessful(user)
-                    ).length
-                    : 0} Paid Students
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-end border border-slate-100/50 rounded-2xl p-5 bg-slate-50/30">
-                <div>
-                  <Label className="student-label">College</Label>
-                  <select
-                    value={exportCollege}
-                    onChange={(event) => setExportCollege(event.target.value)}
-                    className="student-input mt-2 h-12 px-4"
-                  >
-                    <option value="">Select college</option>
-                    {uniqueColleges.map((college) => (
-                      <option key={college} value={college}>
-                        {college}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <Button
-                  type="button"
-                  onClick={exportCollegeStudentsPdf}
-                  disabled={!exportCollege}
-                  className="student-button-primary bg-emerald-600 hover:bg-emerald-700 text-white h-12 px-6 shadow-emerald-600/10 cursor-pointer"
-                >
-                  <Download size={18} />
-                  Export PDF
-                </Button>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="notifications">
-            <div className="student-card p-6 bg-white/80">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="student-icon bg-blue-50 text-blue-600 ring-blue-100">
-                    <Bell size={24} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black text-slate-900 gradient-text">User Notifications</h2>
-                    <p className="text-slate-500 text-sm font-semibold">Add announcements that appear on every user profile page.</p>
-                  </div>
-                </div>
-                <span className="bg-blue-50 text-blue-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-blue-100/80">
-                  {notifications.length} Notifications
-                </span>
-              </div>
-
-              <form onSubmit={handleAddNotification} className="border border-slate-100/50 rounded-2xl p-5 mb-6 bg-slate-50/30">
-                <div className="grid grid-cols-1 md:grid-cols-[280px_1fr_auto] gap-4 items-end">
-                  <div>
-                    <Label className="student-label">Title</Label>
-                    <Input
-                      value={notificationForm.title}
-                      onChange={(event) => setNotificationForm({ ...notificationForm, title: event.target.value })}
-                      placeholder="Notification title"
-                      className="student-input mt-2 h-12 px-4"
-                    />
-                  </div>
-                  <div>
-                    <Label className="student-label">Message</Label>
-                    <textarea
-                      value={notificationForm.message}
-                      onChange={(event) => setNotificationForm({ ...notificationForm, message: event.target.value })}
-                      placeholder="Write notification message"
-                      className="student-input mt-2 min-h-12 py-3"
-                    />
-                  </div>
-                  <Button type="submit" disabled={savingNotification} className="student-button-primary bg-indigo-600 hover:bg-indigo-700 text-white h-12 px-5 min-h-[48px] shadow-indigo-600/10 cursor-pointer">
-                    <Send size={18} />
-                    {savingNotification ? 'Adding...' : 'Add'}
-                  </Button>
-                </div>
-              </form>
-
-              {notifications.length === 0 ? (
-                <div className="border border-dashed border-slate-200 rounded-2xl p-12 text-center">
-                  <Bell size={48} className="text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500 font-bold">No notifications added yet</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {notifications.map((notification) => (
-                    <div key={notification.id} className="student-card p-5 bg-white/60 hover:shadow-md transition-all">
-                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                        <div>
-                          <h3 className="font-black text-slate-900">{notification.title}</h3>
-                          <p className="mt-2 text-sm font-semibold leading-6 text-slate-600 whitespace-pre-line">{notification.message}</p>
-                        </div>
-                        <div className="shrink-0 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
-                          {notification.createdAt
-                            ? new Date(notification.createdAt).toLocaleDateString('en-IN', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric'
-                            })
-                            : '-'}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="reports">
-            <div className="student-card p-6 bg-white/80">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="student-icon bg-indigo-50 text-indigo-600 ring-indigo-100">
-                    <FileText size={24} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black text-slate-900 gradient-text">Internship Reports</h2>
-                    <p className="text-slate-500 text-sm font-semibold">Upload Internship reports course-wise. Students will see only their selected course reports.</p>
-                  </div>
-                </div>
-                <span className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-indigo-100/80">
-                  {courseReports.length} Reports
-                </span>
-              </div>
-
-              <form onSubmit={handleUploadReport} className="border border-slate-100/50 rounded-2xl p-5 mb-6 bg-slate-50/30">
-                <div className="grid grid-cols-1 md:grid-cols-[1fr_260px_1fr_auto] gap-4 items-end">
-                  <div>
-                    <Label className="student-label">Report Title</Label>
-                    <Input
-                      value={reportForm.title}
-                      onChange={(event) => setReportForm({ ...reportForm, title: event.target.value })}
-                      placeholder="Monthly performance report"
-                      className="student-input mt-2 h-12 px-4"
-                    />
-                  </div>
-                  <div>
-                    <Label className="student-label">Course</Label>
-                    <select
-                      value={reportForm.course}
-                      onChange={(event) => setReportForm({ ...reportForm, course: event.target.value })}
-                      className="student-input mt-2 h-12 px-4"
-                    >
-                      <option value="">Select course</option>
-                      {INTERNSHIP_DOMAINS.map((course) => (
-                        <option key={course} value={course}>
-                          {course}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label className="student-label">Report File</Label>
-                    <Input
-                      key={reportFileInputKey}
-                      type="file"
-                      accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
-                      onChange={(event) => setReportForm({ ...reportForm, file: event.target.files?.[0] || null })}
-                      className="student-input mt-2 h-12 px-4 py-2"
-                    />
-                  </div>
-                  <Button type="submit" disabled={savingReport} className="student-button-primary bg-indigo-600 hover:bg-indigo-700 text-white h-12 px-5 min-h-[48px] shadow-indigo-600/10 cursor-pointer">
-                    <Upload size={18} />
-                    {savingReport ? 'Uploading...' : 'Upload'}
-                  </Button>
-                </div>
-              </form>
-
-              {courseReports.length === 0 ? (
-                <div className="border border-dashed border-slate-200 rounded-2xl p-12 text-center">
-                  <FileText size={48} className="text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500 font-bold">No course reports uploaded yet</p>
-                </div>
-              ) : (
-                <div className="student-card overflow-hidden bg-white/50 border-slate-100/50">
-                  <div className="overflow-x-auto w-full">
-                    <table className="w-full min-w-[800px] table-auto">
-                      <thead className="bg-slate-50/50">
-                        <tr>
-                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Report</th>
-                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Course</th>
-                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">File</th>
-                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Uploaded</th>
-                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {courseReports.slice((reportsPage - 1) * reportsPerPage, reportsPage * reportsPerPage).map((report) => (
-                          <tr key={report.id} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
-                            <td className="p-4">
-                              <div className="font-black text-slate-900">{report.title}</div>
-                              <div className="text-xs text-slate-400 font-semibold">{report.id}</div>
-                            </td>
-                            <td className="p-4 text-slate-600 font-bold">{report.course}</td>
-                            <td className="p-4 text-slate-600 text-sm font-medium">{report.fileName}</td>
-                            <td className="p-4 text-slate-600 text-sm font-medium">
-                              {report.uploadedAt
-                                ? new Date(report.uploadedAt).toLocaleDateString('en-IN', {
-                                  day: '2-digit',
-                                  month: 'short',
-                                  year: 'numeric'
-                                })
-                                : '-'}
-                            </td>
-                            <td className="p-4">
-                              <div className="flex gap-2">
-                                <a href={report.fileUrl} target="_blank" rel="noreferrer" download>
-                                  <Button type="button" className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-black text-xs uppercase tracking-wider hover:bg-emerald-700 transition-all active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5">
-                                    <Download size={16} />
-                                    Download
-                                  </Button>
-                                </a>
-                                <Button
-                                  type="button"
-                                  onClick={() => handleDeleteReport(report)}
-                                  className="px-3 py-1.5 rounded-xl bg-rose-600 text-white font-black text-xs uppercase tracking-wider hover:bg-rose-700 transition-all active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
-                                >
-                                  <Trash2 size={16} />
-                                  Delete
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <PaginationControls
-                      currentPage={reportsPage}
-                      totalItems={courseReports.length}
-                      itemsPerPage={reportsPerPage}
-                      onPageChange={setReportsPage}
-                      onItemsPerPageChange={(size) => {
-                        setReportsPerPage(size);
-                        setReportsPage(1);
-                      }}
-                      label="reports"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="emitras">
-            <div className="student-card p-4 sm:p-6 bg-white/80">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="student-icon bg-indigo-50 text-indigo-600 ring-indigo-100">
-                    <Building2 size={24} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black text-slate-900 gradient-text">Cyber cafe Management</h2>
-                    <p className="text-slate-500 text-sm font-semibold">View Cyber cafes, their students, and adjust commission percentage.</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <span className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-indigo-100/80 w-fit">
-                    {emitras.length} Cyber cafes
-                  </span>
-                  <span className="bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-emerald-100/80 w-fit">
-                    {emitraStudentsCount} Students
-                  </span>
-                </div>
-              </div>
-
-              {emitras.length === 0 ? (
-                <div className="border border-dashed border-slate-200 rounded-2xl p-12 text-center">
-                  <Building2 size={48} className="text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500 font-bold">No Cyber cafes registered yet</p>
-                </div>
-              ) : (
-                <div className="student-card overflow-hidden bg-white/50 border-slate-100/50">
-                  <div className="overflow-x-auto w-full">
-                    <table className="w-full min-w-[1100px] table-auto">
-                      <thead className="bg-slate-50/50">
-                        <tr>
-                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Cyber cafe</th>
-                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Owner</th>
-                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Contact</th>
-                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Students</th>
-                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Paid Amount</th>
-                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Percentage</th>
-                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Commission</th>
-                          <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {emitras.map((emitra) => {
-                          const emitraStudents = getEmitraStudents(emitra.uid);
-                          const emitraPaidTotal = getEmitraPaymentTotal(emitra.uid);
-                          const commission = Math.round(emitraPaidTotal * ((emitra.commissionPercentage || 0) / 100));
-
-                          return (
-                            <tr key={emitra.uid} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
-                              <td className="p-4">
-                                <div className="font-black text-slate-900">{emitra.centerName}</div>
-                                <div className="text-xs text-slate-400 font-semibold">{emitra.uid}</div>
-                                <div className="mt-1 text-xs text-slate-500 font-semibold max-w-xs truncate">{emitra.address}</div>
-                              </td>
-                              <td className="p-4 text-slate-700 font-bold text-sm">{emitra.ownerName}</td>
-                              <td className="p-4">
-                                <div className="flex items-center gap-2 text-slate-600 text-sm font-semibold">
-                                  <Mail size={14} className="text-slate-400" />
-                                  {emitra.email}
-                                </div>
-                                <div className="mt-1 flex items-center gap-2 text-slate-600 text-sm font-semibold">
-                                  <Phone size={14} className="text-slate-400" />
-                                  {emitra.contactNumber}
-                                </div>
-                              </td>
-                              <td className="p-4">
-                                <div className="font-black text-slate-900">{emitraStudents.length}</div>
-                                <div className="text-xs text-slate-400 font-bold">
-                                  {emitraStudents.filter(isUserSuccessful).length} paid
-                                </div>
-                              </td>
-                              <td className="p-4 text-slate-900 font-black">₹{emitraPaidTotal.toLocaleString('en-IN')}</td>
-                              <td className="p-4">
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    max={100}
-                                    value={emitra.commissionPercentage ?? 0}
-                                    onChange={(event) => {
-                                      const value = Number(event.target.value);
-                                      setEmitras((prev) =>
-                                        prev.map((item) =>
-                                          item.uid === emitra.uid ? { ...item, commissionPercentage: value } : item
-                                        )
-                                      );
-                                    }}
-                                    className="h-10 w-24 rounded-xl font-black"
-                                  />
-                                  <Button
-                                    type="button"
-                                    disabled={savingEmitraId === emitra.uid}
-                                    onClick={() => handleUpdateEmitraPercentage(emitra.uid, Number(emitra.commissionPercentage || 0))}
-                                    className="h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider"
-                                  >
-                                    {savingEmitraId === emitra.uid ? 'Saving' : 'Save'}
-                                  </Button>
-                                </div>
-                              </td>
-                              <td className="p-4 text-emerald-700 font-black">₹{commission.toLocaleString('en-IN')}</td>
-                              <td className="p-4">
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${emitra.isActive
-                                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80'
-                                  : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
-                                  }`}>
-                                  {emitra.isActive ? <CheckCircle2 size={12} /> : <Clock size={12} />}
-                                  {emitra.isActive ? 'Active' : 'Inactive'}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="teachers">
-            <div className="student-card p-4 sm:p-6 bg-white/80">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="student-icon bg-blue-50 text-blue-600 ring-blue-100">
-                    <UserPlus size={24} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black text-slate-900 gradient-text">Teacher Management</h2>
-                    <p className="text-slate-500 text-sm font-semibold">Teachers can access only Daily Videos.</p>
-                  </div>
-                </div>
-                <span className="bg-blue-50 text-blue-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-blue-100/80 w-fit">
-                  {teachers.length} Teachers
-                </span>
-              </div>
-
-              <Tabs defaultValue="add" className="gap-6 flex-col">
-                <TabsList className="bg-slate-100/70 rounded-xl h-11 p-1">
-                  <TabsTrigger value="add" className="px-5 py-2 rounded-lg font-black text-xs uppercase tracking-wider transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
-                    <UserPlus size={16} />
-                    Add Teacher
-                  </TabsTrigger>
-                  <TabsTrigger value="list" className="px-5 py-2 rounded-lg font-black text-xs uppercase tracking-wider transition-all data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
-                    <Users size={16} />
-                    Teacher List
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="add">
-                  <form onSubmit={handleAddTeacher} className="border border-slate-200/60 rounded-3xl p-4 sm:p-6 bg-white/70 backdrop-blur-sm shadow-sm mt-4">
-                    <div className="flex flex-col lg:grid lg:grid-cols-5 gap-5 lg:items-end w-full">
-                      <div className="w-full">
-                        <Label className="student-label">Teacher Name</Label>
-                        <Input
-                          value={teacherForm.fullName}
-                          onChange={(event) => setTeacherForm({ ...teacherForm, fullName: event.target.value })}
-                          placeholder="Teacher name"
-                          className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80"
-                        />
-                      </div>
-                      <div className="w-full">
-                        <Label className="student-label">Email</Label>
-                        <Input
-                          type="email"
-                          value={teacherForm.email}
-                          onChange={(event) => setTeacherForm({ ...teacherForm, email: event.target.value })}
-                          placeholder="teacher@example.com"
-                          className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80"
-                        />
-                      </div>
-                      <div className="w-full">
-                        <Label className="student-label">Password</Label>
-                        <Input
-                          type="password"
-                          value={teacherForm.password}
-                          onChange={(event) => setTeacherForm({ ...teacherForm, password: event.target.value })}
-                          placeholder="Minimum 6 characters"
-                          className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80"
-                        />
-                      </div>
-                      <div className="w-full">
-                        <Label className="student-label">Course</Label>
-                        <select
-                          value={teacherForm.course}
-                          onChange={(event) => setTeacherForm({ ...teacherForm, course: event.target.value })}
-                          className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80 bg-white"
-                        >
-                          <option value="">Select course</option>
-                          {INTERNSHIP_DOMAINS.map((course) => (
-                            <option key={course} value={course}>
-                              {course}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="w-full">
-                        <Button type="submit" disabled={savingTeacher} className="student-button-primary bg-blue-600 hover:bg-blue-700 text-white h-12 w-full px-5 min-h-[48px] shadow-blue-500/10 cursor-pointer rounded-xl transition-all">
-                          <UserPlus size={18} />
-                          {savingTeacher ? 'Adding...' : 'Add Teacher'}
-                        </Button>
-                      </div>
-                    </div>
-                  </form>
-                </TabsContent>
-
-                <TabsContent value="list" className="mt-4">
-                  {teachers.length === 0 ? (
-                    <div className="border border-dashed border-slate-200 rounded-2xl p-12 text-center">
-                      <Users size={48} className="text-slate-300 mx-auto mb-4" />
-                      <p className="text-slate-500 font-bold">No teachers added yet</p>
-                    </div>
-                  ) : (
-                    <div className="student-card overflow-hidden bg-white/50 border-slate-100/50">
-                      {/* Desktop Table View */}
-                      <div className="hidden lg:block overflow-x-auto w-full">
-                        <table className="w-full min-w-[800px] table-auto">
-                          <thead className="bg-slate-50/50">
-                            <tr>
-                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Teacher</th>
-                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Email</th>
-                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Course</th>
-                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
-                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Created</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {teachers.slice((teachersPage - 1) * teachersPerPage, teachersPage * teachersPerPage).map((teacher) => (
-                              <tr key={teacher.uid} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
-                                <td className="p-4">
-                                  <div className="font-black text-slate-900">{teacher.fullName}</div>
-                                  <div className="text-xs text-slate-400 font-semibold">{teacher.uid}</div>
-                                </td>
-                                <td className="p-4">
-                                  <div className="flex items-center gap-2 text-slate-600 text-sm font-semibold">
-                                    <Mail size={14} className="text-slate-400" />
-                                    {teacher.email}
-                                  </div>
-                                </td>
-                                <td className="p-4 text-slate-600 font-bold text-sm">
-                                  {teacher.course || '-'}
-                                </td>
-                                <td className="p-4">
-                                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${teacher.isActive
-                                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80'
-                                    : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
-                                    }`}>
-                                    {teacher.isActive ? <CheckCircle2 size={12} /> : <Clock size={12} />}
-                                    {teacher.isActive ? 'Active' : 'Inactive'}
-                                  </span>
-                                </td>
-                                <td className="p-4 text-slate-600 text-sm font-medium">
-                                  {teacher.createdAt
-                                    ? new Date(teacher.createdAt).toLocaleDateString('en-IN', {
-                                      day: '2-digit',
-                                      month: 'short',
-                                      year: 'numeric'
-                                    })
-                                    : '-'}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Mobile Card List View */}
-                      <div className="lg:hidden divide-y divide-slate-100/50">
-                        {teachers.slice((teachersPage - 1) * teachersPerPage, teachersPage * teachersPerPage).map((teacher) => (
-                          <div key={teacher.uid} className="p-4 space-y-3">
-                            <div className="flex justify-between items-start gap-2">
-                              <div>
-                                <div className="font-black text-slate-900 text-sm">{teacher.fullName}</div>
-                                <div className="text-[10px] text-slate-400 font-semibold truncate max-w-[180px]">{teacher.uid}</div>
-                              </div>
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${teacher.isActive
-                                ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80'
-                                : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
-                                }`}>
-                                {teacher.isActive ? 'Active' : 'Inactive'}
-                              </span>
-                            </div>
-
-                            <div className="flex flex-col gap-1.5 text-xs text-slate-600 font-medium">
-                              <div className="flex items-center gap-2">
-                                <Mail size={12} className="text-slate-400 shrink-0" />
-                                <span className="truncate">{teacher.email}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <BookOpen size={12} className="text-slate-400 shrink-0" />
-                                <span>{teacher.course || '-'}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Clock size={12} className="text-slate-400 shrink-0" />
-                                <span>
-                                  {teacher.createdAt
-                                    ? new Date(teacher.createdAt).toLocaleDateString('en-IN', {
-                                      day: '2-digit',
-                                      month: 'short',
-                                      year: 'numeric'
-                                    })
-                                    : '-'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <PaginationControls
-                        currentPage={teachersPage}
-                        totalItems={teachers.length}
-                        itemsPerPage={teachersPerPage}
-                        onPageChange={setTeachersPage}
-                        onItemsPerPageChange={(size) => {
-                          setTeachersPerPage(size);
-                          setTeachersPage(1);
-                        }}
-                        label="teachers"
-                      />
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </div>
-          </TabsContent>
-
-          {canManageAdminDashboard && (
-            <TabsContent value="sub-users">
-              <div className="student-card p-4 sm:p-6 bg-white/80">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="student-icon bg-emerald-50 text-emerald-600 ring-emerald-100">
-                      <Users size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black text-slate-900 gradient-text">Sub User Management</h2>
-                      <p className="text-slate-500 text-sm font-semibold">Sub users can access only the admin dashboard in view mode.</p>
-                    </div>
-                  </div>
-                  <span className="bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-emerald-100/80 w-fit">
-                    {subUsers.length} Sub Users
-                  </span>
-                </div>
-
-                <form onSubmit={handleAddSubUser} className="border border-slate-200/60 rounded-3xl p-4 sm:p-6 bg-white/70 backdrop-blur-sm shadow-sm">
-                  <div className="flex flex-col lg:grid lg:grid-cols-4 gap-5 lg:items-end w-full">
-                    <div className="w-full">
-                      <Label className="student-label">Sub User Name</Label>
-                      <Input
-                        value={subUserForm.fullName}
-                        onChange={(event) => setSubUserForm({ ...subUserForm, fullName: event.target.value })}
-                        placeholder="Sub user name"
-                        className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80"
-                      />
-                    </div>
-                    <div className="w-full">
-                      <Label className="student-label">Email</Label>
-                      <Input
-                        type="email"
-                        value={subUserForm.email}
-                        onChange={(event) => setSubUserForm({ ...subUserForm, email: event.target.value })}
-                        placeholder="subuser@example.com"
-                        className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80"
-                      />
-                    </div>
-                    <div className="w-full">
-                      <Label className="student-label">Password</Label>
-                      <Input
-                        type="password"
-                        value={subUserForm.password}
-                        onChange={(event) => setSubUserForm({ ...subUserForm, password: event.target.value })}
-                        placeholder="Minimum 6 characters"
-                        className="student-input mt-2 h-12 px-4 rounded-xl border-slate-200/80"
-                      />
-                    </div>
-                    <div className="w-full">
-                      <Button type="submit" disabled={savingSubUser} className="student-button-primary bg-emerald-600 hover:bg-emerald-700 text-white h-12 w-full px-5 min-h-[48px] shadow-emerald-500/10 cursor-pointer rounded-xl transition-all">
-                        <UserPlus size={18} />
-                        {savingSubUser
-                          ? 'Adding...'
-                          : subUserForm.districtIds.length > 0
-                            ? 'Add District User'
-                            : 'Add Sub User'}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="mt-5 border-t border-slate-100 pt-5">
-                    <Label className="student-label">District Dashboard Access</Label>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                      {districts.length === 0 ? (
-                        <div className="text-xs font-bold text-slate-400">No districts found</div>
-                      ) : (
-                        districts.map((district) => {
-                          const checked = subUserForm.districtIds.includes(district.id);
-                          return (
-                            <label
-                              key={district.id}
-                              className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-xs font-black transition-all ${
-                                checked
-                                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={(event) => {
-                                  setSubUserForm((current) => ({
-                                    ...current,
-                                    districtIds: event.target.checked
-                                      ? [...current.districtIds, district.id]
-                                      : current.districtIds.filter((id) => id !== district.id),
-                                  }));
-                                }}
-                                className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                              />
-                              <span>{district.name}</span>
-                            </label>
-                          );
-                        })
-                      )}
-                    </div>
-                    <p className="mt-2 text-[11px] font-semibold text-slate-500">
-                      Select districts to create a district dashboard user. Leave blank for a normal admin dashboard sub user.
-                    </p>
-                  </div>
-                </form>
-
-                <div className="mt-6">
-                  {subUsers.length === 0 ? (
-                    <div className="border border-dashed border-slate-200 rounded-2xl p-12 text-center">
-                      <Users size={48} className="text-slate-300 mx-auto mb-4" />
-                      <p className="text-slate-500 font-bold">No sub users added yet</p>
-                    </div>
-                  ) : (
-                    <div className="student-card overflow-hidden bg-white/50 border-slate-100/50">
-                      <div className="hidden lg:block overflow-x-auto w-full">
-                        <table className="w-full min-w-[760px] table-auto">
-                          <thead className="bg-slate-50/50">
-                            <tr>
-                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Sub User</th>
-                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Email</th>
-                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Access</th>
-                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
-                              <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Created</th>
-                              <th className="text-right p-4 text-xs font-black uppercase tracking-wider text-slate-500">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {subUsers.slice((subUsersPage - 1) * subUsersPerPage, subUsersPage * subUsersPerPage).map((subUser) => (
-                              <tr key={subUser.uid} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
-                                <td className="p-4">
-                                  <div className="font-black text-slate-900">{subUser.fullName}</div>
-                                  <div className="text-xs text-slate-400 font-semibold">{subUser.uid}</div>
-                                </td>
-                                <td className="p-4">
-                                  <div className="flex items-center gap-2 text-slate-600 text-sm font-semibold">
-                                    <Mail size={14} className="text-slate-400" />
-                                    {subUser.email}
-                                  </div>
-                                </td>
-                                <td className="p-4 text-slate-600 font-bold text-sm">
-                                  {subUser.role === 'district_user'
-                                    ? `Districts: ${(subUser.districtNames || []).join(', ') || '-'}`
-                                    : 'Dashboard only'}
-                                </td>
-                                <td className="p-4">
-                                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${subUser.isActive
-                                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80'
-                                    : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
-                                    }`}>
-                                    {subUser.isActive ? <CheckCircle2 size={12} /> : <Clock size={12} />}
-                                    {subUser.isActive ? 'Active' : 'Inactive'}
-                                  </span>
-                                </td>
-                                <td className="p-4 text-slate-600 text-sm font-medium">
-                                  {subUser.createdAt
-                                    ? new Date(subUser.createdAt).toLocaleDateString('en-IN', {
-                                      day: '2-digit',
-                                      month: 'short',
-                                      year: 'numeric'
-                                    })
-                                    : '-'}
-                                </td>
-                                <td className="p-4 text-right">
-                                  <Button
-                                    type="button"
-                                    onClick={() => handleDeleteSubUser(subUser)}
-                                    disabled={deletingSubUserId === subUser.uid}
-                                    className="h-10 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm shadow-rose-600/10 transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
-                                  >
-                                    <Trash2 size={16} />
-                                    {deletingSubUserId === subUser.uid ? 'Deleting...' : 'Delete'}
-                                  </Button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      <div className="lg:hidden divide-y divide-slate-100/50">
-                        {subUsers.slice((subUsersPage - 1) * subUsersPerPage, subUsersPage * subUsersPerPage).map((subUser) => (
-                          <div key={subUser.uid} className="p-4 space-y-3">
-                            <div className="flex justify-between items-start gap-2">
-                              <div>
-                                <div className="font-black text-slate-900 text-sm">{subUser.fullName}</div>
-                                <div className="text-[10px] text-slate-400 font-semibold truncate max-w-[180px]">{subUser.uid}</div>
-                              </div>
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${subUser.isActive
-                                ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80'
-                                : 'bg-slate-50 text-slate-500 ring-1 ring-slate-100/80'
-                                }`}>
-                                {subUser.isActive ? 'Active' : 'Inactive'}
-                              </span>
-                            </div>
-
-                            <div className="flex flex-col gap-1.5 text-xs text-slate-600 font-medium">
-                              <div className="flex items-center gap-2">
-                                <Mail size={12} className="text-slate-400 shrink-0" />
-                                <span className="truncate">{subUser.email}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <LayoutDashboard size={12} className="text-slate-400 shrink-0" />
-                                <span>
-                                  {subUser.role === 'district_user'
-                                    ? `Districts: ${(subUser.districtNames || []).join(', ') || '-'}`
-                                    : 'Dashboard only'}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Clock size={12} className="text-slate-400 shrink-0" />
-                                <span>
-                                  {subUser.createdAt
-                                    ? new Date(subUser.createdAt).toLocaleDateString('en-IN', {
-                                      day: '2-digit',
-                                      month: 'short',
-                                      year: 'numeric'
-                                    })
-                                    : '-'}
-                                </span>
-                              </div>
-                            </div>
-                            <Button
-                              type="button"
-                              onClick={() => handleDeleteSubUser(subUser)}
-                              disabled={deletingSubUserId === subUser.uid}
-                              className="h-10 w-full bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm shadow-rose-600/10 transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              <Trash2 size={16} />
-                              {deletingSubUserId === subUser.uid ? 'Deleting...' : 'Delete Sub User'}
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-
-                      <PaginationControls
-                        currentPage={subUsersPage}
-                        totalItems={subUsers.length}
-                        itemsPerPage={subUsersPerPage}
-                        onPageChange={setSubUsersPage}
-                        onItemsPerPageChange={(size) => {
-                          setSubUsersPerPage(size);
-                          setSubUsersPage(1);
-                        }}
-                        label="sub users"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </TabsContent>
-          )}
-        </Tabs >
-      </div >
-    </div >
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
   );
 }

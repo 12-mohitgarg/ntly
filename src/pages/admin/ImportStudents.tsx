@@ -18,7 +18,8 @@ import {
   ChevronsRight,
   Info,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  HelpCircle
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { db } from '../../lib/firebase';
@@ -70,6 +71,7 @@ export default function ImportStudents() {
   const navigate = useNavigate();
   const { user, adminProfile } = useAuth();
   const [file, setFile] = useState<File | null>(null);
+  const [headers, setHeaders] = useState<string[]>([]);
   const [parsedData, setParsedData] = useState<ParsedStudent[]>([]);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -266,6 +268,7 @@ export default function ImportStudents() {
         const rollIdx = findColIndex(['University Registration Number', 'Registration Number', 'Reg No', 'Reg. No.', 'universityRoll', 'RegNo']);
         const rollNoIdx = findColIndex(['University Roll No', 'University Roll Number', 'Roll Number', 'Roll No', 'universityRollNo', 'RollNo']);
         const indIdx = findColIndex(['Industrial Registration Number', 'Industrial Reg No', 'industrialRegNo', 'IndustrialRegNo']);
+        const acadIdx = findColIndex(['Academic Details', 'AcademicDetails', 'Academic']);
 
         // Check required fields
         if (rollIdx === -1) fileWarnings.push("Missing University Registration Number column. Students won't be able to verify.");
@@ -636,7 +639,7 @@ export default function ImportStudents() {
               For best results, name columns exactly like this in the sheet:
             </p>
 
-            {importSummary.importedStudents.length > 0 && (
+            {importSummary?.importedStudents && importSummary.importedStudents.length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-xs font-black uppercase tracking-widest text-emerald-700">Imported Students</h4>
                 <div className="overflow-x-auto border border-emerald-100 rounded-2xl">
@@ -678,7 +681,7 @@ export default function ImportStudents() {
               </div>
             )}
 
-            {importSummary.skippedStudents.length > 0 && (
+            {importSummary?.skippedStudents && importSummary.skippedStudents.length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-xs font-black uppercase tracking-widest text-amber-700">Skipped Rows</h4>
                 <div className="overflow-x-auto border border-amber-100 rounded-2xl">
@@ -712,7 +715,6 @@ export default function ImportStudents() {
               </div>
             )}
           </div>
-        )}
 
           {warnings.length > 0 && (
             <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 text-amber-800 text-xs font-bold space-y-1">
@@ -720,7 +722,14 @@ export default function ImportStudents() {
                 <AlertTriangle className="size-4 text-amber-600 shrink-0" />
                 <span>Import Column Mapping Warnings:</span>
               </div>
+              {warnings.map((w, idx) => (
+                <div key={idx} className="flex items-start gap-1.5 text-amber-700 font-semibold">
+                  <span>•</span>
+                  <span>{w}</span>
+                </div>
+              ))}
             </div>
+          )}
 
           {parsedData.length > 0 && (
             <div className="pt-4 border-t border-blue-200/60 flex items-center justify-between">
@@ -912,22 +921,8 @@ export default function ImportStudents() {
                           {student.status || 'Imported'}
                         </span>
                       </td>
-                      <td className="p-3">
-                        <div className="font-semibold text-slate-700">{student.email}</div>
-                        <div className="text-[10px] font-semibold text-slate-400">{student.contactNumber}</div>
-                      </td>
-                      <td className="p-3 font-semibold text-slate-600">{student.gender || '-'}</td>
-                      <td className="p-3">
-                        <div className="font-bold text-slate-800 truncate max-w-[200px]">{student.college}</div>
-                        <div className="text-[10px] font-semibold text-slate-400 truncate max-w-[200px]">{student.university}</div>
-                      </td>
-                      <td className="p-3">
-                        <div className="font-bold text-indigo-600">{student.course}</div>
-                        <div className="text-[10px] font-semibold text-slate-400">{student.semester}</div>
-                      </td>
-                      <td className="p-3">
-                        <div className="font-bold text-slate-800">Reg: {student.universityRoll || <span className="text-rose-500">Missing</span>}</div>
-                        <div className="text-[10px] font-bold text-slate-500">Roll: {student.universityRollNo || '-'}</div>
+                      <td className="py-3.5 px-4 font-semibold text-slate-500 text-[11px] whitespace-nowrap">
+                        {formatDate(student.importedAt)}
                       </td>
                     </tr>
                   );

@@ -311,20 +311,11 @@ export default function Navbar() {
                     </Link>
                   </>
                 )}
-<<<<<<< HEAD
-
-  <div className="text-center pt-2">
-    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1">
-      <ShieldCheck className="w-3 h-3 text-green-500" /> UGC & AICTE Compliant
-    </span>
-  </div>
-=======
->>>>>>> 7464cff312050e8e971e9237a62468f802c704a3
               </div >
             </motion.div >
           </div >
         )
-}
+        }
       </AnimatePresence >
     </>
   );
