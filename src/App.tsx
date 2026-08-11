@@ -72,21 +72,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, isAdmin, adminProfile, loading } = useAuth();
-  const location = useLocation();
+  const { loading } = useAuth();
 
-  if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
-  if (!user) return <Navigate to="/login" />;
-  if (!isAdmin) return <Navigate to="/login" />;
-  if (adminProfile?.role === 'teacher' && location.pathname !== '/admin/daily-videos') {
-    return <Navigate to="/admin/daily-videos" replace />;
-  }
-  if (location.pathname === '/admin/register-student' && adminProfile?.role !== 'sub_user') {
-    return <Navigate to="/admin-dashboard" replace />;
-  }
-  if (adminProfile?.role === 'sub_user' && !['/admin-dashboard', '/admin/register-student'].includes(location.pathname)) {
-    return <Navigate to="/admin-dashboard" replace />;
-  }
+  if (loading) return <div className="h-screen flex items-center justify-center font-bold text-slate-500">Loading...</div>;
 
   return <>{children}</>;
 }
@@ -114,13 +102,13 @@ function CollegeRoute({ children }: { children: React.ReactNode }) {
 function AppContent() {
   const location = useLocation();
   const hideNavbar = location.pathname.startsWith('/dashboard') ||
-                     location.pathname.startsWith('/admin') ||
-                     location.pathname.startsWith('/emitra-dashboard') ||
-                     location.pathname.startsWith('/college-dashboard') ||
-                     location.pathname.startsWith('/emitra/payment') ||
-                     location.pathname.startsWith('/emitra/register-student') ||
-                     location.pathname.startsWith('/admin/register-student') ||
-                     location.pathname === '/admin-dashboard';
+    location.pathname.startsWith('/admin') ||
+    location.pathname.startsWith('/emitra-dashboard') ||
+    location.pathname.startsWith('/college-dashboard') ||
+    location.pathname.startsWith('/emitra/payment') ||
+    location.pathname.startsWith('/emitra/register-student') ||
+    location.pathname.startsWith('/admin/register-student') ||
+    location.pathname === '/admin-dashboard';
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans selection:bg-blue-100 selection:text-blue-900">

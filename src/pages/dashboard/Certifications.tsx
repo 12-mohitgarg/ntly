@@ -84,7 +84,12 @@ export default function Certifications() {
           reports.sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || ''));
           setReportUrl(reports[0].fileUrl || null);
         } else {
-          setReportUrl(null);
+          // Fallback: Fetch all courseReports for case/whitespace tolerant matching
+          const allReportsSnap = await getDocs(collection(db, 'courseReports'));
+          const matchingReport = allReportsSnap.docs
+            .map(d => d.data())
+            .find(r => r.course?.toLowerCase().trim() === profile.internshipDomain?.toLowerCase().trim());
+          setReportUrl(matchingReport?.fileUrl || null);
         }
 
       } catch (error) {

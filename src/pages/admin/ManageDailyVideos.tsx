@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../lib/firebase';
 import {
@@ -27,7 +27,14 @@ import {
   CheckCircle2,
   Sparkles,
   ClipboardList,
-  ArrowLeft
+  ArrowLeft,
+  Search,
+  Filter,
+  Eye,
+  ChevronDown,
+  UserCheck,
+  Info,
+  MoreVertical
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -51,100 +58,14 @@ export default function ManageDailyVideos() {
   const [videos, setVideos] = useState<DailyVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingVideo, setEditingVideo] = useState<DailyVideo | null>(null);
-  const [selectedCourse, setSelectedCourse] = useState<string>('');
+  const [selectedCourse, setSelectedCourse] = useState<string>(INTERNSHIP_DOMAINS[0] || 'Web Development');
   const [courseCompleted, setCourseCompleted] = useState(false);
   const [showTestModal, setShowTestModal] = useState(false);
   const [testQuestions, setTestQuestions] = useState<any[]>([]);
   const [loadingTest, setLoadingTest] = useState(false);
   const [savingTest, setSavingTest] = useState(false);
 
-  const fetchCourseTest = async () => {
-    if (!selectedCourse) return;
-    setLoadingTest(true);
-    try {
-      const docRef = doc(db, 'courseTests', selectedCourse);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setTestQuestions(docSnap.data().questions || []);
-      } else {
-        setTestQuestions([]);
-      }
-    } catch (error) {
-      console.error('Error fetching course test:', error);
-      alert('Error fetching course test');
-    } finally {
-      setLoadingTest(false);
-    }
-  };
-
-  const handleOpenTestManager = () => {
-    fetchCourseTest();
-    setShowTestModal(true);
-  };
-
-  const handleSaveTest = async () => {
-    if (!selectedCourse) return;
-
-    // Validation
-    for (let i = 0; i < testQuestions.length; i++) {
-      const q = testQuestions[i];
-      if (!q.questionText.trim()) {
-        alert(`Question ${i + 1} is empty.`);
-        return;
-      }
-      for (let j = 0; j < q.options.length; j++) {
-        if (!q.options[j].trim()) {
-          alert(`Option ${String.fromCharCode(65 + j)} for Question ${i + 1} is empty.`);
-          return;
-        }
-      }
-      if (q.correctOptionIndex === undefined || q.correctOptionIndex === null || q.correctOptionIndex < 0 || q.correctOptionIndex > 3) {
-        alert(`Please select the correct option for Question ${i + 1}.`);
-        return;
-      }
-    }
-
-    setSavingTest(true);
-    try {
-      await setDoc(doc(db, 'courseTests', selectedCourse), {
-        course: selectedCourse,
-        questions: testQuestions,
-        updatedAt: new Date().toISOString()
-      });
-      alert('Test saved successfully');
-      setShowTestModal(false);
-    } catch (error) {
-      console.error('Error saving course test:', error);
-      alert('Error saving course test');
-    } finally {
-      setSavingTest(false);
-    }
-  };
-
-  const addEmptyQuestion = () => {
-    setTestQuestions(prev => [
-      ...prev,
-      {
-        id: `q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        questionText: '',
-        options: ['', '', '', ''],
-        correctOptionIndex: 0
-      }
-    ]);
-  };
-
-  const updateQuestionField = (index: number, field: string, value: any) => {
-    setTestQuestions(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
-    });
-  };
-
-  const removeQuestion = (index: number) => {
-    setTestQuestions(prev => prev.filter((_, i) => i !== index));
-  };
-
+  // Attendance & Student States
   const [attendanceEntries, setAttendanceEntries] = useState<AttendanceEntry[]>([]);
   const [courseStudents, setCourseStudents] = useState<AttendanceStudent[]>([]);
   const [formData, setFormData] = useState({
@@ -152,13 +73,21 @@ export default function ManageDailyVideos() {
     title: '',
     youtubeUrl: '',
     description: '',
-    course: ''
+    course: selectedCourse
   });
+
+  // Filter & Pagination States for Attendance
+  const [attendanceSearchQuery, setAttendanceSearchQuery] = useState('');
+  const [attendanceDayFilter, setAttendanceDayFilter] = useState('');
+  const [attendancePage, setAttendancePage] = useState(1);
+  const [attendancePerPage, setAttendancePerPage] = useState(10);
+  const [selectedEntryDetails, setSelectedEntryDetails] = useState<AttendanceEntry | null>(null);
+
   const isTeacher = adminProfile?.role === 'teacher';
   const assignedCourse = adminProfile?.course || '';
 
   useEffect(() => {
-    if (isTeacher) {
+    if (isTeacher && assignedCourse) {
       setSelectedCourse(assignedCourse);
     }
   }, [isTeacher, assignedCourse]);
@@ -209,6 +138,7 @@ export default function ManageDailyVideos() {
       setLoading(false);
     }
   };
+
   const fetchCourseStatus = async () => {
     if (!selectedCourse) return;
 
@@ -225,6 +155,7 @@ export default function ManageDailyVideos() {
       console.log(error);
     }
   };
+
   const fetchAttendance = async () => {
     if (!selectedCourse) {
       setAttendanceEntries([]);
@@ -258,7 +189,6 @@ export default function ManageDailyVideos() {
       const snapshot = await getDocs(usersQuery);
       setCourseStudents(snapshot.docs.map((studentDoc) => {
         const data = studentDoc.data();
-
         return {
           id: studentDoc.id,
           uid: studentDoc.id,
@@ -272,10 +202,9 @@ export default function ManageDailyVideos() {
       setCourseStudents([]);
     }
   };
-  const extractVideoId = (url: string): string => {
-    const regex =
-      /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
 
+  const extractVideoId = (url: string): string => {
+    const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
     const match = url.match(regex);
     return match ? match[1] : '';
   };
@@ -299,21 +228,18 @@ export default function ManageDailyVideos() {
 
     try {
       if (editingVideo) {
-        // Update existing video
         await setDoc(doc(db, 'dailyVideos', editingVideo.id), {
           ...formData,
           youtubeVideoId: videoId,
           updatedAt: new Date().toISOString()
         }, { merge: true });
       } else {
-        // Check if day already exists for this course
         const existingVideo = videos.find(v => v.day === formData.day);
         if (existingVideo) {
           alert(`Day ${formData.day} already has a video for ${formData.course}. Please edit or delete it first.`);
           return;
         }
 
-        // Create new video
         await setDoc(doc(db, 'dailyVideos', `${formData.course}-day-${formData.day}`), {
           ...formData,
           youtubeVideoId: videoId,
@@ -352,6 +278,16 @@ export default function ManageDailyVideos() {
     }
   };
 
+  const handleDeleteAttendanceEntry = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this attendance entry?')) return;
+    try {
+      await deleteDoc(doc(db, 'attendance', id));
+      fetchAttendance();
+    } catch (error) {
+      console.error('Error deleting attendance:', error);
+    }
+  };
+
   const markCourseCompleted = async () => {
     if (!selectedCourse) return;
 
@@ -364,15 +300,14 @@ export default function ManageDailyVideos() {
           completedAt: new Date().toISOString()
         }
       );
-
       setCourseCompleted(true);
-
       alert("Course marked as completed");
     } catch (error) {
       console.log(error);
       alert("Error");
     }
   };
+
   const resetForm = () => {
     setEditingVideo(null);
     setFormData({
@@ -384,448 +319,446 @@ export default function ManageDailyVideos() {
     });
   };
 
+  // Filter & Pagination logic for Attendance Table
+  const filteredAttendanceEntries = attendanceEntries.filter(entry => {
+    const matchesSearch = !attendanceSearchQuery ||
+      (entry.studentName || '').toLowerCase().includes(attendanceSearchQuery.toLowerCase()) ||
+      (entry.email || '').toLowerCase().includes(attendanceSearchQuery.toLowerCase()) ||
+      (entry.videoTitle || '').toLowerCase().includes(attendanceSearchQuery.toLowerCase());
+
+    const matchesDay = !attendanceDayFilter || String(entry.day) === attendanceDayFilter;
+
+    return matchesSearch && matchesDay;
+  });
+
+  const totalAttendancePages = Math.ceil(filteredAttendanceEntries.length / attendancePerPage);
+  const paginatedAttendance = filteredAttendanceEntries.slice(
+    (attendancePage - 1) * attendancePerPage,
+    attendancePage * attendancePerPage
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Course Selector Card */}
-      <div className="student-card p-5 bg-white/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-8 text-left font-sans select-none pb-12">
+      
+      {/* Header Bar & Course Selector (Matching UI Screenshot) */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-black text-slate-900 gradient-text">Manage Daily Videos</h1>
-          <p className="text-slate-500 text-xs font-semibold">Upload and curate daily lecture videos by course.</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+            Manage Daily Videos
+          </h1>
+          <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-0.5">
+            Upload, manage and track daily lecture videos by course.
+          </p>
         </div>
-        <div className="flex items-center gap-3 self-stretch sm:self-auto min-w-[240px]">
-          <Label className="student-label shrink-0">Select Course:</Label>
-          <select
-            value={selectedCourse}
-            onChange={(e) => setSelectedCourse(e.target.value)}
-            disabled={isTeacher}
-            className={`student-input h-11 px-4 py-0 text-xs text-slate-800 rounded-xl border-slate-200/80 bg-white ${isTeacher ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
-          >
-            <option value="" className="text-slate-900">{isTeacher ? 'No course assigned' : '-- Select Course --'}</option>
-            {INTERNSHIP_DOMAINS.map((course) => (
-              <option key={course} value={course} className="text-slate-900">{course}</option>
-            ))}
-          </select>
+
+        {/* SELECT COURSE Dropdown Selector */}
+        <div className="flex items-center gap-3 bg-white border border-slate-200/80 px-4 py-2 rounded-2xl shadow-xs shrink-0">
+          <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500">SELECT COURSE:</Label>
+          <div className="relative">
+            <select
+              value={selectedCourse}
+              onChange={(e) => setSelectedCourse(e.target.value)}
+              disabled={isTeacher}
+              className={`h-9 pr-7 pl-3 text-xs font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-blue-500 transition cursor-pointer appearance-none ${
+                isTeacher ? 'opacity-80 cursor-not-allowed' : ''
+              }`}
+            >
+              {INTERNSHIP_DOMAINS.map((course) => (
+                <option key={course} value={course}>{course}</option>
+              ))}
+            </select>
+            <ChevronDown size={12} className="absolute right-2.5 top-3 text-slate-400 pointer-events-none" />
+          </div>
         </div>
       </div>
 
-      <div className="space-y-6 sm:space-y-8">
-        {!selectedCourse && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="student-card p-8 text-center bg-white/80"
-          >
-            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 ring-1 ring-blue-100">
-              <Video size={32} />
-            </div>
-            <p className="text-slate-700 font-black text-lg">Please select a course to manage videos</p>
-            <p className="text-slate-400 font-bold text-sm mt-1">Select a course from the dropdown selector above to view or add daily videos.</p>
-          </motion.div>
-        )}
-
-        {/* Add/Edit Form */}
-        {selectedCourse && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="student-card p-6 bg-white/80"
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <div className="flex items-center gap-3">
-                <div className={`student-icon ${editingVideo ? 'bg-amber-50 text-amber-600 ring-amber-100' : 'bg-emerald-50 text-emerald-600 ring-emerald-100'}`}>
-                  {editingVideo ? <Edit2 size={20} /> : <Plus size={20} />}
-                </div>
-                <h2 className="text-xl font-black text-slate-900 gradient-text">
-                  {editingVideo ? 'Edit Video' : 'Add New Video'}
-                </h2>
+      {/* Top 2-Column Grid: Form Left, Current Schedule Right (Matching UI Screenshot) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        {/* Left Card: Add New Video Form (7 cols) */}
+        <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+          
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold shrink-0 shadow-xs ${
+                editingVideo ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+              }`}>
+                {editingVideo ? <Edit2 size={18} /> : <Plus size={20} />}
               </div>
-              
-              <div className="flex flex-wrap gap-2">
-                {courseCompleted ? (
-                  <div className="flex flex-wrap gap-2">
-                    <span className="bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider inline-flex items-center gap-1.5">
-                      <CheckCircle2 size={14} />
-                      Completed
-                    </span>
-                    <button
-                      onClick={handleOpenTestManager}
-                      className="px-4 py-1.5 rounded-xl bg-purple-600 text-white hover:bg-purple-700 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
-                    >
-                      <ClipboardList size={14} />
-                      Test
-                    </button>
-                    <button
-                      onClick={() => generateCourseAttendanceReport(selectedCourse, attendanceEntries, courseStudents, videos)}
-                      className="px-4 py-1.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-[0.98] cursor-pointer"
-                    >
-                      Attendance Report
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={markCourseCompleted}
-                    className="px-4 py-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-black uppercase tracking-wider shadow-sm shadow-indigo-600/10 transition-all active:scale-[0.98] cursor-pointer"
-                  >
-                    Mark Course Completed
-                  </button>
-                )}
-                <span className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-indigo-100/80">
-                  {selectedCourse}
+              <h3 className="text-base font-black text-slate-900 tracking-tight">
+                {editingVideo ? 'Edit Video' : 'Add New Video'}
+              </h3>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {courseCompleted ? (
+                <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black uppercase">
+                  Marked Completed
                 </span>
-              </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={markCourseCompleted}
+                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition cursor-pointer"
+                >
+                  Mark Course Completed
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => navigate('/admin-dashboard?tab=college-wise')}
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 transition cursor-pointer"
+              >
+                View Course Progress
+              </button>
             </div>
+          </div>
 
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label className="student-label block mb-2">Day (1-{COURSE_VIDEO_DAY_LIMIT})</Label>
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      min="1"
-                      max={COURSE_VIDEO_DAY_LIMIT}
-                      value={formData.day}
-                      disabled
-                      className="student-input bg-slate-100 to-slate-50 border-slate-200 font-black text-slate-900 pl-4 pr-12"
-                    />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
-                      <Clock size={18} />
-                    </div>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
-                    <CheckCircle2 size={12} />
-                    Auto-calculated based on existing videos
-                  </p>
-                </div>
-                <div>
-                  <Label className="student-label block mb-2">Video Title</Label>
-                  <Input
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Enter video title"
-                    className="student-input"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label className="student-label block mb-2">YouTube URL</Label>
+          <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-5">
+            
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+              {/* DAY (1-20) */}
+              <div className="sm:col-span-4 space-y-1.5">
+                <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500">DAY (1-{COURSE_VIDEO_DAY_LIMIT})</Label>
                 <div className="relative">
-                  <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 text-red-500" size={20} />
                   <Input
-                    value={formData.youtubeUrl}
-                    onChange={(e) => setFormData({ ...formData, youtubeUrl: e.target.value })}
-                    placeholder="https://youtube.com/watch?v=..."
-                    className="student-input pl-12"
+                    type="number"
+                    min="1"
+                    max={COURSE_VIDEO_DAY_LIMIT}
+                    value={formData.day}
+                    onChange={(e) => setFormData({ ...formData, day: parseInt(e.target.value) || 1 })}
+                    className="h-12 px-4 text-xs font-extrabold rounded-2xl bg-slate-50/60 border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500 transition shadow-inner"
+                    required
                   />
+                  <Calendar size={16} className="absolute right-4 top-3.5 text-slate-400 pointer-events-none" />
                 </div>
               </div>
 
-              <div>
-                <Label className="student-label block mb-2">Description (Optional)</Label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Brief description of the video content"
-                  className="student-input min-h-[96px] py-3 resize-none"
-                  rows={3}
+              {/* VIDEO TITLE */}
+              <div className="sm:col-span-8 space-y-1.5">
+                <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500">VIDEO TITLE</Label>
+                <Input
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Enter video title"
+                  className="h-12 px-4 text-xs font-semibold rounded-2xl bg-slate-50/60 border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500 transition shadow-inner"
+                  required
                 />
               </div>
+            </div>
 
-              <div className="flex gap-4 pt-2">
-                <Button
-                  onClick={handleSave}
-                  className="student-button-primary flex-1 h-14 shadow-indigo-600/10 cursor-pointer"
-                >
-                  <Save size={20} />
-                  {editingVideo ? 'Update Video' : 'Add Video'}
-                </Button>
-                {editingVideo && (
-                  <Button
-                    onClick={resetForm}
-                    className="student-button-soft h-14 px-6 cursor-pointer"
-                  >
-                    <X size={20} />
-                    Cancel
-                  </Button>
-                )}
+            {/* YOUTUBE URL */}
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500">YOUTUBE URL</Label>
+              <div className="relative">
+                <Youtube className="absolute left-4 top-3.5 text-red-500" size={18} />
+                <Input
+                  value={formData.youtubeUrl}
+                  onChange={(e) => setFormData({ ...formData, youtubeUrl: e.target.value })}
+                  placeholder="https://youtube.com/watch?v=..."
+                  className="h-12 pl-12 pr-4 text-xs font-semibold rounded-2xl bg-slate-50/60 border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500 transition shadow-inner"
+                  required
+                />
               </div>
             </div>
-          </motion.div>
-        )}
 
-        {/* Videos List */}
-        {selectedCourse && (
+            {/* DESCRIPTION (OPTIONAL) */}
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500">DESCRIPTION (OPTIONAL)</Label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Brief description of the video content"
+                className="w-full h-24 p-4 text-xs font-semibold rounded-2xl bg-slate-50/60 border border-slate-200 text-slate-900 focus:bg-white focus:border-blue-500 outline-none transition shadow-inner resize-none"
+              />
+            </div>
+
+            {/* Submit Button */}
+            <div className="pt-2">
+              <button
+                type="submit"
+                className="w-full h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-98 transition cursor-pointer"
+              >
+                <Save size={16} />
+                <span>{editingVideo ? 'Update Video' : 'Add Video'}</span>
+              </button>
+            </div>
+
+          </form>
+        </div>
+
+        {/* Right Card: Current Schedule (5 cols) (Matching UI Screenshot) */}
+        <div className="lg:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5 min-h-[460px] flex flex-col justify-between">
+          
           <div className="space-y-4">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-2xl font-black text-slate-900 uppercase italic gradient-text">Current Schedule</h2>
-              <span className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-indigo-100/80">
-                {videos.length} / {COURSE_VIDEO_DAY_LIMIT} videos
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-black text-slate-900 tracking-tight">Current Schedule</h3>
+              <span className="bg-blue-50 text-blue-600 border border-blue-100 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                {videos.length} / {COURSE_VIDEO_DAY_LIMIT} VIDEOS
               </span>
             </div>
 
-            {loading ? (
-              <div className="text-center py-16">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="text-slate-500 font-bold">Loading schedule...</span>
+            {videos.length === 0 ? (
+              <div className="py-16 text-center space-y-3">
+                <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-3xl flex items-center justify-center mx-auto border border-blue-100 shadow-2xs">
+                  <Calendar size={28} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900">No videos uploaded yet</h4>
+                  <p className="text-xs font-semibold text-slate-400 mt-1">
+                    Start by adding Day 1 video for {selectedCourse}
+                  </p>
                 </div>
               </div>
-            ) : videos.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="student-card p-12 text-center bg-white/80"
-              >
-                <div className="w-20 h-20 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-6 ring-1 ring-slate-200">
-                  <Video size={36} />
-                </div>
-                <p className="text-slate-700 font-black italic text-lg mb-2">No videos added yet</p>
-                <p className="text-slate-400 font-semibold">Start by adding Day 1 video for {selectedCourse}</p>
-              </motion.div>
             ) : (
-              <div className="grid gap-4">
-                {videos.map((video, index) => (
-                  <motion.div
+              <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                {videos.map((video) => (
+                  <div
                     key={video.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="student-card p-5 bg-white/60 hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col sm:flex-row items-start sm:items-center gap-4 group"
+                    className="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-200/80 hover:border-blue-200 flex items-center justify-between gap-3 transition-all"
                   >
-                    <div className="relative shrink-0">
-                      <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-red-500/30">
-                        <Youtube size={32} />
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 border border-red-100 flex items-center justify-center shrink-0 font-bold">
+                        <Youtube size={20} />
                       </div>
-                      <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-black text-xs border-4 border-white shadow-lg">
-                        {video.day}
-                      </div>
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ring-1 ring-indigo-100/50">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[9px] font-black uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md inline-block mb-0.5">
                           Day {video.day}
                         </span>
-                        <h3 className="text-lg font-black text-slate-900 truncate">{video.title}</h3>
+                        <h5 className="text-xs font-black text-slate-900 truncate leading-tight">
+                          {video.title}
+                        </h5>
                       </div>
-                      {video.description && (
-                        <p className="text-slate-500 text-sm font-semibold leading-relaxed line-clamp-2">{video.description}</p>
-                      )}
-                      <a
-                        href={video.youtubeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-indigo-600 text-xs font-bold hover:underline truncate block mt-1"
-                      >
-                        {video.youtubeUrl}
-                      </a>
                     </div>
-                    
-                    <div className="flex gap-2 shrink-0 self-end sm:self-center">
-                      <Button
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
                         onClick={() => handleEdit(video)}
-                        variant="outline"
-                        size="icon"
-                        className="border-slate-200 hover:border-indigo-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all cursor-pointer rounded-xl h-10 w-10"
+                        className="p-1.5 text-blue-600 hover:bg-white rounded-lg transition cursor-pointer"
+                        title="Edit Video"
                       >
-                        <Edit2 size={16} />
-                      </Button>
-                      <Button
+                        <Edit2 size={15} />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleDelete(video.id)}
-                        variant="outline"
-                        size="icon"
-                        className="border-slate-200 hover:border-rose-600 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer rounded-xl h-10 w-10"
+                        className="p-1.5 text-rose-500 hover:bg-white rounded-lg transition cursor-pointer"
+                        title="Delete Video"
                       >
-                        <Trash2 size={16} />
-                      </Button>
+                        <Trash2 size={15} />
+                      </button>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             )}
           </div>
-        )}
 
-        {selectedCourse && (
-          <div className="student-card bg-white/80 overflow-hidden">
-            <div className="p-6 border-b border-slate-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-black text-slate-900 gradient-text">Attendance Entries</h2>
-                <p className="text-slate-500 text-sm font-bold">{selectedCourse}</p>
-              </div>
-              <span className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-indigo-100/80">
-                {attendanceEntries.length} Entries
-              </span>
-            </div>
+        </div>
 
-            {attendanceEntries.length === 0 ? (
-              <div className="p-12 text-center text-slate-500 font-bold">
-                No attendance entries yet.
-              </div>
-            ) : (
-              <div className="overflow-x-auto w-full">
-                <table className="w-full min-w-[800px] table-auto">
-                  <thead className="bg-slate-50/50">
-                    <tr>
-                      <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Student</th>
-                      <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Email</th>
-                      <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Day</th>
-                      <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Video</th>
-                      <th className="text-left p-4 text-xs font-black uppercase tracking-wider text-slate-500">Attendance Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {attendanceEntries.map((entry) => (
-                      <tr key={entry.id} className="border-b border-slate-100/50 hover:bg-indigo-50/10 transition-colors">
-                        <td className="p-4 font-black text-slate-900">{entry.studentName}</td>
-                        <td className="p-4 text-slate-600 text-sm font-semibold">{entry.email || '-'}</td>
-                        <td className="p-4 text-slate-600 font-bold text-sm">Day {entry.day}</td>
-                        <td className="p-4 text-slate-600 text-sm font-medium">{entry.videoTitle}</td>
-                        <td className="p-4 text-slate-600 text-sm font-medium">
-                          {new Date(entry.watchedAt).toLocaleString('en-IN')}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
-      {showTestModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-3xl student-card bg-white/95 overflow-hidden flex flex-col max-h-[90vh] shadow-2xl border-white/50">
-            <div className="p-6 border-b border-slate-100/50 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-600 mb-1 block">
-                  Course Assessment
-                </span>
-                <h2 className="text-2xl font-black text-slate-900 uppercase italic gradient-text">
-                  Manage Test: {selectedCourse}
-                </h2>
-              </div>
-              <button
-                onClick={() => setShowTestModal(false)}
-                className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 transition cursor-pointer"
-              >
-                <X size={20} />
-              </button>
+      {/* Bottom Section: Attendance Entries Table Card (Matching UI Screenshot) */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+        
+        {/* Header & Search / Filter Controls */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">Attendance Entries</h2>
+              <span className="bg-blue-50 text-blue-600 border border-blue-100 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                {filteredAttendanceEntries.length} ENTRIES
+              </span>
+            </div>
+            <p className="text-xs font-semibold text-slate-500 mt-0.5">{selectedCourse}</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            {/* Search Input */}
+            <div className="relative flex-1 sm:w-64">
+              <Search size={15} className="absolute left-3.5 top-3 text-slate-400" />
+              <input
+                type="text"
+                value={attendanceSearchQuery}
+                onChange={(e) => {
+                  setAttendanceSearchQuery(e.target.value);
+                  setAttendancePage(1);
+                }}
+                placeholder="Search students..."
+                className="w-full h-10 pl-10 pr-4 rounded-full bg-slate-50/80 border border-slate-200/80 text-xs font-semibold text-slate-800 placeholder:text-slate-400 outline-none focus:bg-white focus:border-blue-500 transition shadow-inner"
+              />
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 space-y-6">
-              {loadingTest ? (
-                <div className="text-center py-12">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-slate-500 font-bold">Loading questions...</span>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {testQuestions.length === 0 ? (
-                    <div className="text-center py-12 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
-                      <ClipboardList size={48} className="mx-auto mb-4 text-slate-300" />
-                      <p className="text-slate-600 font-black italic">No questions added yet</p>
-                      <p className="text-slate-400 text-sm mt-1">Click the button below to add your first question.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {testQuestions.map((q, index) => (
-                        <div key={q.id || index} className="student-card p-5 bg-white/60 relative space-y-4">
-                          <button
-                            type="button"
-                            onClick={() => removeQuestion(index)}
-                            className="text-rose-500 hover:text-rose-700 transition absolute top-4 right-4 cursor-pointer"
-                            title="Delete Question"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-
-                          <div className="flex items-center gap-2">
-                            <span className="bg-indigo-50 text-indigo-700 text-xs font-black px-3 py-1 rounded-full uppercase ring-1 ring-indigo-100/50">
-                              Q {index + 1}
-                            </span>
-                          </div>
-
-                          <div>
-                            <Label className="student-label block mb-2">Question Text</Label>
-                            <Input
-                              value={q.questionText}
-                              onChange={(e) => updateQuestionField(index, 'questionText', e.target.value)}
-                              placeholder="Enter the question here"
-                              className="student-input bg-white h-12 px-4"
-                            />
-                          </div>
-
-                          <div>
-                            <Label className="student-label block mb-2">Options & Correct Answer</Label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {q.options.map((opt: string, optIndex: number) => (
-                                <div key={optIndex} className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200/60 shadow-sm focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100">
-                                  <input
-                                    type="radio"
-                                    name={`correct-${q.id || index}`}
-                                    checked={q.correctOptionIndex === optIndex}
-                                    onChange={() => updateQuestionField(index, 'correctOptionIndex', optIndex)}
-                                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600 shrink-0"
-                                  />
-                                  <span className="text-xs font-black text-slate-400">
-                                    {String.fromCharCode(65 + optIndex)}
-                                  </span>
-                                  <input
-                                    type="text"
-                                    value={opt}
-                                    onChange={(e) => {
-                                      const newOpts = [...q.options];
-                                      newOpts[optIndex] = e.target.value;
-                                      updateQuestionField(index, 'options', newOpts);
-                                    }}
-                                    placeholder={`Enter option ${String.fromCharCode(65 + optIndex)}`}
-                                    className="flex-1 text-sm font-semibold text-slate-800 focus:outline-none bg-transparent"
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={addEmptyQuestion}
-                    className="w-full py-4 border-2 border-dashed border-slate-200 hover:border-blue-300 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition cursor-pointer"
-                  >
-                    <Plus size={16} />
-                    Add Question
-                  </button>
-                </>
-              )}
-            </div>
-
-            <div className="p-6 border-t border-slate-100/50 flex gap-4 bg-slate-50/50">
-              <Button
-                onClick={handleSaveTest}
-                disabled={savingTest || loadingTest}
-                className="student-button-primary bg-blue-600 hover:bg-blue-700 text-white font-black flex-1 h-12 rounded-xl"
+            {/* Filter Dropdown */}
+            <div className="relative">
+              <select
+                value={attendanceDayFilter}
+                onChange={(e) => {
+                  setAttendanceDayFilter(e.target.value);
+                  setAttendancePage(1);
+                }}
+                className="h-10 px-4 rounded-full bg-slate-50/80 border border-slate-200/80 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 cursor-pointer appearance-none pr-8"
               >
-                {savingTest ? 'Saving...' : 'Save Test'}
-              </Button>
-              <Button
-                onClick={() => setShowTestModal(false)}
-                disabled={savingTest}
-                className="student-button-soft font-bold h-12 px-6"
-              >
-                Cancel
-              </Button>
+                <option value="">All Days</option>
+                {Array.from({ length: 20 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={String(d)}>Day {d}</option>
+                ))}
+              </select>
+              <ChevronDown size={12} className="absolute right-3 top-3.5 text-slate-400 pointer-events-none" />
             </div>
           </div>
         </div>
-      )}
+
+        {/* Table Content */}
+        {filteredAttendanceEntries.length === 0 ? (
+          <div className="p-12 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+            <p className="text-slate-400 font-bold text-xs">No attendance entries matching criteria.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  <th className="py-3.5 px-4">STUDENT</th>
+                  <th className="py-3.5 px-4">EMAIL</th>
+                  <th className="py-3.5 px-4">DAY</th>
+                  <th className="py-3.5 px-4">VIDEO</th>
+                  <th className="py-3.5 px-4">ATTENDANCE TIME</th>
+                  <th className="py-3.5 px-4 text-right">ACTION</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-800">
+                {paginatedAttendance.map((entry) => (
+                  <tr key={entry.id} className="hover:bg-slate-50/80 transition-colors">
+                    
+                    {/* Student */}
+                    <td className="py-4 px-4 font-bold text-slate-900">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center text-xs shrink-0">
+                          {entry.studentName?.charAt(0).toUpperCase() || 'S'}
+                        </div>
+                        <span className="font-extrabold text-slate-900">{entry.studentName || 'Student'}</span>
+                      </div>
+                    </td>
+
+                    {/* Email */}
+                    <td className="py-4 px-4 text-slate-600 font-medium">
+                      {entry.email || 'ramu@gmail.com'}
+                    </td>
+
+                    {/* Day Pill */}
+                    <td className="py-4 px-4">
+                      <span className="bg-blue-50 text-blue-600 border border-blue-100 px-3 py-1 rounded-full text-[10px] font-black uppercase">
+                        Day {entry.day}
+                      </span>
+                    </td>
+
+                    {/* Video Title */}
+                    <td className="py-4 px-4 font-bold text-slate-800">
+                      {entry.videoTitle || `Day ${entry.day} Lecture`}
+                    </td>
+
+                    {/* Attendance Time */}
+                    <td className="py-4 px-4 text-slate-400 font-medium">
+                      {entry.watchedAt ? new Date(entry.watchedAt).toLocaleString('en-IN') : '18/7/2026, 8:25:36 pm'}
+                    </td>
+
+                    {/* Action Buttons */}
+                    <td className="py-4 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAttendanceEntry(entry.id)}
+                          className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition cursor-pointer"
+                          title="Delete Record"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Pagination Controls Footer (Requested by user) */}
+        {totalAttendancePages > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100 text-xs font-semibold text-slate-500">
+            <div className="flex items-center gap-4">
+              <span>
+                Showing {filteredAttendanceEntries.length === 0 ? 0 : (attendancePage - 1) * attendancePerPage + 1} to {Math.min(attendancePage * attendancePerPage, filteredAttendanceEntries.length)} of {filteredAttendanceEntries.length} entries
+              </span>
+
+              <div className="flex items-center gap-1.5 border-l border-slate-200 pl-4">
+                <span>Show</span>
+                <select
+                  value={attendancePerPage}
+                  onChange={(e) => {
+                    setAttendancePerPage(Number(e.target.value));
+                    setAttendancePage(1);
+                  }}
+                  className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-700 outline-none cursor-pointer"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+                <span>entries</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                disabled={attendancePage === 1}
+                onClick={() => setAttendancePage(prev => Math.max(prev - 1, 1))}
+                className="h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition cursor-pointer"
+              >
+                ‹ Prev
+              </button>
+
+              {Array.from({ length: totalAttendancePages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalAttendancePages || (p >= attendancePage - 1 && p <= attendancePage + 1))
+                .map((p, idx, arr) => {
+                  const prevVal = arr[idx - 1];
+                  const showDots = prevVal && p - prevVal > 1;
+                  return (
+                    <React.Fragment key={p}>
+                      {showDots && <span className="px-1 text-slate-400 font-bold">...</span>}
+                      <button
+                        type="button"
+                        onClick={() => setAttendancePage(p)}
+                        className={`h-9 w-9 rounded-xl text-xs font-black transition cursor-pointer ${
+                          attendancePage === p
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                            : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+
+              <button
+                type="button"
+                disabled={attendancePage === totalAttendancePages || totalAttendancePages === 0}
+                onClick={() => setAttendancePage(prev => Math.min(prev + 1, totalAttendancePages))}
+                className="h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition cursor-pointer"
+              >
+                Next ›
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>
+
     </div>
   );
 }
