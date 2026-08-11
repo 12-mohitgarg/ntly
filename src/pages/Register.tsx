@@ -53,7 +53,7 @@ interface Degree {
 }
 
 interface RegisterProps {
-  mode?: 'public' | 'emitraStudent';
+  mode?: 'public' | 'emitraStudent' | 'subUserStudent';
 }
 
 const WhatsAppIcon = ({ size = 20, className = "" }: { size?: number; className?: string }) => (
@@ -133,10 +133,13 @@ let registrationConfigCache: {
 } | null = null;
 
 export default function Register({ mode = 'public' }: RegisterProps) {
-  const { user: currentUser, emitraProfile } = useAuth();
+  const { user: currentUser, emitraProfile, adminProfile } = useAuth();
   const isEmitraStudentMode = mode === 'emitraStudent';
-  const [step, setStep] = useState(1);
+  const isSubUserStudentMode = mode === 'subUserStudent';
+  const isAssistedRegistrationMode = isEmitraStudentMode || isSubUserStudentMode;
+  const [step, setStep] = useState(2);
   const [error, setError] = useState<string | null>(null);
+  const [prefillNotice, setPrefillNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -145,7 +148,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
   const [verificationLoading, setVerificationLoading] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
 
-  const handleVerify = async (rollParam?: string, indParam?: string) => {
+  const handleVerify = async (rollParam?: string) => {
     const roll = (rollParam || inputUniversityRoll).trim();
 
     if (!roll) {
@@ -155,56 +158,56 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
     setVerificationLoading(true);
     setError(null);
+    setPrefillNotice(null);
 
     try {
       const usersRef = collection(db, 'users');
-      const registeredQuery = query(usersRef, where('universityRoll', '==', roll));
-
       const importedRef = collection(db, 'importedStudents');
-      const importedQuery = query(importedRef, where('universityRoll', '==', roll));
+      const rollSnapshot = await getDocs(query(importedRef, where('universityRoll', '==', roll)));
+      const uniqueDocs = rollSnapshot.docs;
 
-      const [registeredSnap, snapshot] = await Promise.all([
-        getDocs(registeredQuery),
-        getDocs(importedQuery)
-      ]);
-
-      if (!registeredSnap.empty) {
-        setError("This student is already registered! Please login to your account.");
+      if (uniqueDocs.length === 0) {
+        setError("No college record found. You can continue filling the form manually.");
         setVerificationLoading(false);
         return;
       }
 
-      if (snapshot.empty) {
-        setError("Registration Number not found in imported list. Please check your number or contact college/admin.");
+      const importedData = uniqueDocs[0].data();
+      const importedRegistrationNumber = importedData.universityRoll || roll;
+      const registeredSnap = importedRegistrationNumber
+        ? await getDocs(query(usersRef, where('universityRoll', '==', importedRegistrationNumber)))
+        : null;
+
+      if (registeredSnap && !registeredSnap.empty) {
+        setError("This student is already registered. Please login to your account.");
         setVerificationLoading(false);
         return;
       }
-
-      const importedData = snapshot.docs[0].data();
 
       setFormData(prev => ({
         ...prev,
-        fullName: importedData.fullName || prev.fullName,
-        parentName: importedData.parentName || prev.parentName,
-        email: importedData.email || prev.email,
-        contactNumber: importedData.contactNumber || prev.contactNumber,
-        gender: importedData.gender || prev.gender,
-        district: importedData.district || prev.district,
-        college: importedData.college ? normalizeCollegeName(importedData.college) : prev.college,
-        university: importedData.university || prev.university,
-        degree: importedData.degree || prev.degree,
-        department: importedData.department || prev.department,
-        subject: importedData.subject || prev.subject,
+        fullName: importedData.fullName || '',
+        parentName: importedData.parentName || '',
+        email: importedData.email || '',
+        contactNumber: importedData.contactNumber || '',
+        gender: importedData.gender || '',
+        district: importedData.district || '',
+        college: normalizeCollegeName(importedData.college || ''),
+        university: importedData.university || '',
+        degree: importedData.degree || '',
+        department: importedData.department || '',
+        subject: normalizeImportedSubject(importedData.subject || ''),
         session: importedData.session || prev.session,
-        internshipDomain: importedData.internshipDomain || importedData.course || prev.internshipDomain,
+        internshipDomain: importedData.internshipDomain || importedData.course || '',
         internshipMode: importedData.internshipMode || prev.internshipMode,
-        semester: importedData.semester || prev.semester || 'Semester 5',
-        universityRoll: roll,
-        universityRollNo: importedData.universityRollNo || prev.universityRollNo,
-        industrialRegNo: importedData.industrialRegNo || prev.industrialRegNo,
+        semester: importedData.semester || prev.semester,
+        universityRoll: importedRegistrationNumber,
+        universityRollNo: importedData.universityRollNo || '',
+        industrialRegNo: importedData.industrialRegNo || '',
       }));
 
       setIsVerified(true);
+      setPrefillNotice("College record found. Available details have been filled automatically.");
       setStep(2);
     } catch (err: any) {
       console.error("Verification failed:", err);
@@ -250,6 +253,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
     semester: 'Semester 5',
     universityRoll: '',
     universityRollNo: '',
+    industrialRegNo: '',
     internshipDomain: '',
     internshipMode: 'Online',
     password: '',
@@ -257,14 +261,79 @@ export default function Register({ mode = 'public' }: RegisterProps) {
     terms: false
   });
 
+  const [hasAutoFilledDefaults, setHasAutoFilledDefaults] = useState(false);
+
+  const saveSubUserAcademicDefaults = (dataToSave: typeof formData) => {
+    if (!isSubUserStudentMode && !isEmitraStudentMode) return;
+    try {
+      const subUserId = currentUser?.uid || 'default';
+      const academicDefaults = {
+        university: dataToSave.university || '',
+        district: dataToSave.district || '',
+        college: dataToSave.college || '',
+        degree: dataToSave.degree || '',
+        department: dataToSave.department || '',
+        subject: dataToSave.subject || '',
+        session: dataToSave.session || '2023-27',
+        semester: dataToSave.semester || 'Semester 5',
+        internshipDomain: dataToSave.internshipDomain || '',
+        internshipMode: dataToSave.internshipMode || 'Online',
+      };
+      localStorage.setItem(`subuser_academic_defaults_${subUserId}`, JSON.stringify(academicDefaults));
+      localStorage.setItem('subuser_academic_defaults', JSON.stringify(academicDefaults));
+    } catch (e) {
+      console.warn("Failed to save sub-user academic defaults:", e);
+    }
+  };
+
+  useEffect(() => {
+    if (isSubUserStudentMode || isEmitraStudentMode) {
+      try {
+        const subUserId = currentUser?.uid || 'default';
+        const savedRaw = localStorage.getItem(`subuser_academic_defaults_${subUserId}`) || localStorage.getItem('subuser_academic_defaults');
+        if (savedRaw) {
+          const saved = JSON.parse(savedRaw);
+          setFormData(prev => ({
+            ...prev,
+            university: saved.university || prev.university,
+            district: saved.district || prev.district,
+            college: saved.college || prev.college,
+            degree: saved.degree || prev.degree,
+            department: saved.department || prev.department,
+            subject: saved.subject || prev.subject,
+            session: saved.session || prev.session,
+            semester: saved.semester || prev.semester,
+            internshipDomain: saved.internshipDomain || prev.internshipDomain,
+            internshipMode: saved.internshipMode || prev.internshipMode,
+          }));
+          setHasAutoFilledDefaults(true);
+        }
+      } catch (e) {
+        console.warn("Failed to load sub-user academic defaults:", e);
+      }
+    }
+  }, [isSubUserStudentMode, isEmitraStudentMode, currentUser?.uid]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const normalizedValue = name === 'contactNumber' ? normalizePhoneNumber(value) : value;
 
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : normalizedValue
-    }));
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : normalizedValue
+      };
+      if (name === 'district' && prev.district !== value) {
+        updated.college = '';
+      }
+      if (name === 'department' && prev.department !== value) {
+        updated.subject = '';
+      }
+      if (isSubUserStudentMode || isEmitraStudentMode) {
+        saveSubUserAcademicDefaults(updated);
+      }
+      return updated;
+    });
     setError(null);
     if (name === 'email') setEmailError(null);
     if (name === 'contactNumber') setPhoneError(null);
@@ -548,14 +617,18 @@ export default function Register({ mode = 'public' }: RegisterProps) {
       return;
     }
 
+    if (isSubUserStudentMode || isEmitraStudentMode) {
+      saveSubUserAcademicDefaults(formData);
+    }
+
     setLoading(true);
     try {
       const emailVal = normalizeEmail(formData.email);
       const phoneVal = normalizePhoneNumber(formData.contactNumber);
-      const studentAuth = isEmitraStudentMode
-        ? getAuth(getApps().some(app => app.name === 'emitra-student-create-app')
-          ? getApp('emitra-student-create-app')
-          : initializeApp(firebaseConfig, 'emitra-student-create-app'))
+      const studentAuth = isAssistedRegistrationMode
+        ? getAuth(getApps().some(app => app.name === 'assisted-student-create-app')
+          ? getApp('assisted-student-create-app')
+          : initializeApp(firebaseConfig, 'assisted-student-create-app'))
         : auth;
 
       const userCredential = await createUserWithEmailAndPassword(studentAuth, emailVal, formData.password);
@@ -580,11 +653,19 @@ export default function Register({ mode = 'public' }: RegisterProps) {
           semester: formData.semester,
           universityRoll: formData.universityRoll,
           universityRollNo: formData.universityRollNo,
+          industrialRegNo: formData.industrialRegNo,
           internshipDomain: formData.internshipDomain,
           internshipMode: formData.internshipMode || 'Online',
           createdByEmitraId: isEmitraStudentMode ? currentUser?.uid || '' : null,
           createdByEmitraName: isEmitraStudentMode ? emitraProfile?.centerName || '' : null,
-          isPaid: false,
+          createdBySubUserId: isSubUserStudentMode ? currentUser?.uid || '' : null,
+          createdBySubUserName: isSubUserStudentMode ? adminProfile?.fullName || adminProfile?.email || '' : null,
+          isPaid: isSubUserStudentMode,
+          hasPaid: isSubUserStudentMode,
+          paymentStatus: isSubUserStudentMode ? 'success' : 'pending',
+          paymentVerifiedAt: isSubUserStudentMode ? new Date().toISOString() : null,
+          paymentVerifiedBy: isSubUserStudentMode ? currentUser?.uid || '' : null,
+          autoVerifiedBySubUser: isSubUserStudentMode,
           registrationDate: new Date().toISOString(),
           learningHours: 0,
           progress: 0
@@ -593,9 +674,14 @@ export default function Register({ mode = 'public' }: RegisterProps) {
         handleFirestoreError(firestoreErr, OperationType.WRITE, path);
       }
 
-      if (isEmitraStudentMode) {
+      if (isAssistedRegistrationMode) {
         await signOut(studentAuth).catch(() => undefined);
+      }
+
+      if (isEmitraStudentMode) {
         navigate(`/emitra/payment/${user.uid}`);
+      } else if (isSubUserStudentMode) {
+        navigate('/admin-dashboard');
       } else {
         navigate('/payment');
       }
@@ -612,7 +698,6 @@ export default function Register({ mode = 'public' }: RegisterProps) {
   };
 
   const stepsList = [
-    { title: 'Verify', sub: 'Identity Verification', icon: ShieldCheck },
     { title: 'Personal', sub: 'Basic Information', icon: User },
     { title: 'Academic', sub: 'Educational Details', icon: GraduationCap },
     { title: 'Security', sub: 'Account Security', icon: ShieldCheck },
@@ -631,23 +716,20 @@ export default function Register({ mode = 'public' }: RegisterProps) {
   }
 
   const getStepProgressText = () => {
-    if (step === 1) return "10% Completed";
-    if (step === 2) return "30% Completed";
-    if (step === 3) return "55% Completed";
+    if (step === 2) return "25% Completed";
+    if (step === 3) return "50% Completed";
     if (step === 4) return "75% Completed";
     return "95% Completed";
   };
 
   const getStepProgressPercent = () => {
-    if (step === 1) return 10;
-    if (step === 2) return 30;
-    if (step === 3) return 55;
+    if (step === 2) return 25;
+    if (step === 3) return 50;
     if (step === 4) return 75;
     return 95;
   };
 
   const getStepIcon = () => {
-    if (step === 1) return ShieldCheck;
     if (step === 2) return User;
     if (step === 3) return GraduationCap;
     if (step === 4) return ShieldCheck;
@@ -665,34 +747,37 @@ export default function Register({ mode = 'public' }: RegisterProps) {
           <FileText size={24} />
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-none">
-          Student <span className="text-blue-600">Registration</span>
+          {isSubUserStudentMode ? 'Register' : 'Student'} <span className="text-blue-600">{isSubUserStudentMode ? 'Student' : 'Registration'}</span>
         </h1>
         <p className="text-slate-500 font-semibold text-sm sm:text-base leading-relaxed">
-          Complete your registration for the UGC-mandated internship program
+          {isSubUserStudentMode
+            ? 'Create a student account from your dashboard. Payment will be marked verified automatically.'
+            : 'Complete your registration for the UGC-mandated internship program'}
         </p>
       </section>
 
       {/* STEPPER TIMELINE */}
       <section className="max-w-4xl mx-auto px-4 mb-10">
-        <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:overflow-visible sm:mx-0 sm:px-0">
-          <div className="flex items-start justify-start sm:justify-between min-w-[520px] sm:min-w-0 w-full relative z-0">
+        <div className="pb-2">
+          <div className="flex items-start justify-between w-full relative z-0 gap-1 sm:gap-2">
             {stepsList.map((s, i) => {
-              const isCompleted = step > i + 1;
-              const isActive = step === i + 1;
+              const visibleStep = step - 1;
+              const isCompleted = visibleStep > i + 1;
+              const isActive = visibleStep === i + 1;
 
               return (
                 <React.Fragment key={i}>
                   {/* Horizontal connecting lines */}
                   {i > 0 && (
-                    <div className={`flex-1 h-0.5 mx-1 sm:mx-4 self-start mt-[18px] transition-colors duration-500 ${step > i
+                    <div className={`flex-1 h-0.5 mx-1 sm:mx-4 self-start mt-[18px] transition-colors duration-500 ${visibleStep > i
                       ? 'bg-blue-600'
                       : 'border-t-2 border-dashed border-slate-200'
                       }`} />
                   )}
 
                   {/* Step Circle & Description */}
-                  <div className="flex flex-col items-center space-y-2.5 z-10 shrink-0">
-                    <div className={`w-9.5 h-9.5 rounded-full flex items-center justify-center border-2 text-xs font-black shadow-sm transition-all duration-300 ${isCompleted
+                  <div className="flex flex-col items-center space-y-2 z-10 shrink-0 w-16 sm:w-auto">
+                    <div className={`w-8 h-8 sm:w-9.5 sm:h-9.5 rounded-full flex items-center justify-center border-2 text-xs font-black shadow-sm transition-all duration-300 ${isCompleted
                       ? 'bg-blue-600 border-blue-600 text-white'
                       : isActive
                         ? 'bg-blue-600 border-blue-600 text-white scale-105'
@@ -701,7 +786,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                       {i + 1}
                     </div>
                     <div className="text-center">
-                      <span className={`text-[10px] md:text-xs block font-black leading-none ${isActive ? 'text-blue-600' : 'text-slate-700'}`}>
+                      <span className={`text-[9px] sm:text-[10px] md:text-xs block font-black leading-tight ${isActive ? 'text-blue-600' : 'text-slate-700'}`}>
                         {s.title}
                       </span>
                       <span className="text-[9px] text-slate-400 font-bold tracking-tight hidden sm:block mt-0.5">
@@ -728,11 +813,10 @@ export default function Register({ mode = 'public' }: RegisterProps) {
               </div>
               <div className="space-y-0.5">
                 <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">
-                  {step === 1 ? 'Verify Identity' : step === 2 ? 'Personal Information' : step === 3 ? 'Academic Details' : step === 4 ? 'Account Security' : 'Consent Letter'}
+                  {step === 2 ? 'Personal Information' : step === 3 ? 'Academic Details' : step === 4 ? 'Account Security' : 'Consent Letter'}
                 </h3>
                 <p className="text-xs text-slate-450 font-bold leading-none">
-                  {step === 1 && 'Enter your Roll Number and Industrial Reg Number to verify.'}
-                  {step === 2 && 'Review your basic details accurately.'}
+                  {step === 2 && 'Fill your basic details or fetch them from college data.'}
                   {step === 3 && 'Verify your educational track records.'}
                   {step === 4 && 'Choose a password for your account.'}
                   {step === 5 && 'Review your registration details and submit.'}
@@ -749,7 +833,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                 <div className="bg-blue-600 h-full transition-all duration-300" style={{ width: `${getStepProgressPercent()}%` }} />
               </div>
               <span className="bg-blue-50 text-blue-600 font-extrabold px-2.5 py-1 rounded text-xs leading-none">
-                Step {step} of 5
+                Step {step - 1} of 4
               </span>
             </div>
           </div>
@@ -768,6 +852,13 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                 <div className="bg-red-50 border border-red-100 text-red-600 p-4.5 rounded-2xl flex items-center gap-3 text-xs font-bold uppercase tracking-tight">
                   <AlertCircle size={18} className="shrink-0" />
                   {error}
+                </div>
+              )}
+
+              {prefillNotice && (
+                <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 p-4.5 rounded-2xl flex items-center gap-3 text-xs font-bold uppercase tracking-tight">
+                  <CheckCircle2 size={18} className="shrink-0" />
+                  {prefillNotice}
                 </div>
               )}
 
@@ -929,6 +1020,19 @@ export default function Register({ mode = 'public' }: RegisterProps) {
               {/* STEP 3: ACADEMIC DETAILS */}
               {step === 3 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-h-[50vh] overflow-y-auto pr-1">
+
+                  {(isSubUserStudentMode || isEmitraStudentMode) && (
+                    <div className="md:col-span-2 rounded-xl bg-blue-50 border border-blue-200/80 p-3 flex items-center justify-between gap-3 text-blue-900 shadow-sm">
+                      <div className="flex items-center gap-2.5 text-xs font-semibold">
+                        <Sparkles size={16} className="text-blue-600 flex-shrink-0" />
+                        <span>
+                          {hasAutoFilledDefaults
+                            ? "Academic fields auto-selected from your previous registration. You can change any field if needed."
+                            : "Selections made here will be auto-selected by default for your next student registration."}
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-1.5 text-left md:col-span-2">
                     <Label htmlFor="university" className="text-[10px] sm:text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">University *</Label>
@@ -1117,7 +1221,7 @@ export default function Register({ mode = 'public' }: RegisterProps) {
 
           {/* Stepper Navigation Actions */}
           <div className="flex items-center justify-between gap-3 pt-5 border-t border-slate-100">
-            {step > 1 ? (
+            {step > 2 ? (
               <Button
                 variant="outline"
                 onClick={prevStep}
@@ -1144,10 +1248,10 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                 className="h-10 sm:h-11 px-3 sm:px-8 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-wider text-[9px] sm:text-xs shadow-md shadow-blue-500/10 hover:scale-[1.01] transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap"
               >
                 <span className="sm:hidden">
-                  {loading ? 'Processing...' : isEmitraStudentMode ? 'Register' : 'Complete'}
+                  {loading ? 'Processing...' : isAssistedRegistrationMode ? 'Register' : 'Complete'}
                 </span>
                 <span className="hidden sm:inline">
-                  {loading ? 'Processing...' : isEmitraStudentMode ? 'Register Student' : 'Complete Register'}
+                  {loading ? 'Processing...' : isAssistedRegistrationMode ? 'Register Student' : 'Complete Register'}
                 </span>
                 <ArrowRight size={14} className="sm:w-4 sm:h-4" />
               </Button>
@@ -1239,8 +1343,12 @@ export default function Register({ mode = 'public' }: RegisterProps) {
                 <img
                   src="/logo-new.jpeg"
                   alt="InternMitra Logo"
-                  className="h-12 w-auto object-contain rounded-xl bg-white p-1 shadow-sm"
+                  className="h-11 w-auto object-contain rounded-xl"
                 />
+                <div>
+                  <h2 className="text-xl font-black tracking-tight">InternMitra</h2>
+                  <p className="text-slate-500 text-[9px] font-bold uppercase tracking-wider">Bihar's Internship Portal</p>
+                </div>
               </div>
 
               <p className="text-slate-400 leading-relaxed text-xs sm:text-sm font-semibold max-w-sm">

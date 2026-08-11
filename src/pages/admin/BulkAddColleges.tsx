@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../lib/firebase';
 import { collection, getDocs, query, orderBy, writeBatch, doc } from 'firebase/firestore';
+import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { ArrowLeft, Building2, MapPin, Save, HelpCircle, UserPlus, Info, Coins, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Building2, MapPin, Plus, Save, Sparkles, HelpCircle } from 'lucide-react';
 
 interface University {
   id: string;
@@ -79,8 +80,8 @@ export default function BulkAddColleges() {
       return;
     }
 
-    // Split input by newlines only (commas in college names are preserved)
-    const lines = collegesInput.split(/\r?\n/);
+    // Split input by newlines or commas
+    const lines = collegesInput.split(/[\n,]+/);
     const collegeNames = lines
       .map(name => name.trim())
       .filter(name => name.length > 0);
@@ -131,178 +132,144 @@ export default function BulkAddColleges() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-slate-500 font-extrabold text-xs uppercase tracking-wider">Loading Setup Data...</span>
+          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-slate-500 font-bold">Loading setup data...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 text-left font-sans select-none max-w-5xl mx-auto pb-10">
-      
-      {/* Header Bar (Matching UI Screenshot) */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Header and Back navigation */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button
-            type="button"
+          <Button
             onClick={() => navigate('/admin/colleges')}
-            className="h-10 px-4 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-extrabold flex items-center gap-2 cursor-pointer shadow-2xs transition active:scale-95"
+            variant="outline"
+            className="rounded-xl h-10 px-3 flex items-center gap-2 cursor-pointer transition-all hover:bg-slate-100"
           >
             <ArrowLeft size={16} />
-            <span>Back to Colleges</span>
-          </button>
-
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-bold shrink-0 shadow-2xs">
-              <UserPlus size={22} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
-                Bulk Add Colleges
-              </h1>
-              <p className="text-xs font-semibold text-slate-500 mt-0.5">
-                Add multiple colleges to a university and district at once.
-              </p>
-            </div>
+            Back to Colleges
+          </Button>
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <Sparkles className="text-indigo-600 size-6 animate-pulse" />
+              Bulk Add Colleges
+            </h1>
+            <p className="text-xs text-slate-500 font-semibold">
+              Add multiple colleges to a university and district simultaneously.
+            </p>
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSaveBulk} className="space-y-6">
-        
-        {/* Top Card: Dropdowns & Default Price (Matching UI Screenshot) */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+      {/* Main card */}
+      <div className="student-card p-6 bg-white/80 backdrop-blur-md border border-slate-100/50 shadow-xl rounded-3xl">
+        <form onSubmit={handleSaveBulk} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
             {/* Select University */}
             <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-slate-700 font-extrabold text-[10px] uppercase tracking-wider">
-                <Building2 size={14} className="text-blue-600" />
-                <span>SELECT UNIVERSITY <span className="text-rose-500">*</span></span>
-              </div>
-              <div className="relative">
-                <select
-                  value={selectedUniversityId}
-                  onChange={(e) => setSelectedUniversityId(e.target.value)}
-                  className="w-full h-12 px-4 rounded-2xl bg-slate-50/70 border border-slate-200 text-slate-900 text-xs font-bold outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition shadow-inner cursor-pointer appearance-none"
-                  required
-                >
-                  <option value="">Choose University</option>
-                  {universities.map((uni) => (
-                    <option key={uni.id} value={uni.id}>
-                      {uni.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-4 top-4 text-slate-400 pointer-events-none" />
-              </div>
+              <Label className="student-label block mb-1 text-slate-700 font-bold flex items-center gap-1.5">
+                <Building2 size={14} className="text-indigo-500" />
+                Select University <span className="text-rose-500">*</span>
+              </Label>
+              <select
+                value={selectedUniversityId}
+                onChange={(e) => setSelectedUniversityId(e.target.value)}
+                className="student-input h-12 w-full px-4 rounded-2xl border border-slate-200 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 transition-all font-semibold text-sm appearance-none bg-white cursor-pointer"
+                required
+              >
+                <option value="">Choose University</option>
+                {universities.map((uni) => (
+                  <option key={uni.id} value={uni.id}>
+                    {uni.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Select District */}
             <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-slate-700 font-extrabold text-[10px] uppercase tracking-wider">
-                <MapPin size={14} className="text-blue-600" />
-                <span>SELECT DISTRICT <span className="text-rose-500">*</span></span>
-              </div>
-              <div className="relative">
-                <select
-                  value={selectedDistrictId}
-                  onChange={(e) => setSelectedDistrictId(e.target.value)}
-                  className="w-full h-12 px-4 rounded-2xl bg-slate-50/70 border border-slate-200 text-slate-900 text-xs font-bold outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition shadow-inner cursor-pointer appearance-none"
-                  required
-                >
-                  <option value="">Choose District</option>
-                  {districts.map((dist) => (
-                    <option key={dist.id} value={dist.id}>
-                      {dist.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-4 top-4 text-slate-400 pointer-events-none" />
-              </div>
+              <Label className="student-label block mb-1 text-slate-700 font-bold flex items-center gap-1.5">
+                <MapPin size={14} className="text-indigo-500" />
+                Select District <span className="text-rose-500">*</span>
+              </Label>
+              <select
+                value={selectedDistrictId}
+                onChange={(e) => setSelectedDistrictId(e.target.value)}
+                className="student-input h-12 w-full px-4 rounded-2xl border border-slate-200 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 transition-all font-semibold text-sm appearance-none bg-white cursor-pointer"
+                required
+              >
+                <option value="">Choose District</option>
+                {districts.map((dist) => (
+                  <option key={dist.id} value={dist.id}>
+                    {dist.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Price input */}
             <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-slate-700 font-extrabold text-[10px] uppercase tracking-wider">
-                <Coins size={14} className="text-blue-600" />
-                <span>PRICE (₹) <span className="text-rose-500">*</span></span>
-              </div>
+              <Label className="student-label block mb-1 text-slate-700 font-bold">
+                Default Price (₹)
+              </Label>
               <Input
                 type="number"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                className="h-12 rounded-2xl bg-slate-50/70 border-slate-200 text-slate-900 text-xs font-bold focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition shadow-inner"
+                className="student-input h-12 rounded-2xl border border-slate-200 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 transition-all font-semibold text-sm"
                 placeholder="1000"
-                required
               />
             </div>
-
           </div>
-        </div>
 
-        {/* Bottom Card: Colleges List Textarea & Info Alert (Matching UI Screenshot) */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
-          
-          <div className="space-y-3">
+          {/* Colleges Input Area */}
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                COLLEGES LIST <span className="text-rose-500">*</span>
+              <Label className="student-label block text-slate-700 font-bold">
+                Colleges List <span className="text-rose-500">*</span>
               </Label>
-              <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-3 py-1 rounded-full font-extrabold uppercase tracking-wider flex items-center gap-1.5">
-                <HelpCircle size={12} />
-                Separate by new lines
+              <span className="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1">
+                <HelpCircle size={10} />
+                Separate by comma or new lines
               </span>
             </div>
-
-            <div className="relative">
-              <textarea
-                value={collegesInput}
-                onChange={(e) => setCollegesInput(e.target.value)}
-                placeholder="Example:&#10;Government College of Technology&#10;Indira Gandhi Science College, Mahatma Gandhi Institute of Technology&#10;State Engineering College"
-                className="w-full min-h-[220px] p-5 rounded-2xl bg-slate-50/50 border border-slate-200/90 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-xs text-slate-800 placeholder-slate-400 outline-none leading-relaxed resize-none shadow-inner"
-                required
-              />
-              <div className="absolute right-4 bottom-4 text-[10px] font-bold text-slate-400 font-mono">
-                {collegesInput.length} / 2000
-              </div>
-            </div>
-          </div>
-
-          {/* Info Alert Box (Matching UI Screenshot) */}
-          <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-4 flex items-center gap-3 text-xs font-bold text-blue-900 shadow-2xs">
-            <Info size={18} className="text-blue-600 shrink-0" />
-            <span>You can enter multiple college names separated by commas or new lines.</span>
+            <textarea
+              value={collegesInput}
+              onChange={(e) => setCollegesInput(e.target.value)}
+              placeholder="Example:&#10;Government College of Technology&#10;Indira Gandhi Science College, Mahatma Gandhi Institute of Technology&#10;State Engineering College"
+              className="w-full min-h-[220px] p-4 rounded-2xl bg-slate-50/50 border border-slate-200 focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 transition-all font-medium text-sm text-slate-800 placeholder-slate-400 outline-none leading-relaxed"
+              required
+            />
           </div>
 
           {/* Feedback messages */}
           {successMsg && (
-            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-extrabold">
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm font-bold animate-fade-in shadow-sm">
               {successMsg}
             </div>
           )}
           {errorMsg && (
-            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-extrabold">
+            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-800 text-sm font-bold animate-fade-in shadow-sm">
               {errorMsg}
             </div>
           )}
 
-        </div>
-
-        {/* Submit button (Matching UI Screenshot) */}
-        <div className="flex justify-end pt-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="h-12 px-8 rounded-2xl bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2.5 shadow-lg shadow-blue-600/20 active:scale-98 transition cursor-pointer disabled:opacity-50"
-          >
-            <Save size={16} />
-            <span>{saving ? 'Saving Colleges...' : 'Save All Colleges'}</span>
-          </button>
-        </div>
-
-      </form>
+          {/* Submit button */}
+          <div className="flex justify-end pt-2">
+            <Button
+              type="submit"
+              disabled={saving}
+              className="student-button-primary h-12 w-full md:w-auto px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.98] disabled:opacity-50"
+            >
+              <Save size={18} />
+              {saving ? 'Saving colleges...' : 'Save All Colleges'}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

@@ -145,14 +145,6 @@ exports.handler = async (event) => {
       { merge: true }
     );
 
-    // Also update colleges document with credentials info
-    await db.collection('colleges').doc(collegeId).set({
-      hasCredentials: true,
-      generatedEmail: email,
-      generatedPassword: password,
-      credentialsGeneratedAt: now,
-    }, { merge: true });
-
     return json(200, {
       status: 'success',
       created,

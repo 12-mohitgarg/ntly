@@ -242,8 +242,12 @@ export default function Contact() {
                 <img
                   src="/logo-new.jpeg"
                   alt="InternMitra Logo"
-                  className="h-12 w-auto object-contain rounded-xl bg-white p-1 shadow-sm"
+                  className="h-11 w-auto object-contain rounded-xl"
                 />
+                <div>
+                  <h2 className="text-xl font-black tracking-tight">InternMitra</h2>
+                  <p className="text-slate-500 text-[9px] font-bold uppercase tracking-wider">Bihar's Internship Portal</p>
+                </div>
               </div>
 
               <p className="text-slate-400 leading-relaxed text-xs sm:text-sm font-semibold max-w-sm">
