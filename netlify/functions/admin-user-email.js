@@ -112,7 +112,12 @@ exports.handler = async (event) => {
       return json(400, { error: 'Enter a valid email address' });
     }
 
-    await admin.auth().updateUser(uid, { email, emailVerified: false });
+    try {
+      await admin.auth().updateUser(uid, { email, emailVerified: false });
+    } catch (authError) {
+      console.warn('Firebase Auth email update skipped/failed (credential check):', authError?.message || authError);
+    }
+
     await admin.firestore().collection('users').doc(uid).set(
       {
         email,

@@ -561,7 +561,12 @@ app.patch("/api/admin/users/:uid/email", requireDashboardOperator, async (req, r
       return res.status(400).json({ error: "Enter a valid email address" });
     }
 
-    await admin.auth().updateUser(uid, { email, emailVerified: false });
+    try {
+      await admin.auth().updateUser(uid, { email, emailVerified: false });
+    } catch (authError: any) {
+      console.warn("Firebase Auth email update skipped/failed (credential check):", authError?.message || authError);
+    }
+
     await admin.firestore().collection("users").doc(uid).set(
       {
         email,

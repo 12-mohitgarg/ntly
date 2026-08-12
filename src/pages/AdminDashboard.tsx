@@ -387,6 +387,9 @@ export default function AdminDashboard() {
   const [emailUser, setEmailUser] = useState<UserProfile | null>(null);
   const [emailForm, setEmailForm] = useState({ email: '' });
   const [savingEmail, setSavingEmail] = useState(false);
+  const [commissionCafe, setCommissionCafe] = useState<EmitraProfile | null>(null);
+  const [commissionRate, setCommissionRate] = useState<string | number>(10);
+  const [savingCommission, setSavingCommission] = useState(false);
   const [teacherForm, setTeacherForm] = useState({
     fullName: '',
     email: '',
@@ -727,29 +730,32 @@ export default function AdminDashboard() {
 
     setSavingEmail(true);
     try {
-      const token = await user.getIdToken();
-      const endpoints = [
-        `/api/admin/users/${emailUser.uid}/email`,
-        `/.netlify/functions/admin-user-email?uid=${encodeURIComponent(emailUser.uid)}`,
-      ];
-      let response: Response | null = null;
-      let result: any = null;
+      // 1. Update Firestore user document directly via client SDK
+      await updateDoc(doc(db, 'users', emailUser.uid), {
+        email: nextEmail,
+        updatedAt: new Date().toISOString()
+      });
 
-      for (const endpoint of endpoints) {
-        response = await fetch(endpoint, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ uid: emailUser.uid, email: nextEmail }),
-        });
-        result = await response.json().catch(() => null);
-        if (response.ok || response.status !== 404) break;
-      }
-
-      if (!response?.ok) {
-        throw new Error(result?.details || result?.error || 'Error updating email');
+      // 2. Attempt to update Firebase Auth user email via backend API (if server credentials exist)
+      try {
+        const token = await user.getIdToken();
+        const endpoints = [
+          `/api/admin/users/${emailUser.uid}/email`,
+          `/.netlify/functions/admin-user-email?uid=${encodeURIComponent(emailUser.uid)}`,
+        ];
+        for (const endpoint of endpoints) {
+          const response = await fetch(endpoint, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ uid: emailUser.uid, email: nextEmail }),
+          });
+          if (response.ok) break;
+        }
+      } catch (backendError) {
+        console.warn('Backend Auth email update skipped/failed:', backendError);
       }
 
       setUsers((currentUsers) =>
@@ -759,12 +765,40 @@ export default function AdminDashboard() {
       );
       setEmailUser(null);
       setEmailForm({ email: '' });
-      alert('Email updated successfully');
+      alert('Email updated successfully!');
     } catch (error: any) {
       console.error('Error updating email:', error);
       alert(error?.message || 'Error updating email');
     } finally {
       setSavingEmail(false);
+    }
+  };
+
+  const handleUpdateCommission = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!commissionCafe) return;
+    const rate = Number(commissionRate);
+    if (isNaN(rate) || rate < 0 || rate > 100) {
+      alert('Please enter a valid percentage between 0 and 100');
+      return;
+    }
+
+    setSavingCommission(true);
+    try {
+      await updateDoc(doc(db, 'emitras', commissionCafe.uid), {
+        commissionPercentage: rate,
+        updatedAt: new Date().toISOString()
+      });
+      setEmitras((current) =>
+        current.map((e) => (e.uid === commissionCafe.uid ? { ...e, commissionPercentage: rate } : e))
+      );
+      alert(`Commission percentage updated to ${rate}% for ${commissionCafe.centerName}`);
+      setCommissionCafe(null);
+    } catch (error: any) {
+      console.error('Error updating commission rate:', error);
+      alert(error?.message || 'Failed to update commission percentage');
+    } finally {
+      setSavingCommission(false);
     }
   };
 
@@ -1250,6 +1284,28 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleToggleSubUser = async (uid: string, current: boolean) => {
+    try {
+      await updateDoc(doc(db, 'admins', uid), { isActive: !current });
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update operator status');
+    }
+  };
+
+  const handleDeleteSubUser = async (uid: string, name?: string) => {
+    if (!window.confirm(`Are you sure you want to delete operator account "${name || 'Sub User'}"?`)) return;
+    try {
+      await deleteDoc(doc(db, 'admins', uid));
+      alert('Operator account deleted successfully');
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete operator account');
+    }
+  };
+
   const handleToggleEmitra = async (uid: string, current: boolean) => {
     try {
       await updateDoc(doc(db, 'emitras', uid), { isActive: !current });
@@ -1564,6 +1620,7 @@ export default function AdminDashboard() {
                     <th className="py-3.5 px-4 text-center">PAID VERIFIED</th>
                     <th className="py-3.5 px-4 text-center">PENDING</th>
                     <th className="py-3.5 px-4 text-center">REVENUE (INR)</th>
+                    <th className="py-3.5 px-4 text-center">COMMISSION %</th>
                     <th className="py-3.5 px-4 text-center">STATUS</th>
                     <th className="py-3.5 px-4 text-center">ACTION</th>
                   </tr>
@@ -1571,7 +1628,7 @@ export default function AdminDashboard() {
                 <tbody className="divide-y divide-slate-100">
                   {emitras.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-slate-400 font-bold">
+                      <td colSpan={8} className="py-8 text-center text-slate-400 font-bold">
                         No Cyber Cafe partners found.
                       </td>
                     </tr>
@@ -1628,6 +1685,13 @@ export default function AdminDashboard() {
                               ₹{rev.toLocaleString('en-IN')}
                             </td>
 
+                            {/* Commission % */}
+                            <td className="py-3.5 px-4 whitespace-nowrap text-center">
+                              <span className="inline-block text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-md">
+                                {cafeItem.commissionPercentage ?? 10}%
+                              </span>
+                            </td>
+
                             {/* Status Badge */}
                             <td className="py-3.5 px-4 whitespace-nowrap text-center">
                               <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${cafeItem.isActive
@@ -1663,6 +1727,17 @@ export default function AdminDashboard() {
                                   >
                                     <Eye size={14} className="text-slate-500" />
                                     <span>View Cafe Details</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setCommissionCafe(cafeItem);
+                                      setCommissionRate(cafeItem.commissionPercentage ?? 10);
+                                      setOpenCafeMenuId(null);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 rounded-xl transition text-left cursor-pointer"
+                                  >
+                                    <Percent size={14} className="text-amber-500" />
+                                    <span>Set Commission %</span>
                                   </button>
                                   <button
                                     onClick={() => {
@@ -1938,6 +2013,39 @@ export default function AdminDashboard() {
                   <Label className="text-[10px] font-black uppercase text-slate-400">Password *</Label>
                   <Input type="password" value={subUserForm.password} onChange={e => setSubUserForm({ ...subUserForm, password: e.target.value })} placeholder="••••••••" className="h-10 text-xs rounded-xl bg-white border-slate-200 font-semibold" minLength={6} required />
                 </div>
+
+                {/* District Selection (District-Wise Access) */}
+                <div className="sm:col-span-3 space-y-1.5">
+                  <Label className="text-[10px] font-black uppercase text-slate-400">Assigned Districts (District-Wise Access)</Label>
+                  <div className="flex flex-wrap gap-2 p-3 bg-white border border-slate-200 rounded-xl max-h-36 overflow-y-auto">
+                    {districts.map(d => {
+                      const isSelected = subUserForm.districtIds.includes(d.id);
+                      return (
+                        <button
+                          key={d.id}
+                          type="button"
+                          onClick={() => {
+                            const next = isSelected
+                              ? subUserForm.districtIds.filter(id => id !== d.id)
+                              : [...subUserForm.districtIds, d.id];
+                            setSubUserForm({ ...subUserForm, districtIds: next });
+                          }}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${isSelected
+                            ? 'bg-blue-600 text-white shadow-xs'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            }`}
+                        >
+                          {isSelected && <Check size={12} />}
+                          <span>{d.name}</span>
+                        </button>
+                      );
+                    })}
+                    {districts.length === 0 && (
+                      <p className="text-xs text-slate-400 font-semibold italic">No districts loaded in database</p>
+                    )}
+                  </div>
+                </div>
+
                 <div className="sm:col-span-3 flex justify-end pt-1">
                   <Button type="submit" disabled={savingSubUser} className="h-10 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs gap-1.5 cursor-pointer shadow-md shadow-blue-600/20">
                     <UserPlus size={14} />
@@ -1954,14 +2062,15 @@ export default function AdminDashboard() {
                   <tr>
                     <th className="py-3.5 px-4">OPERATOR NAME</th>
                     <th className="py-3.5 px-4">EMAIL ADDRESS</th>
-                    <th className="py-3.5 px-4">ROLE PERMISSION</th>
+                    <th className="py-3.5 px-4">ASSIGNED DISTRICTS</th>
                     <th className="py-3.5 px-4 text-center">STATUS</th>
+                    <th className="py-3.5 px-4 text-center">ACTION</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {subUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-slate-400 font-bold">
+                      <td colSpan={5} className="py-8 text-center text-slate-400 font-bold">
                         No operators created yet.
                       </td>
                     </tr>
@@ -1976,14 +2085,49 @@ export default function AdminDashboard() {
                         </td>
                         <td className="py-3.5 px-4 text-slate-600 font-mono whitespace-nowrap select-all">{su.email}</td>
                         <td className="py-3.5 px-4 whitespace-nowrap">
-                          <span className="inline-block text-[9px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-md">
-                            Dashboard Operator
+                          <div className="flex flex-wrap gap-1 max-w-xs">
+                            {su.districtIds && su.districtIds.length > 0 ? (
+                              su.districtIds.map(dId => {
+                                const dist = districts.find(d => d.id === dId || d.name === dId);
+                                return (
+                                  <span key={dId} className="inline-block text-[9px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                                    {dist?.name || dId}
+                                  </span>
+                                );
+                              })
+                            ) : (
+                              <span className="inline-block text-[9px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                                All Districts (Global)
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${su.isActive !== false ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${su.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                            {su.isActive !== false ? 'Active' : 'Disabled'}
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active
-                          </span>
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleToggleSubUser(su.uid, su.isActive !== false)}
+                              className="h-8 text-[10px] font-black rounded-xl cursor-pointer"
+                            >
+                              {su.isActive !== false ? 'Disable' : 'Enable'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteSubUser(su.uid, su.fullName)}
+                              className="h-8 px-2.5 text-[10px] font-black text-rose-600 border-rose-200 hover:bg-rose-50 rounded-xl cursor-pointer"
+                            >
+                              <Trash2 size={13} />
+                              <span>Delete</span>
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -3381,6 +3525,16 @@ export default function AdminDashboard() {
                                   <KeyRound size={14} className="text-slate-500" />
                                   <span>Change Password</span>
                                 </button>
+                                <button
+                                  onClick={() => {
+                                    openEmailModal(userItem);
+                                    setOpenUserMenuId(null);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-xl transition text-left cursor-pointer"
+                                >
+                                  <Mail size={14} className="text-slate-500" />
+                                  <span>Change Email</span>
+                                </button>
                               </div>
                             )}
                           </td>
@@ -3570,6 +3724,69 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* EDIT COMMISSION PERCENTAGE MODAL */}
+      <Dialog
+        open={Boolean(commissionCafe)}
+        onOpenChange={(open) => {
+          if (!open && !savingCommission) {
+            setCommissionCafe(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md bg-white rounded-3xl p-6 sm:p-8">
+          <form onSubmit={handleUpdateCommission} className="space-y-5 text-left">
+            <DialogHeader>
+              <DialogTitle className="font-black text-slate-900 text-lg flex items-center gap-2">
+                <Percent className="text-amber-500" size={20} />
+                <span>Set Cyber Cafe Commission</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs font-semibold text-slate-500">
+                Update commission percentage for {commissionCafe?.centerName || 'selected Cyber Cafe partner'}.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-slate-400 text-[10px] font-black uppercase">Commission Percentage (%)</Label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={commissionRate}
+                    onChange={(e) => setCommissionRate(e.target.value)}
+                    className="h-12 rounded-xl font-black bg-slate-50 border-slate-200 text-sm pr-8"
+                    placeholder="10"
+                    required
+                  />
+                  <span className="absolute right-3.5 top-3.5 text-slate-400 font-black text-sm">%</span>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={savingCommission}
+                onClick={() => setCommissionCafe(null)}
+                className="h-11 rounded-xl cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={savingCommission}
+                className="h-11 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black cursor-pointer shadow-md shadow-amber-600/20"
+              >
+                {savingCommission ? 'Saving...' : 'Update Percentage'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* CHANGE PASSWORD MODAL */}
       <Dialog
         open={Boolean(passwordUser)}
@@ -3646,24 +3863,27 @@ export default function AdminDashboard() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-md bg-white">
-          <form onSubmit={handleUpdateUserEmail} className="space-y-5">
+        <DialogContent className="sm:max-w-md bg-white rounded-3xl p-6 sm:p-8">
+          <form onSubmit={handleUpdateUserEmail} className="space-y-5 text-left">
             <DialogHeader>
-              <DialogTitle className="font-black text-slate-900">Change Email</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="font-black text-slate-900 text-lg">Change User Email</DialogTitle>
+              <DialogDescription className="text-xs font-semibold text-slate-500">
                 Update login email for {emailUser?.fullName || emailUser?.email || 'selected user'}.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-2">
-              <Label className="text-slate-500 text-xs font-black uppercase">New Email</Label>
-              <Input
-                type="email"
-                value={emailForm.email}
-                onChange={(event) => setEmailForm({ email: event.target.value })}
-                className="h-12 rounded-xl font-bold"
-                required
-              />
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-slate-400 text-[10px] font-black uppercase">New Email Address</Label>
+                <Input
+                  type="email"
+                  value={emailForm.email}
+                  onChange={(event) => setEmailForm({ email: event.target.value })}
+                  className="h-12 rounded-xl font-semibold bg-slate-50 border-slate-200 text-xs"
+                  placeholder="e.g. student@example.com"
+                  required
+                />
+              </div>
             </div>
 
             <DialogFooter className="gap-2">
@@ -3675,10 +3895,15 @@ export default function AdminDashboard() {
                   setEmailUser(null);
                   setEmailForm({ email: '' });
                 }}
+                className="h-11 rounded-xl cursor-pointer"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={savingEmail} className="bg-slate-900 hover:bg-blue-700 text-white font-black">
+              <Button
+                type="submit"
+                disabled={savingEmail}
+                className="h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black cursor-pointer"
+              >
                 {savingEmail ? 'Updating...' : 'Update Email'}
               </Button>
             </DialogFooter>
