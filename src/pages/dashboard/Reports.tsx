@@ -53,7 +53,7 @@ export default function Reports() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
-
+  
   // Form states
   const [selectedAssignmentId, setSelectedAssignmentId] = useState('');
   const [description, setDescription] = useState('');
@@ -200,7 +200,7 @@ export default function Reports() {
       alert('Cloudinary configuration error.');
       return;
     }
-
+      
     setUploading(true);
 
     try {
@@ -273,8 +273,8 @@ export default function Reports() {
   // Filtering submitted reports
   const filteredReports = studentReports.filter(report => {
     const title = getAssignmentTitle(report);
-    return title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.fileName.toLowerCase().includes(searchQuery.toLowerCase());
+    return title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+           report.fileName.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   // Pagination calculations
@@ -291,7 +291,7 @@ export default function Reports() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-
+      
       {/* 1. TOP BANNER */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 border border-white/10 shadow-sm relative overflow-hidden select-none">
         <div className="space-y-3 z-10 flex-1">
@@ -305,7 +305,7 @@ export default function Reports() {
             View your assignment reports, scores, and upload submissions.
           </p>
         </div>
-
+        
         {/* Banner Graphic Illustration */}
         <div className="z-10 flex-shrink-0 flex justify-center md:justify-start">
           <img
@@ -321,7 +321,7 @@ export default function Reports() {
 
       {/* 2. SIMPLIFIED STATS ROW */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 select-none">
-
+        
         {/* Reports Submitted */}
         <div className="bg-white rounded-3xl p-5 border border-gray-200/50 shadow-sm flex flex-col justify-between h-36 relative overflow-hidden">
           <div className="flex items-center gap-4">
@@ -370,7 +370,7 @@ export default function Reports() {
 
       {/* 3. LATEST SUBMISSION & QUICK UPLOAD ACTION */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
+        
         {/* Latest Submission Display */}
         <div className="bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm flex flex-col justify-between min-h-[140px]">
           <div>
@@ -443,7 +443,7 @@ export default function Reports() {
 
       {/* 4. ALL SUBMITTED REPORTS TABLE */}
       <div className="bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm">
-
+        
         {/* Section Header Action Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 mb-6">
           <div className="flex items-center gap-3">
@@ -495,12 +495,12 @@ export default function Reports() {
               <tbody className="divide-y divide-slate-100">
                 {paginatedReports.map((report, idx) => {
                   const idxStr = String(startIndex + idx + 1).padStart(2, '0');
-
+                  
                   return (
                     <tr key={report.id} className="hover:bg-slate-50/30 transition-colors text-sm text-slate-700">
                       {/* Index */}
                       <td className="py-4 px-4 font-bold text-slate-400 w-10">{idxStr}</td>
-
+                      
                       {/* Title */}
                       <td className="py-4 px-4 max-w-xs">
                         <div className="flex items-center gap-3">
@@ -517,7 +517,7 @@ export default function Reports() {
                           </div>
                         </div>
                       </td>
-
+                      
                       {/* Domain */}
                       <td className="py-4 px-4">
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-black uppercase tracking-wide leading-none">
@@ -573,10 +573,11 @@ export default function Reports() {
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`w-8 h-8 rounded-lg font-bold text-xs transition active:scale-95 cursor-pointer ${currentPage === pageNum
+                  className={`w-8 h-8 rounded-lg font-bold text-xs transition active:scale-95 cursor-pointer ${
+                    currentPage === pageNum
                       ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
                       : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
+                  }`}
                 >
                   {pageNum}
                 </button>
@@ -622,7 +623,7 @@ export default function Reports() {
       {showUploadModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden border border-slate-100 shadow-2xl relative animate-scale-up">
-
+            
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-slate-100">
               <div className="flex items-center gap-3">
@@ -719,7 +720,7 @@ export default function Reports() {
                 </button>
               </div>
             </form>
-
+            
           </div>
         </div>
       )}

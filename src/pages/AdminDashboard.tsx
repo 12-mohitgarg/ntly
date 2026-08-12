@@ -70,9 +70,6 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 import { QuizSubmission } from './dashboard/generateTestReport';
-import InternshipReportManager from './admin/InternshipReportManager';
-import AssignmentManager from './admin/AssignmentManager';
-import TestReportManager from './admin/TestReportManager';
 
 interface UserProfile {
   uid: string;
@@ -2936,15 +2933,6 @@ export default function AdminDashboard() {
         );
       })()}
 
-      {/* 8. TEST REPORT VIEW */}
-      {activeTab === 'test-report' && <TestReportManager users={users} />}
-
-      {/* 9. ASSIGNMENT VIEW */}
-      {activeTab === 'assignment' && <AssignmentManager users={users} />}
-
-      {/* 10. INTERNSHIP REPORT VIEW */}
-      {activeTab === 'internship-report' && <InternshipReportManager users={users} />}
-
       {/* 11. COLLEGE EXPORT VIEW */}
       {activeTab === 'college-export' && (
         <div className="space-y-8">
@@ -3724,69 +3712,6 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* EDIT COMMISSION PERCENTAGE MODAL */}
-      <Dialog
-        open={Boolean(commissionCafe)}
-        onOpenChange={(open) => {
-          if (!open && !savingCommission) {
-            setCommissionCafe(null);
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-md bg-white rounded-3xl p-6 sm:p-8">
-          <form onSubmit={handleUpdateCommission} className="space-y-5 text-left">
-            <DialogHeader>
-              <DialogTitle className="font-black text-slate-900 text-lg flex items-center gap-2">
-                <Percent className="text-amber-500" size={20} />
-                <span>Set Cyber Cafe Commission</span>
-              </DialogTitle>
-              <DialogDescription className="text-xs font-semibold text-slate-500">
-                Update commission percentage for {commissionCafe?.centerName || 'selected Cyber Cafe partner'}.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label className="text-slate-400 text-[10px] font-black uppercase">Commission Percentage (%)</Label>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={commissionRate}
-                    onChange={(e) => setCommissionRate(e.target.value)}
-                    className="h-12 rounded-xl font-black bg-slate-50 border-slate-200 text-sm pr-8"
-                    placeholder="10"
-                    required
-                  />
-                  <span className="absolute right-3.5 top-3.5 text-slate-400 font-black text-sm">%</span>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={savingCommission}
-                onClick={() => setCommissionCafe(null)}
-                className="h-11 rounded-xl cursor-pointer"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={savingCommission}
-                className="h-11 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black cursor-pointer shadow-md shadow-amber-600/20"
-              >
-                {savingCommission ? 'Saving...' : 'Update Percentage'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
       {/* CHANGE PASSWORD MODAL */}
       <Dialog
         open={Boolean(passwordUser)}
@@ -4042,6 +3967,69 @@ export default function AdminDashboard() {
               </div>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* EDIT COMMISSION PERCENTAGE MODAL */}
+      <Dialog
+        open={Boolean(commissionCafe)}
+        onOpenChange={(open) => {
+          if (!open && !savingCommission) {
+            setCommissionCafe(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md bg-white rounded-3xl p-6 sm:p-8">
+          <form onSubmit={handleUpdateCommission} className="space-y-5 text-left">
+            <DialogHeader>
+              <DialogTitle className="font-black text-slate-900 text-lg flex items-center gap-2">
+                <Percent className="text-amber-500" size={20} />
+                <span>Set Cyber Cafe Commission</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs font-semibold text-slate-500">
+                Update commission percentage for {commissionCafe?.centerName || 'selected Cyber Cafe partner'}.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-slate-400 text-[10px] font-black uppercase">Commission Percentage (%)</Label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={commissionRate}
+                    onChange={(e) => setCommissionRate(e.target.value)}
+                    className="h-12 rounded-xl font-black bg-slate-50 border-slate-200 text-sm pr-8"
+                    placeholder="10"
+                    required
+                  />
+                  <span className="absolute right-3.5 top-3.5 text-slate-400 font-black text-sm">%</span>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={savingCommission}
+                onClick={() => setCommissionCafe(null)}
+                className="h-11 rounded-xl cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={savingCommission}
+                className="h-11 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black cursor-pointer shadow-md shadow-amber-600/20"
+              >
+                {savingCommission ? 'Saving...' : 'Update Percentage'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

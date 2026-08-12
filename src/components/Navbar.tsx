@@ -41,14 +41,15 @@ export default function Navbar() {
   return (
     <>
       <header
-        className={`sticky top-0 z-50 transition-all duration-300 ${scrolled
-          ? 'bg-white/90 backdrop-blur-xl shadow-md border-b border-slate-200/80 py-2.5'
-          : 'bg-white/80 backdrop-blur-md border-b border-slate-100 py-3.5'
-          }`}
+        className={`sticky top-0 z-50 transition-all duration-300 ${
+          scrolled
+            ? 'bg-white/90 backdrop-blur-xl shadow-md border-b border-slate-200/80 py-2.5'
+            : 'bg-white/80 backdrop-blur-md border-b border-slate-100 py-3.5'
+        }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-14 md:h-16 gap-4">
-
+            
             {/* Clean Logo Only Section */}
             <Link to="/" className="flex items-center gap-2.5 group shrink-0">
               <motion.div
@@ -80,10 +81,11 @@ export default function Navbar() {
                   <Link
                     key={link.name}
                     to={link.path}
-                    className={`relative px-4 py-2 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all duration-200 ${isActive
-                      ? 'text-blue-600 bg-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                      }`}
+                    className={`relative px-4 py-2 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all duration-200 ${
+                      isActive
+                        ? 'text-blue-600 bg-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    }`}
                   >
                     {link.name}
                   </Link>
@@ -222,10 +224,11 @@ export default function Navbar() {
                         key={link.name}
                         to={link.path}
                         onClick={() => setIsOpen(false)}
-                        className={`text-sm font-extrabold px-4 py-3 rounded-xl transition-all flex items-center justify-between ${isActive
-                          ? 'bg-blue-50 text-blue-600 border border-blue-100'
-                          : 'text-slate-700 hover:bg-slate-50'
-                          }`}
+                        className={`text-sm font-extrabold px-4 py-3 rounded-xl transition-all flex items-center justify-between ${
+                          isActive
+                            ? 'bg-blue-50 text-blue-600 border border-blue-100'
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
                       >
                         <span>{link.name}</span>
                         {isActive && <div className="w-2 h-2 rounded-full bg-blue-600" />}
@@ -311,12 +314,11 @@ export default function Navbar() {
                     </Link>
                   </>
                 )}
-              </div >
-            </motion.div >
-          </div >
-        )
-        }
-      </AnimatePresence >
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

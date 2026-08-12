@@ -135,8 +135,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   ];
 
   const isActivePath = (path: string) => {
-    if (path === '/admin-dashboard' && location.pathname === '/admin-dashboard' && !location.search) {
+    if (path === '/admin-dashboard' && location.pathname === '/admin-dashboard' && (!location.search || location.search === '?tab=dashboard')) {
       return true;
+    }
+    const currentTab = new URLSearchParams(location.search).get('tab');
+    if (currentTab && path.includes('?tab=')) {
+      const targetTab = new URLSearchParams(path.split('?')[1]).get('tab');
+      if (currentTab === targetTab) return true;
+      if ((currentTab === 'reports' || currentTab === 'internship-report') && (targetTab === 'reports' || targetTab === 'internship-report')) return true;
+      if ((currentTab === 'student-reports' || currentTab === 'assignment') && (targetTab === 'student-reports' || targetTab === 'assignment')) return true;
+      if ((currentTab === 'test-reports' || currentTab === 'test-report') && (targetTab === 'test-reports' || targetTab === 'test-report')) return true;
     }
     return location.pathname + location.search === path;
   };

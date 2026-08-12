@@ -5,6 +5,7 @@ import { doc, updateDoc, collection, getDocs, query, orderBy } from 'firebase/fi
 import { handleFirestoreError, OperationType } from '../../lib/firebase';
 import {
   DEGREES,
+  INTERNSHIP_DOMAINS,
   SESSIONS,
   SEMESTERS
 } from '../../lib/constants';
@@ -32,12 +33,18 @@ interface Degree {
   subjects: string[];
 }
 
+interface Course {
+  id: string;
+  name: string;
+}
+
 export default function Profile() {
   const { profile, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [degrees, setDegrees] = useState<Degree[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
 
   const [formData, setFormData] = useState({
     fullName: profile?.fullName || '',
@@ -57,7 +64,7 @@ export default function Profile() {
   });
 
   useEffect(() => {
-    fetchDegrees();
+    fetchProfileOptions();
   }, []);
 
   useEffect(() => {
@@ -80,24 +87,38 @@ export default function Profile() {
     });
   }, [profile]);
 
-  const fetchDegrees = async () => {
+  const fetchProfileOptions = async () => {
     try {
       const degreesRef = collection(db, 'degrees');
       const degreesQuery = query(degreesRef, orderBy('name'));
-      const degreesSnapshot = await getDocs(degreesQuery);
+      const coursesRef = collection(db, 'courses');
+      const coursesQuery = query(coursesRef, orderBy('name'));
+      const [degreesSnapshot, coursesSnapshot] = await Promise.all([
+        getDocs(degreesQuery),
+        getDocs(coursesQuery),
+      ]);
       const degreesData = degreesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Degree));
+      const coursesData = coursesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course));
       setDegrees(degreesData);
+      setCourses(coursesData);
     } catch (error) {
-      console.error('Error fetching degrees:', error);
+      console.error('Error fetching profile options:', error);
     }
   };
+
+  const domainOptions = courses.length > 0 ? courses.map((course) => course.name) : INTERNSHIP_DOMAINS;
+  const selectedDomainExists = domainOptions.some((domain) => domain === formData.internshipDomain);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setLoading(true);
     try {
-      await updateDoc(doc(db, 'users', user.uid), formData);
+      await updateDoc(doc(db, 'users', user.uid), {
+        ...formData,
+        course: formData.internshipDomain,
+        updatedAt: new Date().toISOString(),
+      });
       setSuccess(true);
       setIsEditing(false);
       setTimeout(() => setSuccess(false), 3000);
@@ -572,6 +593,32 @@ export default function Profile() {
                       ))}
                     </select>
                   </div>
+                </div>
+              </div>
+
+              {/* SECTION: Internship Program */}
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                  <Sparkles size={12} />
+                  Internship Program
+                </h4>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Internship Domain</label>
+                  <select
+                    value={formData.internshipDomain}
+                    onChange={(e) => setFormData({ ...formData, internshipDomain: e.target.value })}
+                    className="w-full bg-slate-50 text-slate-800 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold outline-none focus:border-blue-500 bg-white cursor-pointer"
+                    required
+                  >
+                    <option value="">Select Domain</option>
+                    {formData.internshipDomain && !selectedDomainExists && (
+                      <option value={formData.internshipDomain}>{formData.internshipDomain}</option>
+                    )}
+                    {domainOptions.map((domain) => (
+                      <option key={domain} value={domain}>{domain}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
