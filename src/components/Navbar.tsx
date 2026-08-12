@@ -62,14 +62,6 @@ export default function Navbar() {
                   alt="InternMitra Logo"
                   className="h-10 md:h-12 w-auto object-contain rounded-xl shadow-sm border border-slate-200/80 transition-shadow group-hover:shadow-md"
                 />
-                <div className="hidden xl:flex flex-col text-left">
-                  <span className="text-sm font-black tracking-tight text-slate-900 leading-none">
-                    Intern<span className="text-blue-600">Mitra</span>
-                  </span>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-tight mt-0.5">
-                    UGC Compliant Portal
-                  </span>
-                </div>
               </motion.div>
             </Link>
 
