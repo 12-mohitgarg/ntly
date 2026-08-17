@@ -26,7 +26,10 @@ import {
   ChevronUp,
   ChevronsLeft,
   ChevronsRight,
-  GraduationCap
+  GraduationCap,
+  Sparkles,
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 import { generateCertificate } from './generateCertificate';
 import { AttendanceEntry } from './generateAttendanceReport';
@@ -366,7 +369,7 @@ export default function LMS() {
 
     return (
       <div className="space-y-6">
-        
+
         {/* 1. Course Active Dark Banner */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 border border-white/10 shadow-sm relative overflow-hidden select-none">
           <div className="space-y-4 z-10 flex-1">
@@ -379,7 +382,7 @@ export default function LMS() {
             <p className="text-xs text-blue-100 max-w-sm leading-relaxed">
               Learn HTML, CSS, JavaScript and build real-world projects from scratch.
             </p>
-            
+
             {/* Progress indicator */}
             <div className="space-y-1.5 pt-2 max-w-xs">
               <div className="flex justify-between text-[11px] font-bold">
@@ -430,7 +433,7 @@ export default function LMS() {
 
         {/* 2. Course Metric Row Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 select-none">
-          
+
           {/* Completed Lectures */}
           <div className="bg-white rounded-3xl p-5 border border-gray-200/50 shadow-sm flex items-center gap-4 relative overflow-hidden">
             <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center border border-green-100 flex-shrink-0">
@@ -491,7 +494,7 @@ export default function LMS() {
 
         {/* 3. COURSE MODULES ACCORDION LIST */}
         <div className="bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm">
-          
+
           {/* Header Action Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 mb-6">
             <div>
@@ -506,25 +509,22 @@ export default function LMS() {
               <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 text-xs font-bold text-slate-600">
                 <button
                   onClick={() => { setFilterType('all'); setCurrentLmsPage(1); }}
-                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                    filterType === 'all' ? 'bg-white text-slate-800 shadow-sm' : 'hover:bg-slate-100/50'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${filterType === 'all' ? 'bg-white text-slate-800 shadow-sm' : 'hover:bg-slate-100/50'
+                    }`}
                 >
                   All
                 </button>
                 <button
                   onClick={() => { setFilterType('completed'); setCurrentLmsPage(1); }}
-                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                    filterType === 'completed' ? 'bg-white text-slate-800 shadow-sm' : 'hover:bg-slate-100/50'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${filterType === 'completed' ? 'bg-white text-slate-800 shadow-sm' : 'hover:bg-slate-100/50'
+                    }`}
                 >
                   Completed
                 </button>
                 <button
                   onClick={() => { setFilterType('pending'); setCurrentLmsPage(1); }}
-                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                    filterType === 'pending' ? 'bg-white text-slate-800 shadow-sm' : 'hover:bg-slate-100/50'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${filterType === 'pending' ? 'bg-white text-slate-800 shadow-sm' : 'hover:bg-slate-100/50'
+                    }`}
                 >
                   Pending
                 </button>
@@ -583,7 +583,7 @@ export default function LMS() {
                             <div className="w-16 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xs flex-shrink-0">
                               Day {idxStr}
                             </div>
-                            
+
                             {/* Play Icon Box */}
                             <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-150 flex items-center justify-center text-slate-400">
                               <PlayCircle size={15} />
@@ -666,11 +666,10 @@ export default function LMS() {
                           <button
                             key={pageNum}
                             onClick={() => setCurrentLmsPage(pageNum)}
-                            className={`w-8 h-8 rounded-lg font-bold text-xs transition active:scale-95 cursor-pointer ${
-                              currentLmsPage === pageNum
+                            className={`w-8 h-8 rounded-lg font-bold text-xs transition active:scale-95 cursor-pointer ${currentLmsPage === pageNum
                                 ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
                                 : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                            }`}
+                              }`}
                           >
                             {pageNum}
                           </button>
@@ -796,9 +795,9 @@ export default function LMS() {
         onClick={() => navigate(-1)}
         className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-900 transition"
       >
-        <ChevronLeft size={16}/> Back to Dashboard
+        <ChevronLeft size={16} /> Back to Dashboard
       </button>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {dailyVideos.map((v) => {
           const isDone = hasAttendanceForDay(v.day);
@@ -809,16 +808,16 @@ export default function LMS() {
                 <h3 className="font-bold text-sm text-gray-900">Day {v.day} - {v.title}</h3>
                 <span className="text-[10px] text-slate-400 font-semibold block mt-1">Course recording</span>
               </div>
-              
+
               <div className="flex items-center justify-between gap-4 pt-2">
                 {isDone ? (
                   <span className="text-[10px] font-bold text-green-600">Attendance Marked</span>
                 ) : !isUnlocked ? (
-                  <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Lock size={10}/> Locked</span>
+                  <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Lock size={10} /> Locked</span>
                 ) : (
                   <span className="text-[10px] font-bold text-blue-600">Pending Watch</span>
                 )}
-                
+
                 {isUnlocked ? (
                   <button
                     onClick={() => navigate(`recordings/${v.day}`)}
@@ -842,55 +841,352 @@ export default function LMS() {
     </div>
   );
 
+  const getYouTubeEmbedUrl = (v?: any) => {
+    if (!v) return '';
+    const origin = typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : '';
+    const jsApiParams = `?enablejsapi=1${origin ? `&origin=${origin}` : ''}`;
+
+    let videoId = '';
+    if (v.youtubeVideoId && /^[a-zA-Z0-9_-]{11}$/.test(v.youtubeVideoId)) {
+      videoId = v.youtubeVideoId;
+    } else {
+      const url = v.youtubeUrl || '';
+      const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|live\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+      const match = url.match(regex);
+      if (match && match[1]) {
+        videoId = match[1];
+      } else if (/^[a-zA-Z0-9_-]{11}$/.test(url.trim())) {
+        videoId = url.trim();
+      }
+    }
+    return videoId ? `https://www.youtube.com/embed/${videoId}${jsApiParams}` : '';
+  };
+
   const VideoPlayerView = () => {
     const { dayNum } = useParams();
     const video = dailyVideos.find(v => String(v.day) === String(dayNum));
     const [isVideoCompleted, setIsVideoCompleted] = useState(false);
-    
+    const [watchTimeLeft, setWatchTimeLeft] = useState<number>(120); // 2 minutes = 120s
+
+    // Security Verification Modal States
+    const [showVerifyModal, setShowVerifyModal] = useState(false);
+    const [mathNum1, setMathNum1] = useState(0);
+    const [mathNum2, setMathNum2] = useState(0);
+    const [userAnswer, setUserAnswer] = useState('');
+    const [sliderVal, setSliderVal] = useState(0);
+    const [declarationChecked, setDeclarationChecked] = useState(false);
+    const [verifyError, setVerifyError] = useState('');
+
     useEffect(() => {
-      if(video) setIsVideoCompleted(hasAttendanceForDay(video.day));
+      if (video) {
+        const completed = hasAttendanceForDay(video.day);
+        setIsVideoCompleted(completed);
+        if (completed) {
+          setWatchTimeLeft(0);
+        } else {
+          setWatchTimeLeft(120);
+        }
+      }
     }, [video]);
 
+    useEffect(() => {
+      if (isVideoCompleted || watchTimeLeft <= 0) return;
+
+      const timer = setInterval(() => {
+        setWatchTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }, [isVideoCompleted, watchTimeLeft]);
+
+    const openVerificationModal = () => {
+      const n1 = Math.floor(Math.random() * 15) + 5;
+      const n2 = Math.floor(Math.random() * 15) + 5;
+      setMathNum1(n1);
+      setMathNum2(n2);
+      setUserAnswer('');
+      setSliderVal(0);
+      setDeclarationChecked(false);
+      setVerifyError('');
+      setShowVerifyModal(true);
+    };
+
+    const handleVerifySubmit = () => {
+      setVerifyError('');
+      if (parseInt(userAnswer.trim()) !== mathNum1 + mathNum2) {
+        setVerifyError(`Incorrect calculation! Please answer: What is ${mathNum1} + ${mathNum2}?`);
+        return;
+      }
+      if (sliderVal < 100) {
+        setVerifyError('Please drag the slider all the way to 100% to confirm.');
+        return;
+      }
+      if (!declarationChecked) {
+        setVerifyError('Please check the verification declaration box.');
+        return;
+      }
+      setShowVerifyModal(false);
+      markVideoAsDone(video);
+    };
+
+    const minutes = Math.floor(watchTimeLeft / 60);
+    const seconds = watchTimeLeft % 60;
+    const formattedTimer = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    const progressPercent = Math.min(100, Math.round(((120 - watchTimeLeft) / 120) * 100));
+
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 select-none font-sans">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-900 transition select-none"
+          className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-500 hover:text-slate-900 transition cursor-pointer"
         >
-          <ChevronLeft size={16}/> Back
+          <ChevronLeft size={16} /> Back to Dashboard
         </button>
-        
+
         {/* Youtube player wrapper */}
-        <div className="aspect-video bg-black rounded-[2rem] overflow-hidden shadow-lg border border-slate-200">
+        <div className="aspect-video bg-black rounded-[2rem] overflow-hidden shadow-2xl border border-slate-800 relative group">
           <iframe
-            className="w-full h-full"
-            src={`https://www.youtube.com/embed/${video?.youtubeUrl?.split('v=')[1]}`}
+            className="w-full h-full border-0"
+            src={getYouTubeEmbedUrl(video)}
+            title={video?.title || 'Video Player'}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
           />
         </div>
 
-        {/* Video completion & attendance banner */}
-        <div className="bg-white p-6 rounded-3xl border border-gray-200/50 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 select-none">
-          <div>
-            <h4 className="font-black text-slate-900 text-base">{video?.title}</h4>
-            <p className="text-xs text-slate-400 mt-1 font-semibold">Web training session recording logs</p>
-          </div>
+        {/* ULTRA-PREMIUM ATTENDANCE & WATCH PROGRESS CONTAINER */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-[2.25rem] p-6 sm:p-8 shadow-2xl border border-indigo-500/20">
 
-          {!isVideoCompleted ? (
-            <button
-              onClick={() => markVideoAsDone(video)}
-              className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition shadow-sm active:scale-95 cursor-pointer flex items-center justify-center gap-2"
-            >
-              <CheckCircle2 size={16} />
-              Mark Attendance
-            </button>
-          ) : (
-            <div className="flex items-center gap-2 text-green-600 font-extrabold text-sm bg-green-50 border border-green-200 px-6 py-3 rounded-2xl">
-              <CheckCircle2 size={16} />
-              Attendance Verified
+          {/* Background Ambient Blur Blobs */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 space-y-6">
+
+            {/* Header info */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
+              <div className="space-y-1.5 text-left">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                    <Zap size={12} className="text-blue-400 fill-blue-400" />
+                    Day {video?.day} Session Recording
+                  </span>
+                  {isVideoCompleted && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      Verified
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-snug">
+                  {video?.title || `Day ${video?.day} Video Lecture`}
+                </h3>
+                <p className="text-xs text-slate-400 font-semibold">
+                  Official internship session log. Watch the training video to record your daily attendance.
+                </p>
+              </div>
+
+              {/* Day Badge */}
+              <div className="hidden sm:flex flex-col items-center justify-center bg-slate-800/60 border border-slate-700/60 px-5 py-3 rounded-2xl shrink-0">
+                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">LECTURE DAY</span>
+                <span className="text-2xl font-black text-white leading-none mt-1">DAY {video?.day}</span>
+              </div>
             </div>
-          )}
+
+            {/* Attendance Action Section */}
+            {isVideoCompleted ? (
+              /* ALREADY MARKED STATE */
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2.5xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 backdrop-blur-md text-left">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/10">
+                    <ShieldCheck size={26} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-black text-white">Attendance Verified & Submitted</h4>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                    </div>
+                    <p className="text-xs text-emerald-300 font-semibold mt-0.5">
+                      Your presence for Day {video?.day} is officially recorded in the portal.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 bg-emerald-500/20 text-emerald-300 font-black text-xs px-5 py-3 rounded-xl border border-emerald-500/30 shrink-0">
+                  <CheckCircle2 size={16} />
+                  Recorded
+                </div>
+              </div>
+            ) : (
+              /* NOT MARKED YET - WATCH TIMER & BUTTON */
+              <div className="space-y-5 text-left">
+
+                {/* Watch Time Progress Bar */}
+                <div className="bg-slate-950/70 border border-slate-800 p-4.5 rounded-2.5xl space-y-2.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-extrabold">
+                    <span className="flex items-center gap-1.5 text-slate-300">
+                      <Clock size={14} className="text-blue-400 animate-pulse" />
+                      Minimum Watch Requirement (2:00 Mins)
+                    </span>
+                    <span className={`inline-flex items-center gap-1.5 font-mono text-xs px-3 py-1 rounded-lg border w-fit ${watchTimeLeft === 0
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 font-bold'
+                        : 'bg-blue-500/20 text-blue-400 border-blue-500/30 animate-pulse font-bold'
+                      }`}>
+                      {watchTimeLeft === 0
+                        ? '✨ Watch Goal Completed (100%)'
+                        : `⏱️ ${formattedTimer} remaining (${progressPercent}%)`}
+                    </span>
+                  </div>
+
+                  {/* Visual Progress Bar track */}
+                  <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 transition-all duration-500 shadow-sm"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+
+                  <p className="text-[11px] text-slate-400 font-semibold leading-normal">
+                    {watchTimeLeft > 0
+                      ? 'Please watch the video session above. The attendance button will unlock automatically once 2 minutes are completed.'
+                      : 'Great job! You have satisfied the 2-minute watch duration. Click the button below to solve the active security verification challenge.'}
+                  </p>
+                </div>
+
+                {/* Interactive Action Button */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-1">
+                  <div className="text-xs text-slate-400 font-bold flex items-center gap-2">
+                    <Sparkles size={16} className="text-amber-400 shrink-0" />
+                    <span>Attendance requires Security Verification Challenge completion.</span>
+                  </div>
+
+                  <button
+                    disabled={watchTimeLeft > 0 || attendanceSaving}
+                    onClick={openVerificationModal}
+                    className={`w-full sm:w-auto px-9 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer shadow-xl ${watchTimeLeft > 0
+                        ? 'bg-slate-800 text-slate-400 border border-slate-700/60 cursor-not-allowed opacity-80'
+                        : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-600 hover:from-emerald-400 hover:to-blue-500 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-95 animate-pulse'
+                      }`}
+                  >
+                    {watchTimeLeft > 0 ? (
+                      <>
+                        <Lock size={16} className="text-slate-400" />
+                        <span>Watching Video ({formattedTimer} Left)...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck size={18} className="stroke-[2.5]" />
+                        <span>{attendanceSaving ? 'Submitting...' : 'Verify Attendance '}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+              </div>
+            )}
+
+          </div>
         </div>
+
+        {/* SECURITY VERIFICATION POPUP MODAL */}
+        {showVerifyModal && (
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-white text-left relative overflow-hidden animate-in fade-in zoom-in duration-200">
+
+              <button
+                onClick={() => setShowVerifyModal(false)}
+                className="absolute top-5 right-5 text-slate-400 hover:text-white transition cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-md tracking-wider">
+                    Anti-Cheat Security Check
+                  </span>
+                </div>
+                <h3 className="text-xl font-black text-white">Attendance Verification Challenge</h3>
+                <p className="text-xs text-slate-400 font-semibold">
+                  Complete these 3 security checks to prove active presence for Day {video?.day}.
+                </p>
+              </div>
+
+              {verifyError && (
+                <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3 rounded-xl text-xs font-bold flex items-center gap-2">
+                  <X size={16} className="shrink-0" />
+                  {verifyError}
+                </div>
+              )}
+
+              <div className="space-y-4">
+
+                {/* 1. Math Verification */}
+                <div className="bg-slate-950/80 border border-slate-800 p-4 rounded-2xl space-y-2">
+                  <label className="text-xs text-slate-300 font-bold block">
+                    1. Security Math Answer: What is <span className="text-emerald-400 font-extrabold text-sm">{mathNum1} + {mathNum2}</span>?
+                  </label>
+                  <input
+                    type="number"
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    placeholder="Enter total sum here..."
+                    className="w-full bg-slate-900 border border-slate-700/60 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                {/* 2. Drag to Unlock Slider */}
+                <div className="bg-slate-950/80 border border-slate-800 p-4 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                    <span>2. Drag Slider to Unlock:</span>
+                    <span className={sliderVal === 100 ? 'text-emerald-400 font-black' : 'text-slate-400'}>
+                      {sliderVal === 100 ? '✓ 100% Unlocked' : `${sliderVal}%`}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={sliderVal}
+                    onChange={(e) => setSliderVal(Number(e.target.value))}
+                    className="w-full accent-emerald-500 cursor-pointer h-2.5 bg-slate-800 rounded-lg"
+                  />
+                </div>
+
+                {/* 3. Declaration Checkbox */}
+                <label className="flex items-start gap-3 cursor-pointer bg-slate-950/80 border border-slate-800 p-4 rounded-2xl">
+                  <input
+                    type="checkbox"
+                    checked={declarationChecked}
+                    onChange={(e) => setDeclarationChecked(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600 shrink-0"
+                  />
+                  <span className="text-xs font-semibold text-slate-300 leading-snug">
+                    3. I hereby certify that I watched the Day {video?.day} session video carefully and am submitting my active attendance.
+                  </span>
+                </label>
+
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-2 flex gap-3">
+                <button
+                  onClick={handleVerifySubmit}
+                  disabled={attendanceSaving}
+                  className="w-full py-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-600 hover:from-emerald-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg transition active:scale-95 cursor-pointer disabled:opacity-50"
+                >
+                  {attendanceSaving ? 'Submitting...' : 'Verify & Record Attendance'}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
       </div>
     );
   };
@@ -901,7 +1197,7 @@ export default function LMS() {
     const percentage = Math.round(((currentQuestionIndex) / courseTest.questions.length) * 100);
     return (
       <div className="max-w-2xl mx-auto p-4 md:p-8 space-y-6 select-none">
-        
+
         {/* Test title & progress bar */}
         <div className="bg-white rounded-3xl p-6 border border-gray-200/50 shadow-sm space-y-4">
           <div className="flex justify-between items-center text-xs font-black text-slate-400 uppercase tracking-wider">
@@ -918,7 +1214,7 @@ export default function LMS() {
           <h2 className="text-lg md:text-xl font-black text-slate-900 leading-snug">
             {q.questionText}
           </h2>
-          
+
           {/* Options grid */}
           <div className="space-y-3">
             {q.options.map((opt: string, i: number) => {
@@ -927,15 +1223,13 @@ export default function LMS() {
                 <button
                   key={i}
                   onClick={() => handleSelectOption(q.id, i)}
-                  className={`block w-full text-left p-4 rounded-2xl border text-sm transition-all active:scale-99 cursor-pointer font-bold ${
-                    isSelected
+                  className={`block w-full text-left p-4 rounded-2xl border text-sm transition-all active:scale-99 cursor-pointer font-bold ${isSelected
                       ? 'bg-blue-50 text-blue-600 border-blue-500 shadow-sm'
                       : 'border-slate-200 text-slate-700 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300'
-                  }`}
+                    }`}
                 >
-                  <span className={`inline-flex w-6 h-6 rounded-full border items-center justify-center text-xs mr-3 font-extrabold ${
-                    isSelected ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 text-slate-400 bg-white'
-                  }`}>
+                  <span className={`inline-flex w-6 h-6 rounded-full border items-center justify-center text-xs mr-3 font-extrabold ${isSelected ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 text-slate-400 bg-white'
+                    }`}>
                     {String.fromCharCode(65 + i)}
                   </span>
                   {opt}
@@ -998,15 +1292,15 @@ export default function LMS() {
                 <X size={14} />
               </button>
             </div>
-            
+
             <p className="text-xs font-semibold text-slate-500 leading-relaxed text-center">
               Scan QR to pay ₹248 final assessment evaluation fee and unlock the graded test.
             </p>
-            
+
             <div className="rounded-2xl border border-slate-100 p-2 bg-slate-50/50 flex justify-center">
               <img src="/payment/shivam-qr.jpeg" alt="Payment QR" className="w-48 h-auto object-contain rounded-xl shadow-sm" />
             </div>
-            
+
             <button
               onClick={() => setShowPaymentModal(false)}
               className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-wider transition active:scale-95 cursor-pointer"
@@ -1030,7 +1324,7 @@ export default function LMS() {
                 <X size={14} />
               </button>
             </div>
-            
+
             <div className="space-y-2">
               <div className="w-16 h-16 rounded-full bg-green-50 border border-green-200 text-green-600 flex items-center justify-center mx-auto shadow-sm">
                 <GraduationCap size={28} />
