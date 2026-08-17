@@ -580,6 +580,48 @@ app.patch("/api/admin/users/:uid/email", requireDashboardOperator, async (req, r
   }
 });
 
+app.patch("/api/admin/users/:uid/profile", requireDashboardOperator, async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const profileData = req.body;
+
+    if (!uid) {
+      return res.status(400).json({ error: "User id is required" });
+    }
+
+    const allowedFields = [
+      "fullName", "gender", "parentName", "contactNumber", "district", "college", 
+      "university", "degree", "department", "subject", "session", "semester", 
+      "universityRoll", "universityRollNo", "industrialRegNo", "internshipDomain", 
+      "internshipMode"
+    ];
+
+    const updateData: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (profileData[key] !== undefined) {
+        updateData[key] = profileData[key];
+      }
+    }
+
+    updateData.updatedAt = new Date().toISOString();
+
+    if (updateData.internshipDomain !== undefined) {
+      updateData.course = updateData.internshipDomain;
+    }
+
+    await admin.firestore().collection("users").doc(uid).set(updateData, { merge: true });
+
+    res.json({ status: "success", profile: updateData });
+  } catch (error: any) {
+    console.error("Profile update error:", error);
+    res.status(500).json({
+      error: "Error updating user profile",
+      details: error?.message || "Unknown error",
+    });
+  }
+});
+
+
 app.post("/api/admin/college-users", requireAdmin, async (req, res) => {
   try {
     const collegeId = String(req.body.collegeId || "").trim();

@@ -46,6 +46,12 @@
   status = 200
 
 [[redirects]]
+  from = "/api/admin/users/:uid/profile"
+  to = "/.netlify/functions/admin-user-profile?uid=:uid"
+  status = 200
+
+
+[[redirects]]
   from = "/api/admin/college-users"
   to = "/.netlify/functions/admin-college-user"
   status = 200

@@ -13,7 +13,17 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { auth } from '../lib/firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { CURRENT_INTERNSHIP_START_DATE, INTERNSHIP_DOMAINS } from '../lib/constants';
+import {
+  CURRENT_INTERNSHIP_START_DATE,
+  INTERNSHIP_DOMAINS,
+  DEPARTMENTS,
+  DISTRICTS,
+  UNIVERSITIES,
+  GENDERS,
+  DEGREES,
+  SESSIONS,
+  SEMESTERS
+} from '../lib/constants';
 import { jsPDF } from 'jspdf';
 import { backupFirestore } from "./backupFirestore";
 import autoTable from 'jspdf-autotable';
@@ -51,6 +61,8 @@ interface UserProfile {
   paymentStatus?: string;
   paymentVerifiedAt?: string;
   universityRoll?: string;
+  universityRollNo?: string;
+  industrialRegNo?: string;
   createdBySubUserId?: string | null;
   createdBySubUserName?: string | null;
   registrationDate: string;
@@ -212,6 +224,29 @@ export default function AdminDashboard() {
   const [emailUser, setEmailUser] = useState<UserProfile | null>(null);
   const [emailForm, setEmailForm] = useState({ email: '' });
   const [savingEmail, setSavingEmail] = useState(false);
+  const [profileUser, setProfileUser] = useState<UserProfile | null>(null);
+  const [profileForm, setProfileForm] = useState({
+    fullName: '',
+    gender: 'Male',
+    parentName: '',
+    contactNumber: '',
+    district: '',
+    college: '',
+    university: 'Lalit Narayan Mithila University, Darbhanga',
+    degree: 'UG',
+    department: '',
+    subject: '',
+    session: '',
+    semester: '',
+    universityRoll: '',
+    universityRollNo: '',
+    industrialRegNo: '',
+    internshipDomain: '',
+    internshipMode: 'Online'
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [degreesList, setDegreesList] = useState<any[]>([]);
   const [teacherForm, setTeacherForm] = useState({
     fullName: '',
     email: '',
@@ -417,10 +452,12 @@ export default function AdminDashboard() {
       const paymentsRef = collection(db, 'payments');
 
       if (isSubUser) {
-        const [usersSnapshot, paymentsSnapshot, collegesSnapshot] = await Promise.all([
+        const [usersSnapshot, paymentsSnapshot, collegesSnapshot, coursesSnapshot, degreesSnapshot] = await Promise.all([
           getDocs(usersQuery),
           getDocs(paymentsRef),
-          getDocs(collection(db, 'colleges'))
+          getDocs(collection(db, 'colleges')),
+          getDocs(collection(db, 'courses')).catch(() => null),
+          getDocs(collection(db, 'degrees')).catch(() => null)
         ]);
 
         const usersData = usersSnapshot.docs
@@ -432,6 +469,12 @@ export default function AdminDashboard() {
         setPayments(paymentsSnapshot.docs
           .map(doc => doc.data() as Payment)
           .filter((payment) => currentUserIds.has(payment.userId)));
+        if (coursesSnapshot) {
+          setCourses(coursesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+        }
+        if (degreesSnapshot) {
+          setDegreesList(degreesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+        }
         return;
       }
 
@@ -457,7 +500,9 @@ export default function AdminDashboard() {
         studentReportsResult,
         fallbackReportsResult,
         testSubmissionsResult,
-        courseTestsResult
+        courseTestsResult,
+        coursesSnapshot,
+        degreesSnapshot
       ] = await Promise.all([
         getDocs(usersQuery),
         getDocs(paymentsRef),
@@ -483,6 +528,14 @@ export default function AdminDashboard() {
         }),
         getDocs(collection(db, 'courseTests')).catch((error) => {
           console.error('Error fetching courseTests:', error);
+          return null;
+        }),
+        getDocs(collection(db, 'courses')).catch((error) => {
+          console.error('Error fetching courses:', error);
+          return null;
+        }),
+        getDocs(collection(db, 'degrees')).catch((error) => {
+          console.error('Error fetching degrees:', error);
           return null;
         })
       ]);
@@ -522,6 +575,14 @@ export default function AdminDashboard() {
         .map(doc => ({ id: doc.id, ...doc.data() } as District))
         .sort((a, b) => a.name.localeCompare(b.name));
       setDistricts(districtsData);
+
+      if (coursesSnapshot) {
+        setCourses(coursesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+      }
+
+      if (degreesSnapshot) {
+        setDegreesList(degreesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+      }
 
       const notificationsData = notificationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
       setNotifications(notificationsData);
@@ -1326,6 +1387,161 @@ export default function AdminDashboard() {
     }
   };
 
+  const openProfileModal = (student: UserProfile) => {
+    setProfileUser(student);
+    setProfileForm({
+      fullName: student.fullName || '',
+      gender: student.gender || 'Male',
+      parentName: student.parentName || '',
+      contactNumber: student.contactNumber || '',
+      district: student.district || '',
+      college: student.college || '',
+      university: student.university || 'Lalit Narayan Mithila University, Darbhanga',
+      degree: student.degree || 'UG',
+      department: student.department || '',
+      subject: student.subject || '',
+      session: student.session || '',
+      semester: student.semester || '',
+      universityRoll: student.universityRoll || '',
+      universityRollNo: student.universityRollNo || '',
+      industrialRegNo: student.industrialRegNo || '',
+      internshipDomain: student.internshipDomain || '',
+      internshipMode: student.internshipMode || 'Online'
+    });
+  };
+
+  const handleUpdateUserProfile = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!profileUser || !user) return;
+
+    const {
+      fullName,
+      gender,
+      parentName,
+      contactNumber,
+      district,
+      college,
+      university,
+      degree,
+      department,
+      subject,
+      session,
+      semester,
+      internshipDomain
+    } = profileForm;
+
+    if (!fullName.trim()) {
+      alert('Full Legal Name is required');
+      return;
+    }
+    if (!gender) {
+      alert('Gender is required');
+      return;
+    }
+    if (!parentName.trim()) {
+      alert('Father / Mother / Guardian Name is required');
+      return;
+    }
+
+    // Normalize phone number (extract digits, handle 91 prefix)
+    const digits = contactNumber.replace(/\D/g, '');
+    let finalPhone = digits;
+    if (digits.length === 12 && digits.startsWith('91')) {
+      finalPhone = digits.slice(2);
+    } else if (digits.length > 10) {
+      finalPhone = digits.slice(0, 10);
+    }
+
+    if (!/^[6-9]\d{9}$/.test(finalPhone)) {
+      alert('Please enter a valid 10-digit mobile number starting with 6-9');
+      return;
+    }
+
+    if (!district) {
+      alert('District is required');
+      return;
+    }
+    if (!college) {
+      alert('College is required');
+      return;
+    }
+    if (!university) {
+      alert('University is required');
+      return;
+    }
+    if (!degree) {
+      alert('Degree is required');
+      return;
+    }
+    if (!department) {
+      alert('Department is required');
+      return;
+    }
+    if (!subject.trim()) {
+      alert('Subject is required');
+      return;
+    }
+    if (!session) {
+      alert('Session is required');
+      return;
+    }
+    if (!semester) {
+      alert('Semester is required');
+      return;
+    }
+    if (!internshipDomain) {
+      alert('Internship Domain is required');
+      return;
+    }
+
+    const finalForm = {
+      ...profileForm,
+      contactNumber: finalPhone
+    };
+
+    setSavingProfile(true);
+    try {
+      const token = await user.getIdToken();
+      const endpoints = [
+        `/api/admin/users/${profileUser.uid}/profile`,
+        `/.netlify/functions/admin-user-profile?uid=${encodeURIComponent(profileUser.uid)}`,
+      ];
+      let response: Response | null = null;
+      let result: any = null;
+
+      for (const endpoint of endpoints) {
+        response = await fetch(endpoint, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ uid: profileUser.uid, ...finalForm }),
+        });
+        result = await response.json().catch(() => null);
+        if (response.ok || response.status !== 404) break;
+      }
+
+      if (!response?.ok) {
+        throw new Error(result?.details || result?.error || 'Error updating profile');
+      }
+
+      setUsers((currentUsers) =>
+        currentUsers.map((student) =>
+          student.uid === profileUser.uid ? { ...student, ...finalForm } : student
+        )
+      );
+      setProfileUser(null);
+      alert('Profile updated successfully');
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      alert(error?.message || 'Error updating profile');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   const getGroupName = (value?: string) => value?.trim() || 'Not specified';
 
   const successfulUserIds = new Set(
@@ -1916,6 +2132,310 @@ export default function AdminDashboard() {
               </Button>
               <Button type="submit" disabled={savingEmail} className="bg-slate-900 hover:bg-blue-700 text-white font-black">
                 {savingEmail ? 'Updating...' : 'Update Email'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(profileUser)}
+        onOpenChange={(open) => {
+          if (!open && !savingProfile) {
+            setProfileUser(null);
+          }
+        }}
+      >
+        <DialogContent className="w-[95vw] md:max-w-4xl sm:max-w-2xl bg-white max-h-[90vh] overflow-y-auto rounded-[2rem] p-4 sm:p-8">
+          <form onSubmit={handleUpdateUserProfile} className="space-y-6">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-black text-slate-900 flex items-center justify-between uppercase italic">
+                <span>Edit Profile</span>
+              </DialogTitle>
+              <DialogDescription className="font-bold text-slate-500">
+                Update user profile details for {profileUser?.fullName || profileUser?.email || 'selected user'}.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Personal Details Section */}
+              <div className="space-y-4 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+                <h3 className="font-black text-xs uppercase tracking-wider text-blue-600 border-b pb-2">Personal Details</h3>
+                
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-slate-500 text-[10px] font-black uppercase">Full Legal Name</Label>
+                    <Input
+                      type="text"
+                      value={profileForm.fullName}
+                      onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
+                      className="h-10 rounded-xl font-bold bg-white"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-slate-500 text-[10px] font-black uppercase">Gender</Label>
+                    <select
+                      value={profileForm.gender}
+                      onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value })}
+                      className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none"
+                    >
+                      {GENDERS.map((gender) => (
+                        <option key={gender} value={gender}>{gender}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-slate-500 text-[10px] font-black uppercase">Father / Mother / Guardian Name</Label>
+                    <Input
+                      type="text"
+                      value={profileForm.parentName}
+                      onChange={(e) => setProfileForm({ ...profileForm, parentName: e.target.value })}
+                      className="h-10 rounded-xl font-bold bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-slate-500 text-[10px] font-black uppercase">Contact Number</Label>
+                    <Input
+                      type="text"
+                      value={profileForm.contactNumber}
+                      onChange={(e) => setProfileForm({ ...profileForm, contactNumber: e.target.value })}
+                      className="h-10 rounded-xl font-bold bg-white"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Academic Details Section */}
+              <div className="space-y-4 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+                <h3 className="font-black text-xs uppercase tracking-wider text-indigo-600 border-b pb-2">Academic Details</h3>
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-slate-500 text-[10px] font-black uppercase">University</Label>
+                    <select
+                      value={profileForm.university}
+                      onChange={(e) => setProfileForm({ ...profileForm, university: e.target.value })}
+                      className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none"
+                    >
+                      {UNIVERSITIES.map((uni) => (
+                        <option key={uni} value={uni}>{uni}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-slate-500 text-[10px] font-black uppercase">District</Label>
+                    <select
+                      value={profileForm.district}
+                      onChange={(e) => {
+                        const newDistrict = e.target.value;
+                        setProfileForm({
+                          ...profileForm,
+                          district: newDistrict,
+                          college: ''
+                        });
+                      }}
+                      className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none"
+                    >
+                      <option value="">Select District</option>
+                      {districts.map((d) => (
+                        <option key={d.id} value={d.name}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-slate-500 text-[10px] font-black uppercase">College</Label>
+                    <select
+                      value={profileForm.college}
+                      onChange={(e) => setProfileForm({ ...profileForm, college: e.target.value })}
+                      className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none"
+                    >
+                      <option value="">Select College</option>
+                      {colleges
+                        .filter((c) => {
+                          const dist = districts.find((d) => d.name === profileForm.district);
+                          return dist ? c.districtId === dist.id : false;
+                        })
+                        .map((c) => (
+                          <option key={c.id} value={c.name}>{c.name}</option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-slate-500 text-[10px] font-black uppercase">Degree</Label>
+                      <select
+                        value={profileForm.degree}
+                        onChange={(e) => setProfileForm({ ...profileForm, degree: e.target.value })}
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none"
+                      >
+                        {DEGREES.map((deg) => (
+                          <option key={deg} value={deg}>{deg}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-slate-500 text-[10px] font-black uppercase">Department</Label>
+                      <select
+                        value={profileForm.department}
+                        onChange={(e) => {
+                          const newDept = e.target.value;
+                          setProfileForm({
+                            ...profileForm,
+                            department: newDept,
+                            subject: ''
+                          });
+                        }}
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none"
+                      >
+                        <option value="">Select Department</option>
+                        {degreesList.length > 0
+                          ? degreesList.map((d) => (
+                              <option key={d.id} value={d.name}>{d.name}</option>
+                            ))
+                          : Object.keys(DEPARTMENTS).map((name) => (
+                              <option key={name} value={name}>{name}</option>
+                            ))
+                        }
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-slate-500 text-[10px] font-black uppercase">Subject</Label>
+                      <select
+                        value={profileForm.subject}
+                        onChange={(e) => setProfileForm({ ...profileForm, subject: e.target.value })}
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none"
+                      >
+                        <option value="">Select Subject</option>
+                        {(() => {
+                          const matchedDegree = degreesList.find(d => d.name === profileForm.department);
+                          const subjects = matchedDegree?.subjects || DEPARTMENTS[profileForm.department] || [];
+                          return subjects.map((sub: string) => (
+                            <option key={sub} value={sub}>{sub}</option>
+                          ));
+                        })()}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-slate-500 text-[10px] font-black uppercase">Session</Label>
+                      <select
+                        value={profileForm.session}
+                        onChange={(e) => setProfileForm({ ...profileForm, session: e.target.value })}
+                        className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none"
+                      >
+                        <option value="">Select Session</option>
+                        {SESSIONS.map((sess) => (
+                          <option key={sess} value={sess}>{sess}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-slate-500 text-[10px] font-black uppercase">Semester</Label>
+                    <select
+                      value={profileForm.semester}
+                      onChange={(e) => setProfileForm({ ...profileForm, semester: e.target.value })}
+                      className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none"
+                    >
+                      <option value="">Select Semester</option>
+                      {SEMESTERS.map((sem) => (
+                        <option key={sem} value={sem}>{sem}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-slate-500 text-[10px] font-black uppercase">Univ Reg No</Label>
+                      <Input
+                        type="text"
+                        value={profileForm.universityRoll}
+                        onChange={(e) => setProfileForm({ ...profileForm, universityRoll: e.target.value })}
+                        className="h-10 rounded-xl font-bold bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-slate-500 text-[10px] font-black uppercase">Univ Roll No</Label>
+                      <Input
+                        type="text"
+                        value={profileForm.universityRollNo}
+                        onChange={(e) => setProfileForm({ ...profileForm, universityRollNo: e.target.value })}
+                        className="h-10 rounded-xl font-bold bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-slate-500 text-[10px] font-black uppercase">Industrial Reg No</Label>
+                      <Input
+                        type="text"
+                        value={profileForm.industrialRegNo}
+                        onChange={(e) => setProfileForm({ ...profileForm, industrialRegNo: e.target.value })}
+                        className="h-10 rounded-xl font-bold bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Internship Section */}
+            <div className="space-y-4 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+              <h3 className="font-black text-xs uppercase tracking-wider text-emerald-600 border-b pb-2">Internship Program Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-slate-500 text-[10px] font-black uppercase">Internship Domain</Label>
+                  <select
+                    value={profileForm.internshipDomain}
+                    onChange={(e) => setProfileForm({ ...profileForm, internshipDomain: e.target.value })}
+                    className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none"
+                    required
+                  >
+                    <option value="">Select Domain</option>
+                    {(courses.length > 0 ? courses.map(c => c.name) : INTERNSHIP_DOMAINS).map((domain) => (
+                      <option key={domain} value={domain}>{domain}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-slate-500 text-[10px] font-black uppercase">Internship Mode</Label>
+                  <select
+                    value={profileForm.internshipMode}
+                    onChange={(e) => setProfileForm({ ...profileForm, internshipMode: e.target.value })}
+                    className="w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold outline-none"
+                  >
+                    <option value="Online">Online</option>
+                    <option value="Offline">Offline</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 border-t pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={savingProfile}
+                onClick={() => setProfileUser(null)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={savingProfile} className="bg-blue-600 hover:bg-blue-700 text-white font-black">
+                {savingProfile ? 'Saving...' : 'Save Profile Changes'}
               </Button>
             </DialogFooter>
           </form>
@@ -2943,6 +3463,15 @@ export default function AdminDashboard() {
                                 >
                                   <Mail size={14} />
                                   Change Email
+                                </button>
+
+                                <button
+                                  onClick={() => openProfileModal(user)}
+                                  className="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                                  title="Edit Profile"
+                                >
+                                  <Users size={14} />
+                                  Edit Profile
                                 </button>
 
                               </div>
