@@ -369,6 +369,7 @@ export default function Dashboard() {
     { name: 'Assignments', path: '/dashboard/assignments', icon: FileCheck },
     { name: 'Certifications', path: '/dashboard/certs', icon: Award },
     { name: 'Reports', path: '/dashboard/reports', icon: FileText },
+    { name: 'Internship Logbook', path: '/dashboard/internship-logbook', icon: ClipboardList },
     { name: 'Messages', path: '/dashboard/messages', icon: MessageSquare, badge: unreadMessagesCount || undefined },
     { name: 'Help & Support', path: '/dashboard/help', icon: HelpCircle },
   ];

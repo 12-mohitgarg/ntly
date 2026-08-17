@@ -107,9 +107,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     {
       category: 'REPORTS & EXPORTS',
       items: [
-        { title: 'Test Report', path: '/admin-dashboard?tab=test-report', icon: FileCheck },
-        { title: 'Assignment', path: '/admin-dashboard?tab=assignment', icon: ClipboardList },
-        { title: 'Course Internship Reports', path: '/admin-dashboard?tab=internship-report', icon: FileText },
+        { title: 'Test Report', path: '/admin-dashboard?tab=test-reports', icon: FileCheck },
+        { title: 'Assignment', path: '/admin-dashboard?tab=student-reports', icon: ClipboardList },
+        { title: 'Course Internship Reports', path: '/admin-dashboard?tab=reports', icon: FileText },
         { title: 'College Export', path: '/admin-dashboard?tab=college-export', icon: Download }
       ]
     },
