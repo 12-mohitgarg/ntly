@@ -114,13 +114,13 @@ function CollegeRoute({ children }: { children: React.ReactNode }) {
 function AppContent() {
   const location = useLocation();
   const hideNavbar = location.pathname.startsWith('/dashboard') ||
-                     location.pathname.startsWith('/admin') ||
-                     location.pathname.startsWith('/emitra-dashboard') ||
-                     location.pathname.startsWith('/college-dashboard') ||
-                     location.pathname.startsWith('/emitra/payment') ||
-                     location.pathname.startsWith('/emitra/register-student') ||
-                     location.pathname.startsWith('/admin/register-student') ||
-                     location.pathname === '/admin-dashboard';
+    location.pathname.startsWith('/admin') ||
+    location.pathname.startsWith('/emitra-dashboard') ||
+    location.pathname.startsWith('/college-dashboard') ||
+    location.pathname.startsWith('/emitra/payment') ||
+    location.pathname.startsWith('/emitra/register-student') ||
+    location.pathname.startsWith('/admin/register-student') ||
+    location.pathname === '/admin-dashboard';
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans selection:bg-blue-100 selection:text-blue-900">

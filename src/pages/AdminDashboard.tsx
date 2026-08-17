@@ -287,7 +287,7 @@ export default function AdminDashboard() {
   const [teachersPerPage, setTeachersPerPage] = useState(10);
   const [subUsersPage, setSubUsersPage] = useState(1);
   const [subUsersPerPage, setSubUsersPerPage] = useState(10);
-    const collegeCountsMap = users.reduce<Record<string, number>>((acc, u) => {
+  const collegeCountsMap = users.reduce<Record<string, number>>((acc, u) => {
     const col = u.college?.trim() || 'Unknown College';
     acc[col] = (acc[col] || 0) + 1;
     return acc;
@@ -1549,28 +1549,28 @@ export default function AdminDashboard() {
   );
 
   const collegeCompleteReportMap = reportFilteredUsers.reduce<Record<string, CollegeCompleteReport>>((acc, student) => {
-      const college = getGroupName(student.college);
-      const university = getGroupName(student.university);
-      const key = `${college}__${university}`;
+    const college = getGroupName(student.college);
+    const university = getGroupName(student.university);
+    const key = `${college}__${university}`;
 
-      if (!acc[key]) {
-        acc[key] = {
-          college,
-          university,
-          totalStudents: 0,
-          totalPayments: 0,
-          pendingPayments: 0,
-          totalRevenue: 0,
-        };
-      }
+    if (!acc[key]) {
+      acc[key] = {
+        college,
+        university,
+        totalStudents: 0,
+        totalPayments: 0,
+        pendingPayments: 0,
+        totalRevenue: 0,
+      };
+    }
 
-      const paymentSuccess = isUserSuccessful(student);
-      acc[key].totalStudents += 1;
-      acc[key].totalPayments += paymentSuccess ? 1 : 0;
-      acc[key].pendingPayments += paymentSuccess ? 0 : 1;
-      acc[key].totalRevenue += getUserSuccessfulPaymentAmount(student);
-      return acc;
-    }, {});
+    const paymentSuccess = isUserSuccessful(student);
+    acc[key].totalStudents += 1;
+    acc[key].totalPayments += paymentSuccess ? 1 : 0;
+    acc[key].pendingPayments += paymentSuccess ? 0 : 1;
+    acc[key].totalRevenue += getUserSuccessfulPaymentAmount(student);
+    return acc;
+  }, {});
 
   const collegeCompleteReport: CollegeCompleteReport[] = Object.keys(collegeCompleteReportMap)
     .map((key) => collegeCompleteReportMap[key])
@@ -3386,541 +3386,539 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="college-wise" className="space-y-8 mt-4">
-      {activeTab === 'college-wise' && (() => {
-        const totalCollegesCount = Object.keys(collegeCountsMap).length || 18;
-        const totalStudentsCount = users.length || 152;
-        const activeCollegesCount = Object.values(collegeCountsMap).filter(c => (c as number) > 0).length || 16;
-        const avgStudentsPerCollege = totalCollegesCount > 0 ? (totalStudentsCount / totalCollegesCount).toFixed(2) : '8.44';
+            {activeTab === 'college-wise' && (() => {
+              const totalCollegesCount = Object.keys(collegeCountsMap).length || 18;
+              const totalStudentsCount = users.length || 152;
+              const activeCollegesCount = Object.values(collegeCountsMap).filter(c => (c as number) > 0).length || 16;
+              const avgStudentsPerCollege = totalCollegesCount > 0 ? (totalStudentsCount / totalCollegesCount).toFixed(2) : '8.44';
 
-        const filteredColleges = Object.entries(collegeCountsMap)
-          .filter(([name]) => !collegeSearchQuery || name.toLowerCase().includes(collegeSearchQuery.toLowerCase()))
-          .sort((a, b) => {
-            if (collegeSortOrder === 'high-to-low') return (b[1] as number) - (a[1] as number);
-            if (collegeSortOrder === 'low-to-high') return (a[1] as number) - (b[1] as number);
-            return a[0].localeCompare(b[0]);
-          });
+              const filteredColleges = Object.entries(collegeCountsMap)
+                .filter(([name]) => !collegeSearchQuery || name.toLowerCase().includes(collegeSearchQuery.toLowerCase()))
+                .sort((a, b) => {
+                  if (collegeSortOrder === 'high-to-low') return (b[1] as number) - (a[1] as number);
+                  if (collegeSortOrder === 'low-to-high') return (a[1] as number) - (b[1] as number);
+                  return a[0].localeCompare(b[0]);
+                });
 
-        const collegeStartIndex = (collegePage - 1) * collegePerPage;
-        const paginatedColleges = filteredColleges.slice(collegeStartIndex, collegeStartIndex + collegePerPage);
-        const totalCollegePages = Math.max(1, Math.ceil(filteredColleges.length / collegePerPage));
+              const collegeStartIndex = (collegePage - 1) * collegePerPage;
+              const paginatedColleges = filteredColleges.slice(collegeStartIndex, collegeStartIndex + collegePerPage);
+              const totalCollegePages = Math.max(1, Math.ceil(filteredColleges.length / collegePerPage));
 
-        return (
-          <div className="space-y-8">
-            
-            {/* Title Header & Export Report Button */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight flex items-center gap-2">
-                  <span>College Wise Registration Breakdown</span>
-                  <span className="text-blue-500 text-base font-normal">ⓘ</span>
-                </h1>
-                <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
-                  Full distribution of enrolled students per college
-                </p>
-              </div>
+              return (
+                <div className="space-y-8">
 
-              <Button
-                onClick={() => {
-                  const exportData = filteredColleges.map(([name, count], idx) => ({
-                    'S.No.': idx + 1,
-                    'College Name': name,
-                    'Total Students': count,
-                    'Status': (count as number) > 0 ? 'Active' : 'No Students'
-                  }));
-                  const worksheet = XLSX.utils.json_to_sheet(exportData);
-                  const workbook = XLSX.utils.book_new();
-                  XLSX.utils.book_append_sheet(workbook, worksheet, 'College Breakdown');
-                  XLSX.writeFile(workbook, `College_Registration_Breakdown_${Date.now()}.xlsx`);
-                }}
-                className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black gap-2 shadow-md shadow-blue-600/20 cursor-pointer shrink-0"
-              >
-                <Download size={15} />
-                <span>Export Report</span>
-              </Button>
-            </div>
+                  {/* Title Header & Export Report Button */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                      <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight flex items-center gap-2">
+                        <span>College Wise Registration Breakdown</span>
+                        <span className="text-blue-500 text-base font-normal">ⓘ</span>
+                      </h1>
+                      <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
+                        Full distribution of enrolled students per college
+                      </p>
+                    </div>
 
-            {/* 4 STAT SUMMARY CARDS */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              
-              {/* Card 1: TOTAL COLLEGES */}
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">TOTAL COLLEGES</p>
-                  <h3 className="text-3xl font-black text-slate-900 mt-1">{totalCollegesCount}</h3>
-                  <p className="text-[11px] font-bold text-slate-400 mt-1">Associated Colleges</p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
-                  <Building2 size={22} />
-                </div>
-              </div>
-
-              {/* Card 2: TOTAL STUDENTS */}
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">TOTAL STUDENTS</p>
-                  <h3 className="text-3xl font-black text-slate-900 mt-1">{totalStudentsCount}</h3>
-                  <p className="text-[11px] font-bold text-slate-400 mt-1">Total Enrolled Students</p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
-                  <Users size={22} />
-                </div>
-              </div>
-
-              {/* Card 3: ACTIVE COLLEGES */}
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">ACTIVE COLLEGES</p>
-                  <h3 className="text-3xl font-black text-slate-900 mt-1">{activeCollegesCount}</h3>
-                  <p className="text-[11px] font-bold text-slate-400 mt-1">With Enrollments</p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
-                  <ShieldCheck size={22} />
-                </div>
-              </div>
-
-              {/* Card 4: AVG. STUDENTS/COLLEGE */}
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">AVG. STUDENTS/COLLEGE</p>
-                  <h3 className="text-3xl font-black text-slate-900 mt-1">{avgStudentsPerCollege}</h3>
-                  <p className="text-[11px] font-bold text-slate-400 mt-1">Average Enrollment</p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
-                  <TrendingUp size={22} />
-                </div>
-              </div>
-
-            </div>
-
-            {/* MAIN COLLEGE CARDS CONTAINER */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-              
-              {/* SEARCH & SORT BAR */}
-              <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-                
-                {/* Search College Input */}
-                <div className="relative w-full lg:max-w-md">
-                  <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
-                  <input
-                    type="text"
-                    value={collegeSearchQuery}
-                    onChange={(e) => {
-                      setCollegeSearchQuery(e.target.value);
-                      setCollegePage(1);
-                    }}
-                    placeholder="Search college name..."
-                    className="w-full h-11 pl-10 pr-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 outline-none transition-all shadow-2xs"
-                  />
-                  {collegeSearchQuery && (
-                    <button onClick={() => { setCollegeSearchQuery(''); setCollegePage(1); }} className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 cursor-pointer">
-                      <X size={15} />
-                    </button>
-                  )}
-                </div>
-
-                {/* Sort Dropdown, Per Page Selector & Filters Button */}
-                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-                  
-                  {/* Items Per Page Selector */}
-                  <div className="flex items-center gap-2 bg-slate-50/70 border border-slate-200/80 px-3.5 py-2 rounded-2xl text-xs font-bold text-slate-700 shadow-2xs">
-                    <span className="text-slate-400">Show:</span>
-                    <select
-                      value={collegePerPage}
-                      onChange={(e) => {
-                        setCollegePerPage(Number(e.target.value));
-                        setCollegePage(1);
+                    <Button
+                      onClick={() => {
+                        const exportData = filteredColleges.map(([name, count], idx) => ({
+                          'S.No.': idx + 1,
+                          'College Name': name,
+                          'Total Students': count,
+                          'Status': (count as number) > 0 ? 'Active' : 'No Students'
+                        }));
+                        const worksheet = XLSX.utils.json_to_sheet(exportData);
+                        const workbook = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(workbook, worksheet, 'College Breakdown');
+                        XLSX.writeFile(workbook, `College_Registration_Breakdown_${Date.now()}.xlsx`);
                       }}
-                      className="bg-transparent font-black text-slate-900 outline-none cursor-pointer"
+                      className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black gap-2 shadow-md shadow-blue-600/20 cursor-pointer shrink-0"
                     >
-                      <option value={12}>12 / page</option>
-                      <option value={25}>25 / page</option>
-                      <option value={50}>50 / page</option>
-                      <option value={100}>100 / page</option>
-                    </select>
+                      <Download size={15} />
+                      <span>Export Report</span>
+                    </Button>
                   </div>
 
-                  <div className="flex items-center gap-2 bg-slate-50/70 border border-slate-200/80 px-3.5 py-2 rounded-2xl text-xs font-bold text-slate-700 shadow-2xs">
-                    <span className="text-slate-400">Sort by:</span>
-                    <select
-                      value={collegeSortOrder}
-                      onChange={(e) => {
-                        setCollegeSortOrder(e.target.value);
-                        setCollegePage(1);
-                      }}
-                      className="bg-transparent font-black text-slate-900 outline-none cursor-pointer"
-                    >
-                      <option value="high-to-low">Total Students (High to Low)</option>
-                      <option value="low-to-high">Total Students (Low to High)</option>
-                      <option value="alphabetical">College Name (A-Z)</option>
-                    </select>
+                  {/* 4 STAT SUMMARY CARDS */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+                    {/* Card 1: TOTAL COLLEGES */}
+                    <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">TOTAL COLLEGES</p>
+                        <h3 className="text-3xl font-black text-slate-900 mt-1">{totalCollegesCount}</h3>
+                        <p className="text-[11px] font-bold text-slate-400 mt-1">Associated Colleges</p>
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+                        <Building2 size={22} />
+                      </div>
+                    </div>
+
+                    {/* Card 2: TOTAL STUDENTS */}
+                    <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">TOTAL STUDENTS</p>
+                        <h3 className="text-3xl font-black text-slate-900 mt-1">{totalStudentsCount}</h3>
+                        <p className="text-[11px] font-bold text-slate-400 mt-1">Total Enrolled Students</p>
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+                        <Users size={22} />
+                      </div>
+                    </div>
+
+                    {/* Card 3: ACTIVE COLLEGES */}
+                    <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">ACTIVE COLLEGES</p>
+                        <h3 className="text-3xl font-black text-slate-900 mt-1">{activeCollegesCount}</h3>
+                        <p className="text-[11px] font-bold text-slate-400 mt-1">With Enrollments</p>
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
+                        <ShieldCheck size={22} />
+                      </div>
+                    </div>
+
+                    {/* Card 4: AVG. STUDENTS/COLLEGE */}
+                    <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">AVG. STUDENTS/COLLEGE</p>
+                        <h3 className="text-3xl font-black text-slate-900 mt-1">{avgStudentsPerCollege}</h3>
+                        <p className="text-[11px] font-bold text-slate-400 mt-1">Average Enrollment</p>
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
+                        <TrendingUp size={22} />
+                      </div>
+                    </div>
+
                   </div>
 
-                  <Button
-                    variant="outline"
-                    className="h-11 px-4 rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold gap-2 cursor-pointer shadow-2xs"
-                  >
-                    <Filter size={15} className="text-blue-600" />
-                    <span>Filters</span>
-                    <ChevronDown size={12} className="text-slate-400" />
-                  </Button>
-                </div>
+                  {/* MAIN COLLEGE CARDS CONTAINER */}
+                  <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
 
-              </div>
+                    {/* SEARCH & SORT BAR */}
+                    <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
 
-              {/* 3-COLUMN COLLEGE CARDS GRID (12 Per Page) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {paginatedColleges.length === 0 ? (
-                  <div className="col-span-full py-12 text-center text-slate-400 font-bold">
-                    No colleges matching "{collegeSearchQuery}".
-                  </div>
-                ) : (
-                  paginatedColleges.map(([collegeName, count]) => (
-                    <div
-                      key={collegeName}
-                      className="p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-blue-300 hover:shadow-md transition-all duration-200 flex items-center justify-between gap-4"
-                    >
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
-                          <GraduationCap size={20} />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs font-black text-slate-900 leading-snug truncate">
-                            {collegeName}
-                          </h4>
-                          <p className="text-[10px] font-bold text-slate-400 mt-0.5">
-                            Associated College
-                          </p>
-                        </div>
+                      {/* Search College Input */}
+                      <div className="relative w-full lg:max-w-md">
+                        <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
+                        <input
+                          type="text"
+                          value={collegeSearchQuery}
+                          onChange={(e) => {
+                            setCollegeSearchQuery(e.target.value);
+                            setCollegePage(1);
+                          }}
+                          placeholder="Search college name..."
+                          className="w-full h-11 pl-10 pr-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 outline-none transition-all shadow-2xs"
+                        />
+                        {collegeSearchQuery && (
+                          <button onClick={() => { setCollegeSearchQuery(''); setCollegePage(1); }} className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 cursor-pointer">
+                            <X size={15} />
+                          </button>
+                        )}
                       </div>
 
-                      <span className="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200/80 px-3.5 py-1.5 rounded-xl shrink-0">
-                        {count}
-                      </span>
+                      {/* Sort Dropdown, Per Page Selector & Filters Button */}
+                      <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
+
+                        {/* Items Per Page Selector */}
+                        <div className="flex items-center gap-2 bg-slate-50/70 border border-slate-200/80 px-3.5 py-2 rounded-2xl text-xs font-bold text-slate-700 shadow-2xs">
+                          <span className="text-slate-400">Show:</span>
+                          <select
+                            value={collegePerPage}
+                            onChange={(e) => {
+                              setCollegePerPage(Number(e.target.value));
+                              setCollegePage(1);
+                            }}
+                            className="bg-transparent font-black text-slate-900 outline-none cursor-pointer"
+                          >
+                            <option value={12}>12 / page</option>
+                            <option value={25}>25 / page</option>
+                            <option value={50}>50 / page</option>
+                            <option value={100}>100 / page</option>
+                          </select>
+                        </div>
+
+                        <div className="flex items-center gap-2 bg-slate-50/70 border border-slate-200/80 px-3.5 py-2 rounded-2xl text-xs font-bold text-slate-700 shadow-2xs">
+                          <span className="text-slate-400">Sort by:</span>
+                          <select
+                            value={collegeSortOrder}
+                            onChange={(e) => {
+                              setCollegeSortOrder(e.target.value);
+                              setCollegePage(1);
+                            }}
+                            className="bg-transparent font-black text-slate-900 outline-none cursor-pointer"
+                          >
+                            <option value="high-to-low">Total Students (High to Low)</option>
+                            <option value="low-to-high">Total Students (Low to High)</option>
+                            <option value="alphabetical">College Name (A-Z)</option>
+                          </select>
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          className="h-11 px-4 rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold gap-2 cursor-pointer shadow-2xs"
+                        >
+                          <Filter size={15} className="text-blue-600" />
+                          <span>Filters</span>
+                          <ChevronDown size={12} className="text-slate-400" />
+                        </Button>
+                      </div>
+
                     </div>
-                  ))
-                )}
-              </div>
 
-              {/* PAGINATION FOOTER */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100">
-                <p className="text-xs font-bold text-slate-500 italic">
-                  Showing {filteredColleges.length === 0 ? 0 : collegeStartIndex + 1} to {Math.min(collegeStartIndex + collegePerPage, filteredColleges.length)} of {filteredColleges.length} colleges
-                </p>
+                    {/* 3-COLUMN COLLEGE CARDS GRID (12 Per Page) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {paginatedColleges.length === 0 ? (
+                        <div className="col-span-full py-12 text-center text-slate-400 font-bold">
+                          No colleges matching "{collegeSearchQuery}".
+                        </div>
+                      ) : (
+                        paginatedColleges.map(([collegeName, count]) => (
+                          <div
+                            key={collegeName}
+                            className="p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-blue-300 hover:shadow-md transition-all duration-200 flex items-center justify-between gap-4"
+                          >
+                            <div className="flex items-center gap-3.5 min-w-0">
+                              <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+                                <GraduationCap size={20} />
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="text-xs font-black text-slate-900 leading-snug truncate">
+                                  {collegeName}
+                                </h4>
+                                <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+                                  Associated College
+                                </p>
+                              </div>
+                            </div>
 
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    disabled={collegePage === 1}
-                    onClick={() => setCollegePage(p => p - 1)}
-                    variant="outline"
-                    className="w-8 h-8 p-0 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer disabled:opacity-40"
-                  >
-                    <ChevronLeft size={16} />
-                  </Button>
+                            <span className="text-xs font-black text-blue-700 bg-blue-50 border border-blue-200/80 px-3.5 py-1.5 rounded-xl shrink-0">
+                              {count}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
 
-                  {[...Array(totalCollegePages)].map((_, idx) => {
-                    const pNum = idx + 1;
-                    return (
-                      <Button
-                        key={pNum}
-                        onClick={() => setCollegePage(pNum)}
-                        className={`w-8 h-8 p-0 rounded-xl text-xs font-black cursor-pointer ${
-                          collegePage === pNum
-                            ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/20'
-                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        {pNum}
-                      </Button>
-                    );
-                  })}
+                    {/* PAGINATION FOOTER */}
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100">
+                      <p className="text-xs font-bold text-slate-500 italic">
+                        Showing {filteredColleges.length === 0 ? 0 : collegeStartIndex + 1} to {Math.min(collegeStartIndex + collegePerPage, filteredColleges.length)} of {filteredColleges.length} colleges
+                      </p>
 
-                  <Button
-                    disabled={collegePage >= totalCollegePages}
-                    onClick={() => setCollegePage(p => p + 1)}
-                    variant="outline"
-                    className="w-8 h-8 p-0 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer disabled:opacity-40"
-                  >
-                    <ChevronRight size={16} />
-                  </Button>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          disabled={collegePage === 1}
+                          onClick={() => setCollegePage(p => p - 1)}
+                          variant="outline"
+                          className="w-8 h-8 p-0 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer disabled:opacity-40"
+                        >
+                          <ChevronLeft size={16} />
+                        </Button>
+
+                        {[...Array(totalCollegePages)].map((_, idx) => {
+                          const pNum = idx + 1;
+                          return (
+                            <Button
+                              key={pNum}
+                              onClick={() => setCollegePage(pNum)}
+                              className={`w-8 h-8 p-0 rounded-xl text-xs font-black cursor-pointer ${collegePage === pNum
+                                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/20'
+                                  : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                                }`}
+                            >
+                              {pNum}
+                            </Button>
+                          );
+                        })}
+
+                        <Button
+                          disabled={collegePage >= totalCollegePages}
+                          onClick={() => setCollegePage(p => p + 1)}
+                          variant="outline"
+                          className="w-8 h-8 p-0 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer disabled:opacity-40"
+                        >
+                          <ChevronRight size={16} />
+                        </Button>
+                      </div>
+                    </div>
+
+                  </div>
+
                 </div>
-              </div>
+              );
+            })()}
 
-            </div>
-
-          </div>
-        );
-      })()}
-
-      {/* 7. DOMAIN WISE USERS FULL VIEW (Paginated 12 per page) */}
+            {/* 7. DOMAIN WISE USERS FULL VIEW (Paginated 12 per page) */}
           </TabsContent>
 
           <TabsContent value="domain-wise" className="space-y-8 mt-4">
-      {activeTab === 'domain-wise' && (() => {
-        const totalDomainsCount = Object.keys(domainCountsMap).length || 8;
-        const totalStudentsCount = users.length || 152;
-        const activeDomainsCount = Object.values(domainCountsMap).filter(c => (c as number) > 0).length || 6;
-        const avgStudentsPerDomain = totalDomainsCount > 0 ? (totalStudentsCount / totalDomainsCount).toFixed(2) : '19.00';
+            {activeTab === 'domain-wise' && (() => {
+              const totalDomainsCount = Object.keys(domainCountsMap).length || 8;
+              const totalStudentsCount = users.length || 152;
+              const activeDomainsCount = Object.values(domainCountsMap).filter(c => (c as number) > 0).length || 6;
+              const avgStudentsPerDomain = totalDomainsCount > 0 ? (totalStudentsCount / totalDomainsCount).toFixed(2) : '19.00';
 
-        const filteredDomains = Object.entries(domainCountsMap)
-          .filter(([name]) => !domainSearchQuery || name.toLowerCase().includes(domainSearchQuery.toLowerCase()))
-          .sort((a, b) => {
-            if (domainSortOrder === 'high-to-low') return (b[1] as number) - (a[1] as number);
-            if (domainSortOrder === 'low-to-high') return (a[1] as number) - (b[1] as number);
-            return a[0].localeCompare(b[0]);
-          });
+              const filteredDomains = Object.entries(domainCountsMap)
+                .filter(([name]) => !domainSearchQuery || name.toLowerCase().includes(domainSearchQuery.toLowerCase()))
+                .sort((a, b) => {
+                  if (domainSortOrder === 'high-to-low') return (b[1] as number) - (a[1] as number);
+                  if (domainSortOrder === 'low-to-high') return (a[1] as number) - (b[1] as number);
+                  return a[0].localeCompare(b[0]);
+                });
 
-        const domainStartIndex = (domainPage - 1) * domainPerPage;
-        const paginatedDomains = filteredDomains.slice(domainStartIndex, domainStartIndex + domainPerPage);
-        const totalDomainPages = Math.max(1, Math.ceil(filteredDomains.length / domainPerPage));
+              const domainStartIndex = (domainPage - 1) * domainPerPage;
+              const paginatedDomains = filteredDomains.slice(domainStartIndex, domainStartIndex + domainPerPage);
+              const totalDomainPages = Math.max(1, Math.ceil(filteredDomains.length / domainPerPage));
 
-        return (
-          <div className="space-y-8">
-            
-            {/* Title Header & Export Report Button */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight flex items-center gap-2">
-                  <span>Domain Wise Registration Breakdown</span>
-                  <span className="text-teal-500 text-base font-normal">ⓘ</span>
-                </h1>
-                <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
-                  Distribution of scholars across internship domain tracks
-                </p>
-              </div>
+              return (
+                <div className="space-y-8">
 
-              <Button
-                onClick={() => {
-                  const exportData = filteredDomains.map(([name, count], idx) => ({
-                    'S.No.': idx + 1,
-                    'Domain Name': name,
-                    'Total Students': count,
-                    'Status': (count as number) > 0 ? 'Active' : 'No Students'
-                  }));
-                  const worksheet = XLSX.utils.json_to_sheet(exportData);
-                  const workbook = XLSX.utils.book_new();
-                  XLSX.utils.book_append_sheet(workbook, worksheet, 'Domain Breakdown');
-                  XLSX.writeFile(workbook, `Domain_Registration_Breakdown_${Date.now()}.xlsx`);
-                }}
-                className="h-10 px-5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-black gap-2 shadow-md shadow-teal-600/20 cursor-pointer shrink-0"
-              >
-                <Download size={15} />
-                <span>Export Report</span>
-              </Button>
-            </div>
+                  {/* Title Header & Export Report Button */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                      <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight flex items-center gap-2">
+                        <span>Domain Wise Registration Breakdown</span>
+                        <span className="text-teal-500 text-base font-normal">ⓘ</span>
+                      </h1>
+                      <p className="text-xs sm:text-sm font-semibold text-slate-500 mt-1">
+                        Distribution of scholars across internship domain tracks
+                      </p>
+                    </div>
 
-            {/* 4 STAT SUMMARY CARDS */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              
-              {/* Card 1: TOTAL DOMAINS */}
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">TOTAL DOMAINS</p>
-                  <h3 className="text-3xl font-black text-slate-900 mt-1">{totalDomainsCount}</h3>
-                  <p className="text-[11px] font-bold text-slate-400 mt-1">Internship Tracks</p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center shrink-0">
-                  <Layers size={22} />
-                </div>
-              </div>
-
-              {/* Card 2: TOTAL STUDENTS */}
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">TOTAL STUDENTS</p>
-                  <h3 className="text-3xl font-black text-slate-900 mt-1">{totalStudentsCount}</h3>
-                  <p className="text-[11px] font-bold text-slate-400 mt-1">Total Enrolled Scholars</p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
-                  <Users size={22} />
-                </div>
-              </div>
-
-              {/* Card 3: ACTIVE TRACKS */}
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">ACTIVE TRACKS</p>
-                  <h3 className="text-3xl font-black text-slate-900 mt-1">{activeDomainsCount}</h3>
-                  <p className="text-[11px] font-bold text-slate-400 mt-1">With Scholars</p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
-                  <ShieldCheck size={22} />
-                </div>
-              </div>
-
-              {/* Card 4: AVG. STUDENTS/DOMAIN */}
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">AVG. STUDENTS/DOMAIN</p>
-                  <h3 className="text-3xl font-black text-slate-900 mt-1">{avgStudentsPerDomain}</h3>
-                  <p className="text-[11px] font-bold text-slate-400 mt-1">Average Scholars</p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
-                  <TrendingUp size={22} />
-                </div>
-              </div>
-
-            </div>
-
-            {/* MAIN DOMAIN CARDS CONTAINER */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-              
-              {/* SEARCH & SORT BAR */}
-              <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-                
-                {/* Search Domain Input */}
-                <div className="relative w-full lg:max-w-md">
-                  <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
-                  <input
-                    type="text"
-                    value={domainSearchQuery}
-                    onChange={(e) => {
-                      setDomainSearchQuery(e.target.value);
-                      setDomainPage(1);
-                    }}
-                    placeholder="Search domain track..."
-                    className="w-full h-11 pl-10 pr-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-teal-500 outline-none transition-all shadow-2xs"
-                  />
-                  {domainSearchQuery && (
-                    <button onClick={() => { setDomainSearchQuery(''); setDomainPage(1); }} className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 cursor-pointer">
-                      <X size={15} />
-                    </button>
-                  )}
-                </div>
-
-                {/* Sort Dropdown, Per Page Selector & Filters Button */}
-                <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-                  
-                  {/* Items Per Page Selector */}
-                  <div className="flex items-center gap-2 bg-slate-50/70 border border-slate-200/80 px-3.5 py-2 rounded-2xl text-xs font-bold text-slate-700 shadow-2xs">
-                    <span className="text-slate-400">Show:</span>
-                    <select
-                      value={domainPerPage}
-                      onChange={(e) => {
-                        setDomainPerPage(Number(e.target.value));
-                        setDomainPage(1);
+                    <Button
+                      onClick={() => {
+                        const exportData = filteredDomains.map(([name, count], idx) => ({
+                          'S.No.': idx + 1,
+                          'Domain Name': name,
+                          'Total Students': count,
+                          'Status': (count as number) > 0 ? 'Active' : 'No Students'
+                        }));
+                        const worksheet = XLSX.utils.json_to_sheet(exportData);
+                        const workbook = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(workbook, worksheet, 'Domain Breakdown');
+                        XLSX.writeFile(workbook, `Domain_Registration_Breakdown_${Date.now()}.xlsx`);
                       }}
-                      className="bg-transparent font-black text-slate-900 outline-none cursor-pointer"
+                      className="h-10 px-5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-black gap-2 shadow-md shadow-teal-600/20 cursor-pointer shrink-0"
                     >
-                      <option value={12}>12 / page</option>
-                      <option value={25}>25 / page</option>
-                      <option value={50}>50 / page</option>
-                      <option value={100}>100 / page</option>
-                    </select>
+                      <Download size={15} />
+                      <span>Export Report</span>
+                    </Button>
                   </div>
 
-                  <div className="flex items-center gap-2 bg-slate-50/70 border border-slate-200/80 px-3.5 py-2 rounded-2xl text-xs font-bold text-slate-700 shadow-2xs">
-                    <span className="text-slate-400">Sort by:</span>
-                    <select
-                      value={domainSortOrder}
-                      onChange={(e) => {
-                        setDomainSortOrder(e.target.value);
-                        setDomainPage(1);
-                      }}
-                      className="bg-transparent font-black text-slate-900 outline-none cursor-pointer"
-                    >
-                      <option value="high-to-low">Total Students (High to Low)</option>
-                      <option value="low-to-high">Total Students (Low to High)</option>
-                      <option value="alphabetical">Domain Name (A-Z)</option>
-                    </select>
+                  {/* 4 STAT SUMMARY CARDS */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+                    {/* Card 1: TOTAL DOMAINS */}
+                    <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">TOTAL DOMAINS</p>
+                        <h3 className="text-3xl font-black text-slate-900 mt-1">{totalDomainsCount}</h3>
+                        <p className="text-[11px] font-bold text-slate-400 mt-1">Internship Tracks</p>
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center shrink-0">
+                        <Layers size={22} />
+                      </div>
+                    </div>
+
+                    {/* Card 2: TOTAL STUDENTS */}
+                    <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">TOTAL STUDENTS</p>
+                        <h3 className="text-3xl font-black text-slate-900 mt-1">{totalStudentsCount}</h3>
+                        <p className="text-[11px] font-bold text-slate-400 mt-1">Total Enrolled Scholars</p>
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+                        <Users size={22} />
+                      </div>
+                    </div>
+
+                    {/* Card 3: ACTIVE TRACKS */}
+                    <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">ACTIVE TRACKS</p>
+                        <h3 className="text-3xl font-black text-slate-900 mt-1">{activeDomainsCount}</h3>
+                        <p className="text-[11px] font-bold text-slate-400 mt-1">With Scholars</p>
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
+                        <ShieldCheck size={22} />
+                      </div>
+                    </div>
+
+                    {/* Card 4: AVG. STUDENTS/DOMAIN */}
+                    <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">AVG. STUDENTS/DOMAIN</p>
+                        <h3 className="text-3xl font-black text-slate-900 mt-1">{avgStudentsPerDomain}</h3>
+                        <p className="text-[11px] font-bold text-slate-400 mt-1">Average Scholars</p>
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
+                        <TrendingUp size={22} />
+                      </div>
+                    </div>
+
                   </div>
 
-                  <Button
-                    variant="outline"
-                    className="h-11 px-4 rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold gap-2 cursor-pointer shadow-2xs"
-                  >
-                    <Filter size={15} className="text-teal-600" />
-                    <span>Filters</span>
-                    <ChevronDown size={12} className="text-slate-400" />
-                  </Button>
-                </div>
+                  {/* MAIN DOMAIN CARDS CONTAINER */}
+                  <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
 
-              </div>
+                    {/* SEARCH & SORT BAR */}
+                    <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
 
-              {/* 3-COLUMN DOMAIN CARDS GRID (12 Per Page) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {paginatedDomains.length === 0 ? (
-                  <div className="col-span-full py-12 text-center text-slate-400 font-bold">
-                    No domain tracks matching "{domainSearchQuery}".
-                  </div>
-                ) : (
-                  paginatedDomains.map(([domainName, count]) => (
-                    <div
-                      key={domainName}
-                      className="p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-teal-300 hover:shadow-md transition-all duration-200 flex items-center justify-between gap-4"
-                    >
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center shrink-0">
-                          <Layers size={20} />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs font-black text-slate-900 leading-snug truncate">
-                            {domainName}
-                          </h4>
-                          <p className="text-[10px] font-bold text-teal-600 mt-0.5">
-                            Internship Track
-                          </p>
-                        </div>
+                      {/* Search Domain Input */}
+                      <div className="relative w-full lg:max-w-md">
+                        <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
+                        <input
+                          type="text"
+                          value={domainSearchQuery}
+                          onChange={(e) => {
+                            setDomainSearchQuery(e.target.value);
+                            setDomainPage(1);
+                          }}
+                          placeholder="Search domain track..."
+                          className="w-full h-11 pl-10 pr-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-teal-500 outline-none transition-all shadow-2xs"
+                        />
+                        {domainSearchQuery && (
+                          <button onClick={() => { setDomainSearchQuery(''); setDomainPage(1); }} className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 cursor-pointer">
+                            <X size={15} />
+                          </button>
+                        )}
                       </div>
 
-                      <span className="text-xs font-black text-teal-700 bg-teal-50 border border-teal-200/80 px-3.5 py-1.5 rounded-xl shrink-0">
-                        {count}
-                      </span>
+                      {/* Sort Dropdown, Per Page Selector & Filters Button */}
+                      <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
+
+                        {/* Items Per Page Selector */}
+                        <div className="flex items-center gap-2 bg-slate-50/70 border border-slate-200/80 px-3.5 py-2 rounded-2xl text-xs font-bold text-slate-700 shadow-2xs">
+                          <span className="text-slate-400">Show:</span>
+                          <select
+                            value={domainPerPage}
+                            onChange={(e) => {
+                              setDomainPerPage(Number(e.target.value));
+                              setDomainPage(1);
+                            }}
+                            className="bg-transparent font-black text-slate-900 outline-none cursor-pointer"
+                          >
+                            <option value={12}>12 / page</option>
+                            <option value={25}>25 / page</option>
+                            <option value={50}>50 / page</option>
+                            <option value={100}>100 / page</option>
+                          </select>
+                        </div>
+
+                        <div className="flex items-center gap-2 bg-slate-50/70 border border-slate-200/80 px-3.5 py-2 rounded-2xl text-xs font-bold text-slate-700 shadow-2xs">
+                          <span className="text-slate-400">Sort by:</span>
+                          <select
+                            value={domainSortOrder}
+                            onChange={(e) => {
+                              setDomainSortOrder(e.target.value);
+                              setDomainPage(1);
+                            }}
+                            className="bg-transparent font-black text-slate-900 outline-none cursor-pointer"
+                          >
+                            <option value="high-to-low">Total Students (High to Low)</option>
+                            <option value="low-to-high">Total Students (Low to High)</option>
+                            <option value="alphabetical">Domain Name (A-Z)</option>
+                          </select>
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          className="h-11 px-4 rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold gap-2 cursor-pointer shadow-2xs"
+                        >
+                          <Filter size={15} className="text-teal-600" />
+                          <span>Filters</span>
+                          <ChevronDown size={12} className="text-slate-400" />
+                        </Button>
+                      </div>
+
                     </div>
-                  ))
-                )}
-              </div>
 
-              {/* PAGINATION FOOTER */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100">
-                <p className="text-xs font-bold text-slate-500 italic">
-                  Showing {filteredDomains.length === 0 ? 0 : domainStartIndex + 1} to {Math.min(domainStartIndex + domainPerPage, filteredDomains.length)} of {filteredDomains.length} domains
-                </p>
+                    {/* 3-COLUMN DOMAIN CARDS GRID (12 Per Page) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {paginatedDomains.length === 0 ? (
+                        <div className="col-span-full py-12 text-center text-slate-400 font-bold">
+                          No domain tracks matching "{domainSearchQuery}".
+                        </div>
+                      ) : (
+                        paginatedDomains.map(([domainName, count]) => (
+                          <div
+                            key={domainName}
+                            className="p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-teal-300 hover:shadow-md transition-all duration-200 flex items-center justify-between gap-4"
+                          >
+                            <div className="flex items-center gap-3.5 min-w-0">
+                              <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center shrink-0">
+                                <Layers size={20} />
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="text-xs font-black text-slate-900 leading-snug truncate">
+                                  {domainName}
+                                </h4>
+                                <p className="text-[10px] font-bold text-teal-600 mt-0.5">
+                                  Internship Track
+                                </p>
+                              </div>
+                            </div>
 
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    disabled={domainPage === 1}
-                    onClick={() => setDomainPage(p => p - 1)}
-                    variant="outline"
-                    className="w-8 h-8 p-0 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer disabled:opacity-40"
-                  >
-                    <ChevronLeft size={16} />
-                  </Button>
+                            <span className="text-xs font-black text-teal-700 bg-teal-50 border border-teal-200/80 px-3.5 py-1.5 rounded-xl shrink-0">
+                              {count}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
 
-                  {[...Array(totalDomainPages)].map((_, idx) => {
-                    const pNum = idx + 1;
-                    return (
-                      <Button
-                        key={pNum}
-                        onClick={() => setDomainPage(pNum)}
-                        className={`w-8 h-8 p-0 rounded-xl text-xs font-black cursor-pointer ${
-                          domainPage === pNum
-                            ? 'bg-teal-600 text-white shadow-sm shadow-teal-600/20'
-                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        {pNum}
-                      </Button>
-                    );
-                  })}
+                    {/* PAGINATION FOOTER */}
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100">
+                      <p className="text-xs font-bold text-slate-500 italic">
+                        Showing {filteredDomains.length === 0 ? 0 : domainStartIndex + 1} to {Math.min(domainStartIndex + domainPerPage, filteredDomains.length)} of {filteredDomains.length} domains
+                      </p>
 
-                  <Button
-                    disabled={domainPage >= totalDomainPages}
-                    onClick={() => setDomainPage(p => p + 1)}
-                    variant="outline"
-                    className="w-8 h-8 p-0 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer disabled:opacity-40"
-                  >
-                    <ChevronRight size={16} />
-                  </Button>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          disabled={domainPage === 1}
+                          onClick={() => setDomainPage(p => p - 1)}
+                          variant="outline"
+                          className="w-8 h-8 p-0 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer disabled:opacity-40"
+                        >
+                          <ChevronLeft size={16} />
+                        </Button>
+
+                        {[...Array(totalDomainPages)].map((_, idx) => {
+                          const pNum = idx + 1;
+                          return (
+                            <Button
+                              key={pNum}
+                              onClick={() => setDomainPage(pNum)}
+                              className={`w-8 h-8 p-0 rounded-xl text-xs font-black cursor-pointer ${domainPage === pNum
+                                  ? 'bg-teal-600 text-white shadow-sm shadow-teal-600/20'
+                                  : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                                }`}
+                            >
+                              {pNum}
+                            </Button>
+                          );
+                        })}
+
+                        <Button
+                          disabled={domainPage >= totalDomainPages}
+                          onClick={() => setDomainPage(p => p + 1)}
+                          variant="outline"
+                          className="w-8 h-8 p-0 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 cursor-pointer disabled:opacity-40"
+                        >
+                          <ChevronRight size={16} />
+                        </Button>
+                      </div>
+                    </div>
+
+                  </div>
+
                 </div>
-              </div>
+              );
+            })()}
 
-            </div>
-
-          </div>
-        );
-      })()}
-
-      {/* 8. TEST REPORT VIEW */}
+            {/* 8. TEST REPORT VIEW */}
           </TabsContent>
 
           <TabsContent value="college-export">
@@ -4584,11 +4582,10 @@ export default function AdminDashboard() {
                           return (
                             <label
                               key={district.id}
-                              className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-xs font-black transition-all ${
-                                checked
+                              className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-xs font-black transition-all ${checked
                                   ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
                                   : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                              }`}
+                                }`}
                             >
                               <input
                                 type="checkbox"
