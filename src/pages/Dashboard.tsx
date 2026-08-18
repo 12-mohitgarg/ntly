@@ -272,7 +272,7 @@ export default function Dashboard() {
         ['Full Name', name],
         ['Email Address', email],
         ['Contact Number', contact],
-        ['University Roll No.', roll],
+        ['University Reg No.', roll],
         ['College / Institution', college],
         ['Department', dept],
         ['Internship Domain', domain],
