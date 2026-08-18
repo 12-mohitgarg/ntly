@@ -71,13 +71,48 @@ export default function LMS() {
   const [lmsPageSize, setLmsPageSize] = useState(5);
 
 
+  const [userAssignmentsCount, setUserAssignmentsCount] = useState(0);
+  const [totalAssignmentsCount, setTotalAssignmentsCount] = useState(6);
+
   useEffect(() => {
     fetchDailyVideos();
     fetchVideoProgress();
     fetchAttendance();
     calculateCurrentDay();
     fetchTestAndSubmission();
+    fetchAssignmentsData();
   }, [profile, user]);
+
+  const fetchAssignmentsData = async () => {
+    if (!user?.uid || !profile?.internshipDomain) return;
+    try {
+      const studentCourse = profile.internshipDomain.trim().toLowerCase();
+
+      const assignmentsSnap = await getDocs(collection(db, 'assignments'));
+      const courseAssignments = assignmentsSnap.docs.filter((docSnap) => {
+        const data = docSnap.data();
+        return data.isActive !== false && (data.course || '').trim().toLowerCase() === studentCourse;
+      });
+      if (courseAssignments.length > 0) {
+        setTotalAssignmentsCount(courseAssignments.length);
+      }
+
+      const reportsQuery = query(
+        collection(db, 'studentReports'),
+        where('userId', '==', user.uid)
+      );
+      const reportsSnap = await getDocs(reportsQuery);
+      const userReports = reportsSnap.docs.filter((docSnap) => {
+        const data = docSnap.data();
+        return (data.course || '').trim().toLowerCase() === studentCourse;
+      });
+
+      const uniqueAssignments = new Set(userReports.map((r) => r.data().assignmentId).filter(Boolean));
+      setUserAssignmentsCount(uniqueAssignments.size || userReports.length);
+    } catch (error) {
+      console.error('Error fetching assignments data:', error);
+    }
+  };
 
   useEffect(() => {
     if (dailyVideos.length > 0) {
@@ -396,6 +431,8 @@ export default function LMS() {
               hasAttendanceForDay={hasAttendanceForDay}
               getProgressPercentage={getProgressPercentage}
               getCompletedVideoDays={getCompletedVideoDays}
+              userAssignmentsCount={userAssignmentsCount}
+              totalAssignmentsCount={totalAssignmentsCount}
             />
           }
         />
@@ -612,6 +649,8 @@ interface CourseDashboardProps {
   hasAttendanceForDay: (day: number) => boolean;
   getProgressPercentage: (progress?: VideoProgress, attendance?: AttendanceEntry[]) => number;
   getCompletedVideoDays: (progress?: VideoProgress, attendance?: AttendanceEntry[]) => Set<string>;
+  userAssignmentsCount: number;
+  totalAssignmentsCount: number;
 }
 
 const CourseDashboard = ({
@@ -626,7 +665,9 @@ const CourseDashboard = ({
   setShowReportModal,
   hasAttendanceForDay,
   getProgressPercentage,
-  getCompletedVideoDays
+  getCompletedVideoDays,
+  userAssignmentsCount,
+  totalAssignmentsCount
 }: CourseDashboardProps) => {
   const { profile } = useAuth();
   const navigate = useNavigate();
@@ -752,7 +793,7 @@ const CourseDashboard = ({
           <div>
             <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Assignments Done</span>
             <h4 className="text-lg font-black text-slate-800 mt-1">
-              {isAssessmentCompleted ? 6 : 4} / 6
+              {userAssignmentsCount} / {totalAssignmentsCount}
             </h4>
           </div>
           <div className="absolute bottom-0 left-0 w-full h-1 bg-purple-500 rounded-b-3xl"></div>
@@ -766,7 +807,7 @@ const CourseDashboard = ({
           <div>
             <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Quizzes Score</span>
             <h4 className="text-lg font-black text-slate-800 mt-1">
-              {testSubmission ? `${testSubmission.scorePercentage}%` : '78%'}
+              {testSubmission ? `${testSubmission.scorePercentage}%` : '0%'}
             </h4>
           </div>
           <div className="absolute bottom-0 left-0 w-full h-1 bg-amber-500 rounded-b-3xl"></div>

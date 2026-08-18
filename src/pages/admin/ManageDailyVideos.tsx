@@ -12,7 +12,7 @@ import {
   where,
   getDoc
 } from 'firebase/firestore';
- 
+
 import { motion } from 'motion/react';
 import {
   Youtube,
@@ -27,7 +27,8 @@ import {
   CheckCircle2,
   Sparkles,
   ClipboardList,
-  ArrowLeft
+  ArrowLeft,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -35,7 +36,7 @@ import { Label } from '../../components/ui/label';
 import { COURSE_VIDEO_DAY_LIMIT, INTERNSHIP_DOMAINS } from '../../lib/constants';
 import { useAuth } from '../../components/AuthContext';
 import { AttendanceEntry, AttendanceStudent, generateCourseAttendanceReport } from '../dashboard/generateAttendanceReport';
- 
+
 interface DailyVideo {
   id: string;
   day: number;
@@ -44,7 +45,7 @@ interface DailyVideo {
   description: string;
   course: string;
 }
- 
+
 export default function ManageDailyVideos() {
   const navigate = useNavigate();
   const { adminProfile } = useAuth();
@@ -58,7 +59,7 @@ export default function ManageDailyVideos() {
   const [testQuestions, setTestQuestions] = useState<any[]>([]);
   const [loadingTest, setLoadingTest] = useState(false);
   const [savingTest, setSavingTest] = useState(false);
- 
+
   const fetchCourseTest = async () => {
     if (!selectedCourse) return;
     setLoadingTest(true);
@@ -77,15 +78,15 @@ export default function ManageDailyVideos() {
       setLoadingTest(false);
     }
   };
- 
+
   const handleOpenTestManager = () => {
     fetchCourseTest();
     setShowTestModal(true);
   };
- 
+
   const handleSaveTest = async () => {
     if (!selectedCourse) return;
- 
+
     // Validation
     for (let i = 0; i < testQuestions.length; i++) {
       const q = testQuestions[i];
@@ -104,7 +105,7 @@ export default function ManageDailyVideos() {
         return;
       }
     }
- 
+
     setSavingTest(true);
     try {
       await setDoc(doc(db, 'courseTests', selectedCourse), {
@@ -121,7 +122,7 @@ export default function ManageDailyVideos() {
       setSavingTest(false);
     }
   };
- 
+
   const addEmptyQuestion = () => {
     setTestQuestions(prev => [
       ...prev,
@@ -133,7 +134,7 @@ export default function ManageDailyVideos() {
       }
     ]);
   };
- 
+
   const updateQuestionField = (index: number, field: string, value: any) => {
     setTestQuestions(prev => {
       const updated = [...prev];
@@ -141,11 +142,11 @@ export default function ManageDailyVideos() {
       return updated;
     });
   };
- 
+
   const removeQuestion = (index: number) => {
     setTestQuestions(prev => prev.filter((_, i) => i !== index));
   };
- 
+
   const [attendanceEntries, setAttendanceEntries] = useState<AttendanceEntry[]>([]);
   const [courseStudents, setCourseStudents] = useState<AttendanceStudent[]>([]);
   const [formData, setFormData] = useState({
@@ -157,7 +158,7 @@ export default function ManageDailyVideos() {
   });
   const isTeacher = adminProfile?.role === 'teacher';
   const assignedCourse = adminProfile?.course || '';
- 
+
   const fetchCourseOptions = async () => {
     try {
       const coursesRef = collection(db, 'courses');
@@ -166,10 +167,10 @@ export default function ManageDailyVideos() {
       const firestoreCourses = snapshot.docs
         .map(doc => String(doc.data().name ?? '').trim())
         .filter(Boolean);
- 
+
       const mergedCourses = [...new Set([...firestoreCourses, ...INTERNSHIP_DOMAINS])];
       setCourseOptions(mergedCourses);
- 
+
       if (isTeacher && assignedCourse && mergedCourses.includes(assignedCourse)) {
         setSelectedCourse(assignedCourse);
       }
@@ -178,38 +179,38 @@ export default function ManageDailyVideos() {
       setCourseOptions(INTERNSHIP_DOMAINS);
     }
   };
- 
+
   useEffect(() => {
     fetchCourseOptions();
   }, []);
- 
+
   useEffect(() => {
     if (isTeacher) {
       setSelectedCourse(assignedCourse);
     }
   }, [isTeacher, assignedCourse]);
- 
+
   useEffect(() => {
     if (selectedCourse) {
       fetchVideos();
       fetchCourseStatus();
       fetchAttendance();
       fetchCourseStudents();
- 
+
       setFormData(prev => ({
         ...prev,
         course: selectedCourse
       }));
     }
   }, [selectedCourse]);
- 
+
   const fetchVideos = async () => {
     if (!selectedCourse) {
       setVideos([]);
       setLoading(false);
       return;
     }
- 
+
     try {
       const videosRef = collection(db, 'dailyVideos');
       const q = query(videosRef, where('course', '==', selectedCourse), orderBy('day'));
@@ -219,7 +220,7 @@ export default function ManageDailyVideos() {
         ...doc.data()
       } as DailyVideo));
       setVideos(videosData);
- 
+
       // Calculate next available day
       if (videosData.length > 0) {
         const maxDay = Math.max(...videosData.map(v => v.day));
@@ -228,7 +229,7 @@ export default function ManageDailyVideos() {
       } else {
         setFormData(prev => ({ ...prev, day: 1 }));
       }
- 
+
       setLoading(false);
     } catch (error) {
       console.error('Error fetching videos:', error);
@@ -237,11 +238,11 @@ export default function ManageDailyVideos() {
   };
   const fetchCourseStatus = async () => {
     if (!selectedCourse) return;
- 
+
     try {
       const docRef = doc(db, "courseCompletion", selectedCourse);
       const docSnap = await getDoc(docRef);
- 
+
       if (docSnap.exists()) {
         setCourseCompleted(docSnap.data().completed || false);
       } else {
@@ -256,7 +257,7 @@ export default function ManageDailyVideos() {
       setAttendanceEntries([]);
       return;
     }
- 
+
     try {
       const attendanceQuery = query(
         collection(db, 'attendance'),
@@ -269,13 +270,13 @@ export default function ManageDailyVideos() {
       console.error('Error fetching attendance:', error);
     }
   };
- 
+
   const fetchCourseStudents = async () => {
     if (!selectedCourse) {
       setCourseStudents([]);
       return;
     }
- 
+
     try {
       const usersQuery = query(
         collection(db, 'users'),
@@ -284,7 +285,7 @@ export default function ManageDailyVideos() {
       const snapshot = await getDocs(usersQuery);
       setCourseStudents(snapshot.docs.map((studentDoc) => {
         const data = studentDoc.data();
- 
+
         return {
           id: studentDoc.id,
           uid: studentDoc.id,
@@ -301,28 +302,28 @@ export default function ManageDailyVideos() {
   const extractVideoId = (url: string): string => {
     const regex =
       /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|live\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
- 
+
     const match = url.match(regex);
     return match ? match[1] : '';
   };
- 
+
   const handleSave = async () => {
     if (isTeacher && formData.course !== assignedCourse) {
       alert('You can add videos only for your assigned course');
       return;
     }
- 
+
     if (!formData.title || !formData.youtubeUrl || !formData.course) {
       alert('Please fill in title, YouTube URL, and select a course');
       return;
     }
- 
+
     const videoId = extractVideoId(formData.youtubeUrl);
     if (!videoId) {
       alert('Invalid YouTube URL');
       return;
     }
- 
+
     try {
       if (editingVideo) {
         // Update existing video
@@ -338,7 +339,7 @@ export default function ManageDailyVideos() {
           alert(`Day ${formData.day} already has a video for ${formData.course}. Please edit or delete it first.`);
           return;
         }
- 
+
         // Create new video
         const safeCourseKey = String(formData.course).replace(/[\/\\]/g, '-').trim();
         const docId = `${safeCourseKey}-day-${formData.day}`;
@@ -348,7 +349,7 @@ export default function ManageDailyVideos() {
           createdAt: new Date().toISOString()
         });
       }
- 
+
       await fetchVideos();
       resetForm();
     } catch (error) {
@@ -356,7 +357,7 @@ export default function ManageDailyVideos() {
       alert('Error saving video');
     }
   };
- 
+
   const handleEdit = (video: DailyVideo) => {
     setEditingVideo(video);
     setFormData({
@@ -367,10 +368,10 @@ export default function ManageDailyVideos() {
       course: video.course
     });
   };
- 
+
   const handleDelete = async (videoId: string) => {
     if (!confirm('Are you sure you want to delete this video?')) return;
- 
+
     try {
       await deleteDoc(doc(db, 'dailyVideos', videoId));
       await fetchVideos();
@@ -379,26 +380,67 @@ export default function ManageDailyVideos() {
       alert('Error deleting video');
     }
   };
- 
-  const markCourseCompleted = async () => {
+
+  const toggleCourseCompletion = async (status: boolean) => {
     if (!selectedCourse) return;
- 
+
     try {
       await setDoc(
         doc(db, "courseCompletion", selectedCourse),
         {
           course: selectedCourse,
-          completed: true,
-          completedAt: new Date().toISOString()
-        }
+          completed: status,
+          updatedAt: new Date().toISOString()
+        },
+        { merge: true }
       );
- 
-      setCourseCompleted(true);
- 
-      alert("Course marked as completed");
+
+      setCourseCompleted(status);
+
+      alert(status ? "Course marked as completed" : "Course marked as active / in progress");
     } catch (error) {
       console.log(error);
-      alert("Error");
+      alert("Error updating course status");
+    }
+  };
+
+  const reopenAllCourses = async () => {
+    if (!confirm("Are you sure you want to reopen ALL courses/domains?")) return;
+
+    try {
+      setLoading(true);
+      const completionSnap = await getDocs(collection(db, "courseCompletion"));
+      for (const docSnap of completionSnap.docs) {
+        await setDoc(
+          doc(db, "courseCompletion", docSnap.id),
+          {
+            course: docSnap.id,
+            completed: false,
+            updatedAt: new Date().toISOString()
+          },
+          { merge: true }
+        );
+      }
+
+      for (const domain of courseOptions) {
+        await setDoc(
+          doc(db, "courseCompletion", domain),
+          {
+            course: domain,
+            completed: false,
+            updatedAt: new Date().toISOString()
+          },
+          { merge: true }
+        );
+      }
+
+      setCourseCompleted(false);
+      alert("✅ All domains/courses have been reopened!");
+    } catch (error) {
+      console.error("Error reopening all courses:", error);
+      alert("Error reopening courses. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
   const resetForm = () => {
@@ -411,7 +453,7 @@ export default function ManageDailyVideos() {
       course: selectedCourse
     });
   };
- 
+
   return (
     <div className="space-y-6">
       {/* Course Selector Card */}
@@ -420,22 +462,34 @@ export default function ManageDailyVideos() {
           <h1 className="text-xl font-black text-slate-900 gradient-text">Manage Daily Videos</h1>
           <p className="text-slate-500 text-xs font-semibold">Upload and curate daily lecture videos by course.</p>
         </div>
-        <div className="flex items-center gap-3 self-stretch sm:self-auto min-w-[240px]">
-          <Label className="student-label shrink-0">Select Course:</Label>
-          <select
-            value={selectedCourse}
-            onChange={(e) => setSelectedCourse(e.target.value)}
-            disabled={isTeacher}
-            className={`student-input h-11 px-4 py-0 text-xs text-slate-800 rounded-xl border-slate-200/80 bg-white ${isTeacher ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
-          >
-            <option value="" className="text-slate-900">{isTeacher ? 'No course assigned' : '-- Select Course --'}</option>
-            {courseOptions.map((course) => (
-              <option key={course} value={course} className="text-slate-900">{course}</option>
-            ))}
-          </select>
+        <div className="flex flex-wrap items-center gap-3 self-stretch sm:self-auto">
+          {/* {!isTeacher && (
+            <button
+              onClick={reopenAllCourses}
+              title="Reopen all courses/domains to Active / In Progress"
+              className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black uppercase tracking-wider shadow-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+            >
+              <RotateCcw size={14} />
+              Reopen All Domains
+            </button>
+          )} */}
+          <div className="flex items-center gap-3 min-w-[200px]">
+            <Label className="student-label shrink-0">Select Course:</Label>
+            <select
+              value={selectedCourse}
+              onChange={(e) => setSelectedCourse(e.target.value)}
+              disabled={isTeacher}
+              className={`student-input h-11 px-4 py-0 text-xs text-slate-800 rounded-xl border-slate-200/80 bg-white ${isTeacher ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
+            >
+              <option value="" className="text-slate-900">{isTeacher ? 'No course assigned' : '-- Select Course --'}</option>
+              {courseOptions.map((course) => (
+                <option key={course} value={course} className="text-slate-900">{course}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
- 
+
       <div className="space-y-6 sm:space-y-8">
         {!selectedCourse && (
           <motion.div
@@ -450,7 +504,7 @@ export default function ManageDailyVideos() {
             <p className="text-slate-400 font-bold text-sm mt-1">Select a course from the dropdown selector above to view or add daily videos.</p>
           </motion.div>
         )}
- 
+
         {/* Add/Edit Form */}
         {selectedCourse && (
           <motion.div
@@ -467,31 +521,33 @@ export default function ManageDailyVideos() {
                   {editingVideo ? 'Edit Video' : 'Add New Video'}
                 </h2>
               </div>
-             
+
               <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleOpenTestManager}
+                  className="px-4 py-1.5 rounded-xl bg-purple-600 text-white hover:bg-purple-700 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
+                >
+                  <ClipboardList size={14} />
+                  Test
+                </button>
+                <button
+                  onClick={() => generateCourseAttendanceReport(selectedCourse, attendanceEntries, courseStudents, videos)}
+                  className="px-4 py-1.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+                >
+                  Attendance Report
+                </button>
                 {courseCompleted ? (
-                  <div className="flex flex-wrap gap-2">
-                    <span className="bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/80 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider inline-flex items-center gap-1.5">
-                      <CheckCircle2 size={14} />
-                      Completed
-                    </span>
-                    <button
-                      onClick={handleOpenTestManager}
-                      className="px-4 py-1.5 rounded-xl bg-purple-600 text-white hover:bg-purple-700 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5"
-                    >
-                      <ClipboardList size={14} />
-                      Test
-                    </button>
-                    <button
-                      onClick={() => generateCourseAttendanceReport(selectedCourse, attendanceEntries, courseStudents, videos)}
-                      className="px-4 py-1.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-xs font-black uppercase tracking-wider shadow-sm transition-all active:scale-[0.98] cursor-pointer"
-                    >
-                      Attendance Report
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => toggleCourseCompletion(false)}
+                    title="Click to mark course as Active / In Progress"
+                    className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 ring-1 ring-emerald-200/80 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider inline-flex items-center gap-1.5 cursor-pointer transition-all"
+                  >
+                    <CheckCircle2 size={14} />
+                    Completed (Click to Reopen)
+                  </button>
                 ) : (
                   <button
-                    onClick={markCourseCompleted}
+                    onClick={() => toggleCourseCompletion(true)}
                     className="px-4 py-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-black uppercase tracking-wider shadow-sm shadow-indigo-600/10 transition-all active:scale-[0.98] cursor-pointer"
                   >
                     Mark Course Completed
@@ -502,7 +558,7 @@ export default function ManageDailyVideos() {
                 </span>
               </div>
             </div>
- 
+
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -535,7 +591,7 @@ export default function ManageDailyVideos() {
                   />
                 </div>
               </div>
- 
+
               <div>
                 <Label className="student-label block mb-2">YouTube URL</Label>
                 <div className="relative">
@@ -548,7 +604,7 @@ export default function ManageDailyVideos() {
                   />
                 </div>
               </div>
- 
+
               <div>
                 <Label className="student-label block mb-2">Description (Optional)</Label>
                 <textarea
@@ -559,7 +615,7 @@ export default function ManageDailyVideos() {
                   rows={3}
                 />
               </div>
- 
+
               <div className="flex gap-4 pt-2">
                 <Button
                   onClick={handleSave}
@@ -581,7 +637,7 @@ export default function ManageDailyVideos() {
             </div>
           </motion.div>
         )}
- 
+
         {/* Videos List */}
         {selectedCourse && (
           <div className="space-y-4">
@@ -591,7 +647,7 @@ export default function ManageDailyVideos() {
                 {videos.length} / {COURSE_VIDEO_DAY_LIMIT} videos
               </span>
             </div>
- 
+
             {loading ? (
               <div className="text-center py-16">
                 <div className="flex flex-col items-center gap-3">
@@ -629,7 +685,7 @@ export default function ManageDailyVideos() {
                         {video.day}
                       </div>
                     </div>
-                   
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                         <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ring-1 ring-indigo-100/50">
@@ -649,7 +705,7 @@ export default function ManageDailyVideos() {
                         {video.youtubeUrl}
                       </a>
                     </div>
-                   
+
                     <div className="flex gap-2 shrink-0 self-end sm:self-center">
                       <Button
                         onClick={() => handleEdit(video)}
@@ -674,7 +730,7 @@ export default function ManageDailyVideos() {
             )}
           </div>
         )}
- 
+
         {selectedCourse && (
           <div className="student-card bg-white/80 overflow-hidden">
             <div className="p-6 border-b border-slate-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -686,7 +742,7 @@ export default function ManageDailyVideos() {
                 {attendanceEntries.length} Entries
               </span>
             </div>
- 
+
             {attendanceEntries.length === 0 ? (
               <div className="p-12 text-center text-slate-500 font-bold">
                 No attendance entries yet.
@@ -722,7 +778,7 @@ export default function ManageDailyVideos() {
           </div>
         )}
       </div>
- 
+
       {showTestModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-3xl student-card bg-white/95 overflow-hidden flex flex-col max-h-[90vh] shadow-2xl border-white/50">
@@ -742,7 +798,7 @@ export default function ManageDailyVideos() {
                 <X size={20} />
               </button>
             </div>
- 
+
             <div className="p-6 overflow-y-auto flex-1 space-y-6">
               {loadingTest ? (
                 <div className="text-center py-12">
@@ -771,13 +827,13 @@ export default function ManageDailyVideos() {
                           >
                             <Trash2 size={18} />
                           </button>
- 
+
                           <div className="flex items-center gap-2">
                             <span className="bg-indigo-50 text-indigo-700 text-xs font-black px-3 py-1 rounded-full uppercase ring-1 ring-indigo-100/50">
                               Q {index + 1}
                             </span>
                           </div>
- 
+
                           <div>
                             <Label className="student-label block mb-2">Question Text</Label>
                             <Input
@@ -787,7 +843,7 @@ export default function ManageDailyVideos() {
                               className="student-input bg-white h-12 px-4"
                             />
                           </div>
- 
+
                           <div>
                             <Label className="student-label block mb-2">Options & Correct Answer</Label>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -822,7 +878,7 @@ export default function ManageDailyVideos() {
                       ))}
                     </div>
                   )}
- 
+
                   <button
                     type="button"
                     onClick={addEmptyQuestion}
@@ -834,7 +890,7 @@ export default function ManageDailyVideos() {
                 </>
               )}
             </div>
- 
+
             <div className="p-6 border-t border-slate-100/50 flex gap-4 bg-slate-50/50">
               <Button
                 onClick={handleSaveTest}
