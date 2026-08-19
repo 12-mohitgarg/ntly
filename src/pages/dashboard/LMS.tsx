@@ -365,8 +365,8 @@ export default function LMS() {
                   key={i}
                   onClick={() => handleSelectOption(q.id, i)}
                   className={`block w-full text-left p-4 rounded-2xl border text-sm transition-all active:scale-99 cursor-pointer font-bold ${isSelected
-                      ? 'bg-blue-50 text-blue-600 border-blue-500 shadow-sm'
-                      : 'border-slate-200 text-slate-700 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300'
+                    ? 'bg-blue-50 text-blue-600 border-blue-500 shadow-sm'
+                    : 'border-slate-200 text-slate-700 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300'
                     }`}
                 >
                   <span className={`inline-flex w-6 h-6 rounded-full border items-center justify-center text-xs mr-3 font-extrabold ${isSelected ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300 text-slate-400 bg-white'
@@ -990,8 +990,8 @@ const CourseDashboard = ({
                           key={pageNum}
                           onClick={() => setCurrentLmsPage(pageNum)}
                           className={`w-8 h-8 rounded-lg font-bold text-xs transition active:scale-95 cursor-pointer ${currentLmsPage === pageNum
-                              ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
-                              : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                            ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                            : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
                             }`}
                         >
                           {pageNum}
@@ -1246,20 +1246,19 @@ const VideoPlayerView = ({
       {/* Top Mobile-Responsive Attendance Quick Bar */}
       <div className="bg-gradient-to-r from-slate-900 to-indigo-950 border border-slate-800 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-white shadow-xl">
         <div className="flex items-center gap-3 w-full sm:w-auto text-left">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-            isVideoCompleted 
-              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isVideoCompleted
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
               : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-          }`}>
+            }`}>
             {isVideoCompleted ? <ShieldCheck size={20} /> : <Clock size={20} className={watchTimeLeft > 0 ? "animate-pulse" : ""} />}
           </div>
           <div className="min-w-0 flex-1">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Attendance Log</h4>
             <p className="text-xs sm:text-sm font-black text-white truncate mt-0.5">
-              {isVideoCompleted 
-                ? "Attendance officially recorded" 
-                : watchTimeLeft > 0 
-                  ? `Timer Active: ${formattedTimer} remaining` 
+              {isVideoCompleted
+                ? "Attendance officially recorded"
+                : watchTimeLeft > 0
+                  ? `Timer Active: ${formattedTimer} remaining`
                   : "Watch goal reached! Ready to submit"}
             </p>
           </div>
@@ -1269,11 +1268,10 @@ const VideoPlayerView = ({
           <button
             disabled={watchTimeLeft > 0 || attendanceSaving}
             onClick={() => markVideoAsDone(video)}
-            className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
-              watchTimeLeft > 0
+            className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${watchTimeLeft > 0
                 ? 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed opacity-80'
                 : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white shadow-lg shadow-emerald-500/20 hover:scale-[1.02] active:scale-98 animate-pulse'
-            }`}
+              }`}
           >
             {watchTimeLeft > 0 ? (
               <>
@@ -1380,8 +1378,8 @@ const VideoPlayerView = ({
                     Minimum Watch Requirement (5:00 Mins)
                   </span>
                   <span className={`inline-flex items-center gap-1.5 font-mono text-xs px-3 py-1 rounded-lg border w-fit ${watchTimeLeft === 0
-                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 font-bold'
-                      : 'bg-blue-500/20 text-blue-400 border-blue-500/30 animate-pulse font-bold'
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 font-bold'
+                    : 'bg-blue-500/20 text-blue-400 border-blue-500/30 animate-pulse font-bold'
                     }`}>
                     {watchTimeLeft === 0
                       ? '✨ Watch Goal Completed (100%)'
@@ -1415,8 +1413,8 @@ const VideoPlayerView = ({
                   disabled={watchTimeLeft > 0 || attendanceSaving}
                   onClick={() => markVideoAsDone(video)}
                   className={`w-full sm:w-auto px-9 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer shadow-xl ${watchTimeLeft > 0
-                      ? 'bg-slate-800 text-slate-400 border border-slate-700/60 cursor-not-allowed opacity-80'
-                      : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-600 hover:from-emerald-400 hover:to-blue-500 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-95 animate-pulse'
+                    ? 'bg-slate-800 text-slate-400 border border-slate-700/60 cursor-not-allowed opacity-80'
+                    : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-600 hover:from-emerald-400 hover:to-blue-500 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-95 animate-pulse'
                     }`}
                 >
                   {watchTimeLeft > 0 ? (

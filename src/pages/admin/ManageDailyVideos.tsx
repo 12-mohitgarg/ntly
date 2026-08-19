@@ -33,7 +33,7 @@ import {
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { COURSE_VIDEO_DAY_LIMIT, INTERNSHIP_DOMAINS } from '../../lib/constants';
+import { COURSE_VIDEO_DAY_LIMIT, CURRENT_INTERNSHIP_START_DATE, INTERNSHIP_DOMAINS } from '../../lib/constants';
 import { useAuth } from '../../components/AuthContext';
 import { AttendanceEntry, AttendanceStudent, generateCourseAttendanceReport } from '../dashboard/generateAttendanceReport';
 
@@ -259,15 +259,52 @@ export default function ManageDailyVideos() {
     }
 
     try {
-      const attendanceQuery = query(
-        collection(db, 'attendance'),
-        where('course', '==', selectedCourse),
-        orderBy('day')
-      );
-      const snapshot = await getDocs(attendanceQuery);
-      setAttendanceEntries(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceEntry)));
+      let snapshot;
+      try {
+        const attendanceQuery = query(
+          collection(db, 'attendance'),
+          where('course', '==', selectedCourse),
+          orderBy('day')
+        );
+        snapshot = await getDocs(attendanceQuery);
+      } catch (err) {
+        console.warn('Index missing for ordered attendance query, falling back to un-ordered query:', err);
+        const fallbackQuery = query(
+          collection(db, 'attendance'),
+          where('course', '==', selectedCourse)
+        );
+        snapshot = await getDocs(fallbackQuery);
+      }
+
+      const cutoffTime = new Date(`${CURRENT_INTERNSHIP_START_DATE}T00:00:00`).getTime();
+      const allEntries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceEntry));
+
+      // Filter entries to show attendance marked from 20 July 2026 onward
+      const filteredEntries = allEntries.filter(entry => {
+        const rawDate = entry.watchedAt || (entry as any).createdAt || (entry as any).timestamp;
+        if (!rawDate) return false;
+        let entryTime: number | null = null;
+        if (typeof rawDate === 'number') {
+          entryTime = rawDate;
+        } else if (typeof rawDate === 'string') {
+          entryTime = new Date(rawDate).getTime();
+        } else if (typeof rawDate === 'object') {
+          if (typeof (rawDate as any).toDate === 'function') {
+            entryTime = (rawDate as any).toDate().getTime();
+          } else if (typeof (rawDate as any).seconds === 'number') {
+            entryTime = (rawDate as any).seconds * 1000;
+          }
+        }
+        return entryTime !== null && Number.isFinite(entryTime) && entryTime >= cutoffTime;
+      });
+
+      // Sort entries by day ascending
+      filteredEntries.sort((a, b) => Number(a.day || 0) - Number(b.day || 0));
+
+      setAttendanceEntries(filteredEntries);
     } catch (error) {
       console.error('Error fetching attendance:', error);
+      setAttendanceEntries([]);
     }
   };
 
@@ -283,17 +320,27 @@ export default function ManageDailyVideos() {
         where('internshipDomain', '==', selectedCourse)
       );
       const snapshot = await getDocs(usersQuery);
-      setCourseStudents(snapshot.docs.map((studentDoc) => {
-        const data = studentDoc.data();
+      const cutoffTime = new Date(`${CURRENT_INTERNSHIP_START_DATE}T00:00:00`).getTime();
 
-        return {
-          id: studentDoc.id,
-          uid: studentDoc.id,
-          fullName: data.fullName || '',
-          email: data.email || '',
-          college: data.college || ''
-        };
-      }));
+      const students = snapshot.docs
+        .map((studentDoc) => {
+          const data = studentDoc.data();
+          return {
+            id: studentDoc.id,
+            uid: studentDoc.id,
+            fullName: data.fullName || '',
+            email: data.email || '',
+            college: data.college || '',
+            registrationDate: data.registrationDate || data.createdAt
+          };
+        })
+        .filter((student) => {
+          if (!student.registrationDate) return true;
+          const regTime = new Date(student.registrationDate).getTime();
+          return !Number.isFinite(regTime) || regTime >= cutoffTime;
+        });
+
+      setCourseStudents(students);
     } catch (error) {
       console.error('Error fetching course students:', error);
       setCourseStudents([]);
@@ -736,7 +783,7 @@ export default function ManageDailyVideos() {
             <div className="p-6 border-b border-slate-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-black text-slate-900 gradient-text">Attendance Entries</h2>
-                <p className="text-slate-500 text-sm font-bold">{selectedCourse}</p>
+                <p className="text-slate-500 text-sm font-bold">{selectedCourse} <span className="text-emerald-600 font-semibold text-xs ml-1">(Showing attendance from 20 July 2026 onward)</span></p>
               </div>
               <span className="bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider ring-1 ring-indigo-100/80">
                 {attendanceEntries.length} Entries
