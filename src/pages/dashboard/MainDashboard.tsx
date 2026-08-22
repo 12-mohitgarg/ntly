@@ -175,17 +175,7 @@ export default function MainDashboard() {
   };
 
   const handleDownloadAttendance = async () => {
-    if (!profile) return;
-    if (dailyVideos.length === 0) {
-      alert('Attendance report will be available after lectures are uploaded.');
-      return;
-    }
-    try {
-      await generateAttendanceReport(profile, attendanceEntries, dailyVideos);
-    } catch (error) {
-      console.error(error);
-      alert('Error downloading attendance report');
-    }
+    alert('Attendance report download is currently disabled.');
   };
 
   const handleDownloadMarksheet = async () => {
@@ -504,11 +494,13 @@ export default function MainDashboard() {
 
             {hasUploadedVideos && (
               <button
+                disabled
                 onClick={handleDownloadAttendance}
-                className="inline-flex h-9 items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 rounded-xl text-xs font-bold border border-emerald-100 transition active:scale-95 cursor-pointer shadow-sm"
+                title="Attendance report download is currently disabled"
+                className="inline-flex h-9 items-center justify-center gap-2 bg-slate-100 text-slate-400 border border-slate-200 rounded-xl text-xs font-bold px-4 cursor-not-allowed shadow-sm opacity-75"
               >
                 <Download size={13} />
-                Download Report
+                Download Report (Disabled)
               </button>
             )}
 

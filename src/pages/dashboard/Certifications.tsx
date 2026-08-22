@@ -107,7 +107,8 @@ export default function Certifications() {
       if (type === 'certificate') {
         await generateCertificate(profile, user.uid);
       } else if (type === 'attendance') {
-        await generateAttendanceReport(profile, attendanceEntries, dailyVideos);
+        alert('Attendance report download is currently disabled.');
+        return;
       } else if (type === 'marksheet') {
         if (!testSubmission || !courseTest) {
           alert('Marksheet is locked. Complete the final assessment first.');
