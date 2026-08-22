@@ -117,7 +117,7 @@ export default function LMS() {
   useEffect(() => {
     if (dailyVideos.length > 0) {
       const completedCount = getCompletedVideoDays(videoProgress, attendanceEntries).size;
-      setIsCourseCompleted(completedCount === dailyVideos.length);
+      setIsCourseCompleted(completedCount >= COURSE_VIDEO_DAY_LIMIT && dailyVideos.length >= COURSE_VIDEO_DAY_LIMIT);
     }
   }, [dailyVideos, videoProgress, attendanceEntries]);
 
@@ -216,8 +216,9 @@ export default function LMS() {
   };
 
   const getProgressPercentage = (progress: VideoProgress = videoProgress, attendance: AttendanceEntry[] = attendanceEntries) => {
-    const uploadedCount = getUploadedVideoDays().size;
-    return uploadedCount === 0 ? 0 : Math.round((getCompletedVideoDays(progress, attendance).size / uploadedCount) * 100);
+    const totalCourseDays = Math.max(getUploadedVideoDays().size, COURSE_VIDEO_DAY_LIMIT);
+    const completedCount = getCompletedVideoDays(progress, attendance).size;
+    return totalCourseDays === 0 ? 0 : Math.min(100, Math.round((completedCount / totalCourseDays) * 100));
   };
 
   const isAssessmentCompleted = !!testSubmission;
@@ -275,7 +276,7 @@ export default function LMS() {
         lastVideoCompletedAt: new Date().toISOString()
       });
 
-      setIsCourseCompleted(completedDays.size === dailyVideos.length && dailyVideos.length > 0);
+      setIsCourseCompleted(completedDays.size >= COURSE_VIDEO_DAY_LIMIT && dailyVideos.length >= COURSE_VIDEO_DAY_LIMIT);
       await fetchAttendance();
     } catch (error) {
       console.error('Error marking video as done:', error);
@@ -433,6 +434,7 @@ export default function LMS() {
               getCompletedVideoDays={getCompletedVideoDays}
               userAssignmentsCount={userAssignmentsCount}
               totalAssignmentsCount={totalAssignmentsCount}
+              isCourseCompleted={isCourseCompleted}
             />
           }
         />
@@ -651,6 +653,7 @@ interface CourseDashboardProps {
   getCompletedVideoDays: (progress?: VideoProgress, attendance?: AttendanceEntry[]) => Set<string>;
   userAssignmentsCount: number;
   totalAssignmentsCount: number;
+  isCourseCompleted: boolean;
 }
 
 const CourseDashboard = ({
@@ -667,7 +670,8 @@ const CourseDashboard = ({
   getProgressPercentage,
   getCompletedVideoDays,
   userAssignmentsCount,
-  totalAssignmentsCount
+  totalAssignmentsCount,
+  isCourseCompleted
 }: CourseDashboardProps) => {
   const { profile } = useAuth();
   const navigate = useNavigate();
@@ -1035,8 +1039,8 @@ const CourseDashboard = ({
             );
           })()}
 
-          {/* Quiz Row item at the end of Module list */}
-          {courseTest && (
+          {/* Quiz Row item at the end of Module list - Only shown when full course is completed or quiz already attempted */}
+          {((isCourseCompleted && completedCount >= COURSE_VIDEO_DAY_LIMIT) || testSubmission) && courseTest && (
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-2xl border border-red-50 bg-[#fff5f5]/30 hover:border-red-150 transition hover:shadow-sm gap-4">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-black text-xs flex-shrink-0">
